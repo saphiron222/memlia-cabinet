@@ -81,6 +81,22 @@ it("uploads a genuine PDF, preserves explicit versions and independent same-name
   const f = await fixture();
   try {
     await f.setup();
+    expect((await f.request("GET", "/documents/catalogue")).json()).toEqual({
+      maxBytes: 10485760,
+      formats: [
+        {
+          mediaType: "application/pdf",
+          label: "PDF (non protégé)",
+          extraction: true,
+        },
+        { mediaType: "text/plain", label: "Texte UTF-8", extraction: true },
+        {
+          mediaType: "application/octet-stream",
+          label: "Original binaire (sans extraction)",
+          extraction: false,
+        },
+      ],
+    });
     const d = (await f.request("POST", "/records", dossier())).json();
     const input = metadata(d.id),
       bytes = pdf();

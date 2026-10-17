@@ -81,3 +81,5 @@ export type UserList = z.infer<typeof UserListSchema>;
 export * from "./documents.js";
 export * from "./jobs.js";
 export * from "./collections.js";
+
+export const HealthSchema = z.object({ ready: z.boolean() });

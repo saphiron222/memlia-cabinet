@@ -8,6 +8,7 @@ import type { Connection } from "../storage/database.js";
 import { fail } from "../errors.js";
 import {
   digest,
+  normalizeEmail,
   hashPassword,
   newSession,
   verifyPassword,
@@ -44,7 +45,7 @@ export async function createUser(
     "INSERT INTO cabinet_users(id,email,name,password_hash,permissions) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING *",
     [
       id,
-      input.email.toLowerCase(),
+      normalizeEmail(input.email),
       input.name,
       await hashPassword(input.password),
       JSON.stringify(permissions),
@@ -67,7 +68,7 @@ export async function authenticate(
 }
 export async function login(tx: Connection, email: string, password: string) {
   const rows = await tx.query("SELECT * FROM cabinet_users WHERE email=$1", [
-    email.toLowerCase(),
+    normalizeEmail(email),
   ]);
   const row = rows[0];
   if (!row) {

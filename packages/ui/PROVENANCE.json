@@ -30,7 +30,7 @@
       "sha256Original": "cc1712e7b6fed7f3262b12e3bf438f9164d1420da6400d98722af3e89dc320aa",
       "sha256Adapted": "224531984d8ee4eb0b51a312959de8e744f6fd2a4bfee07ec56b7c99764c815f",
       "adaptations": [
-        "Import direct, comportement inchang\u00e9 : th\u00e8me ou ic\u00f4nes Tabler \u00e0 leur origine."
+        "Import direct, comportement inchangé : thème ou icônes Tabler à leur origine."
       ]
     },
     {
@@ -393,8 +393,10 @@
       "upstream": "packages/twenty-ui/build-tools/wrapInTwentyUiCascadeLayer.ts",
       "local": "vendor/build-tools/wrapInTwentyUiCascadeLayer.ts",
       "sha256Original": "b3a6fe6c440607ad959f8160f166c9585678ffa964e0923b01ee19e453bf4853",
-      "sha256Adapted": "b3a6fe6c440607ad959f8160f166c9585678ffa964e0923b01ee19e453bf4853",
-      "adaptations": []
+      "sha256Adapted": "22b5e08303ba842e32146c5974f1cfec394ebc826db3a8859e6e561a3f354bcc",
+      "adaptations": [
+        "Explicit .ts import extensions for Node 22 native Vite config loader; cascade behavior unchanged."
+      ]
     },
     {
       "upstream": "packages/twenty-ui/build-tools/twentyUiCascadeLayerName.ts",

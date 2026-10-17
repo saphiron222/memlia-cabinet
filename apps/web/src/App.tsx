@@ -124,7 +124,7 @@ function Auth({
       setErrors(validationErrors(result.error));
       return;
     }
-    if (setup.requiresToken && !token) {
+    if (setup.needsSetup && setup.requiresToken && !token) {
       setErrors({
         bootstrap: "Le jeton fourni par votre administrateur est requis.",
       });
@@ -138,7 +138,10 @@ function Auth({
         signal,
         {
           method: "POST",
-          headers: setup.requiresToken ? { "X-Bootstrap-Token": token } : {},
+          headers:
+            setup.needsSetup && setup.requiresToken
+              ? { "X-Bootstrap-Token": token }
+              : {},
           body: JSON.stringify(result.data),
         },
       );
@@ -199,7 +202,7 @@ function Auth({
           required
           hint={setup.needsSetup ? "12 caractères minimum." : undefined}
         />
-        {setup.requiresToken && (
+        {setup.needsSetup && setup.requiresToken && (
           <Field
             name="bootstrap"
             label="Jeton local d’installation"

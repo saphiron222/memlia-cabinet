@@ -626,3 +626,34 @@ test.describe("Droits par dossier", () => {
     await expect(page.getByLabel("Dossier lié")).toHaveValue(a.id);
   });
 });
+
+test.describe("Connexion après installation réseau", () => {
+  test.use({ baseURL: "http://127.0.0.1:4179" });
+  test("connexion réseau après rechargement sans champ ni en-tête bootstrap", async ({
+    page,
+  }) => {
+    await login(page, "http://127.0.0.1:4179");
+    await page.getByRole("button", { name: "Se déconnecter" }).click();
+    // Reproduces the previous server's network status as well as protecting the UI independently.
+    await page.route("**/api/v1/setup", (route) =>
+      route.fulfill({ json: { needsSetup: false, requiresToken: true } }),
+    );
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Connexion au cabinet" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Jeton local d’installation")).toHaveCount(0);
+    await page.getByLabel("Adresse email").fill("camille@example.test");
+    await page
+      .getByLabel("Mot de passe", { exact: true })
+      .fill("Exemple-fictif-2026");
+    const sent = page.waitForRequest(
+      (r) => r.url().endsWith("/login") && r.method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Se connecter", exact: true })
+      .click();
+    expect((await sent).headers()["x-bootstrap-token"]).toBeUndefined();
+    await expect(page.getByRole("navigation")).toBeVisible();
+  });
+});

@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
-import { distributeNotices } from "./notices";
-import { wrapInTwentyUiCascadeLayer } from "../../packages/ui/vendor/build-tools/wrapInTwentyUiCascadeLayer";
+import { distributeNotices } from "./notices.ts";
+import { wrapInTwentyUiCascadeLayer } from "../../packages/ui/vendor/build-tools/wrapInTwentyUiCascadeLayer.ts";
 const source = resolve(import.meta.dirname, "../../packages/ui/vendor/src");
 export default defineConfig({
   root: resolve(import.meta.dirname),

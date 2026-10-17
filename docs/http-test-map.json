@@ -1,0 +1,110 @@
+{
+  "GET /api/v1/setup": {
+    "file": "apps/server/test/application.test.ts",
+    "test": "requires one local setup and creates no default credentials"
+  },
+  "POST /api/v1/setup": {
+    "file": "apps/server/test/application.test.ts",
+    "test": "requires one local setup and creates no default credentials"
+  },
+  "GET /api/v1/session": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "POST /api/v1/login": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "POST /api/v1/logout": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "GET /api/v1/health": {
+    "file": "apps/server/test/installation.test.ts",
+    "test": "serves compiled UI and notices from one origin without exposing files or API fallbacks"
+  },
+  "GET /*": {
+    "file": "apps/server/test/installation.test.ts",
+    "test": "serves compiled UI and notices from one origin without exposing files or API fallbacks"
+  },
+  "GET /api/v1/catalogue": {
+    "file": "apps/server/test/resources.test.ts",
+    "test": "exposes canonical catalogue, contact and obligation lifecycle, exact amounts and archival"
+  },
+  "GET /api/v1/records": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/export.csv": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/:id": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "POST /api/v1/records": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "PUT /api/v1/records/:id": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "POST /api/v1/records/:id/transition": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/:id/history": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/dashboard": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/users": {
+    "file": "apps/server/test/resources.test.ts",
+    "test": "combines dossier grants with confidentiality and refuses moving a record outside the granted dossier"
+  },
+  "POST /api/v1/users": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "PUT /api/v1/users/:id": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "GET /api/v1/documents/catalogue": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "POST /api/v1/documents": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/documents": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/documents/:id": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "searches extracted text only in authorized documents and keeps missing/corrupt originals distinct from metadata"
+  },
+  "GET /api/v1/documents/:id/download": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/collections/catalogue": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "17 adaptateurs explicites : variantes métier, axes et provenance ne créent ni déclaration ni paiement"
+  },
+  "POST /api/v1/collections": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "CFE fictive : identité, période, référence et original GED durable sans doublon"
+  },
+  "GET /api/v1/collections/:id": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "CFE fictive : identité, période, référence et original GED durable sans doublon"
+  }
+}

@@ -7,14 +7,24 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node", "vitest/globals"],
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
     "noEmit": true,
     "jsx": "react-jsx",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@ui/*": ["packages/ui/vendor/src/*"]
-    }
+      "@ui/*": [
+        "packages/ui/vendor/src/*"
+      ]
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "apps/**/*.ts",

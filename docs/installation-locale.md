@@ -1,0 +1,58 @@
+# Installation et reprise du socle partagé
+
+Le paquet cible Linux avec Docker Engine/Compose et Node ≥22.22 pour les préflights. PostgreSQL 17 et Node 22.22.3 sont figés par digest dans les images. Le service applicatif unique sert l’interface compilée, `/api/v1` et `/licenses/` ; les originaux GED ne sont jamais servis comme fichiers statiques. L’application utilise un rôle propriétaire de sa base, sans SUPERUSER, CREATEDB ni CREATEROLE. Le rôle d’initialisation est distinct et son secret n’est pas monté dans l’application. `pg_trgm` 1.6 dans `public` reste un prérequis vérifié ; cette extension trusted peut être créée par le propriétaire de base lors de la migration.
+
+## Installation neuve
+
+Préparer un répertoire privé **hors dépôt**, sur un disque administré par le cabinet, par exemple `/srv/memlia`, propriétaire de l’utilisateur opérateur, mode 0700. Ne pas utiliser de lien symbolique ou de chemin contenant des espaces/caractères shell. Exécuter depuis le dépôt, avec `INSTALL_DIRECTORY=/srv/memlia`, `PUBLIC_ORIGIN=https://memlia.cabinet.example`, `BIND_ADDRESS=127.0.0.1` et `HTTP_PORT=3000` :
+
+```sh
+deploy/install.sh init
+deploy/install.sh start
+deploy/install.sh status
+```
+
+Le préflight exige Docker actif, répertoire neuf, droits privés, port disponible et au moins 1 Gio libre (seuil minimal, pas dimensionnement de production). Il génère deux secrets PostgreSQL distincts et un jeton bootstrap, sans mot de passe universel. Le premier administrateur choisit son propre mot de passe dans l’interface. Le jeton initial reste dans `secrets/bootstrap-token`, à lire localement et saisir seulement lors de la première initialisation ; il n’est ni journalisé ni demandé à la connexion ordinaire après rechargement. Ne pas publier `compose.env`, les fichiers secrets ou la sortie détaillée de `docker compose config`.
+
+Les volumes bind `postgres`, `data`, `config` et `secrets` survivent à une recréation. Le processus applicatif utilise l’UID/GID de l’opérateur, les données et secrets sont privés. Le service PostgreSQL utilise le même UID/GID hôte pour pouvoir lire ses fichiers 0600 ; la CI doit qualifier cette exécution de l’image officielle avec UID arbitraire. Aucun port PostgreSQL n’est publié. Le réseau PostgreSQL est interne ; seule l’application possède aussi une interface de publication, avec le port lié au loopback de l’hôte. Aucun accès fournisseur n’est nécessaire. Les services redémarrent selon `unless-stopped` ; le démarrage du daemon au boot reste une obligation d’administration de l’hôte.
+
+Le proxy HTTPS local est administré par le cabinet ; `deploy/Caddyfile.example` illustre son branchement sur le port loopback avec un certificat déjà disponible. Le paquet ne crée ni CA ni domaine, et ne modifie aucune confiance TLS. La chaîne, le nom, les cookies Secure, l’accès depuis les autres postes et la confiance Windows sont à vérifier en cabinet. Pour un essai explicitement local seulement, `PUBLIC_ORIGIN=http://127.0.0.1:3000 ALLOW_HTTP_LOOPBACK=true` est accepté. Depuis l’hôte, le pair vu par un conteneur peut être une adresse bridge : le paquet fournit donc un jeton bootstrap, requis même pour cette origine loopback. Le développement sans jeton conserve le contrôle strict du pair loopback. La CI utilise une origine réseau et le jeton ; le cas origine loopback avec pair bridge a sa régression HTTP.
+
+Les connexions ordinaires disposent de deux protections locales : dix échecs par compte normalisé sur quinze minutes, remis à zéro après un succès, et cent requêtes par pair réseau réel sur quinze minutes. Les vérifications en cours réservent leur place ; les adresses `X-Forwarded-For` ne sont pas utilisées. Vingt comptes distincts peuvent ainsi se connecter derrière le même proxy. Le registre en mémoire contient au maximum 5 000 comptes hachés ; la saturation refuse explicitement une nouvelle admission, et les entrées expirées sont récupérées. Comme le limiteur précédent, cet état disparaît au redémarrage ; il ne constitue pas une défense distribuée. Le garde-fou par pair peut temporairement affecter tous les postes derrière un proxy en cas de rafale importante.
+
+## Sauvegarde cohérente
+
+```sh
+INSTALL_DIRECTORY=/srv/memlia deploy/backup.sh reception-2026-10-17
+```
+
+Cette commande crée un verrou hôte exclusif `.operation-lock`, envoie SIGTERM au service unique et attend **une sortie propre 0**, au plus 120 secondes. Fastify draine les requêtes, puis `JobRunner.stop()` attend son exécutant avant la fermeture de la base. Une expiration ou un arrêt brutal interdit la capture. PostgreSQL reste actif. L’indisponibilité couvre arrêt, dump, copie et contrôle ; la durée n’est pas encore qualifiée sur une charge cabinet.
+
+Une connexion PostgreSQL dédiée prend un verrou consultatif partagé pendant toute la vie de chaque application. Les outils de capture/restauration prennent son verrou exclusif, empêchent le redémarrage concurrent et refusent tant qu’un autre exécutant est présent. Tous les futurs producteurs, imports, workers et GC doivent appartenir au service arrêté ou être explicitement ajoutés à ce protocole. Une perte du verrou d’un serveur rend ses transactions indisponibles jusqu’au redémarrage. Aucun GC n’est actuellement exécuté.
+
+Le format est un **répertoire privé contrôlé**, sans extraction tar/zip : dump PostgreSQL custom, configuration publique d’installation, originaux référencés et manifeste versionné avec tailles/SHA-256, versions client/serveur, architecture et date UTC. Les outils clients sont de majeure 17. Chaque original est comparé à sa référence DB avant copie. Les temporaires et orphelins privés restent sur le volume d’origine, jamais effacés automatiquement ; leur rapprochement manuel avec les UUID DB reste possible. Les fichiers sont synchronisés puis la sauvegarde finalisée par renommage. Un échec conserve un répertoire `.incomplete-*`, jamais sélectionnable comme succès. Le serveur reste arrêté si la capture échoue ; examiner la cause avant `install.sh start`. Un outil PostgreSQL interrompu/expiré après 120 secondes échoue sans publier de sauvegarde.
+
+Ce format a une limite actuelle d’un fichier de 1 Gio et de 100 000 entrées. Il ne constitue pas encore la qualification charge du produit complet. Les empreintes détectent l’altération ; elles ne prouvent pas la provenance d’un dump capable d’exécuter du SQL. Restaurer uniquement une sauvegarde de confiance du cabinet.
+
+## Restauration dans une installation neuve
+
+1. Préparer un autre répertoire privé et lancer uniquement `install.sh init`. Ne pas démarrer l’application.
+2. Copier le répertoire de sauvegarde sous `backups/<nom>`, avec propriétaire opérateur, dossiers 0700 et fichiers 0600.
+3. Exécuter `INSTALL_DIRECTORY=/nouvelle/installation deploy/restore.sh <nom>`.
+4. Contrôler l’origine restaurée et les données ; ouvrir l’application par `install.sh start`, se connecter, vérifier dossier/tâche/pièces et export avant bascule du proxy.
+
+La validation exhaustive du manifeste précède la mutation. Chemins absolus/parents, liens symboliques/durs, types spéciaux, doublons, fichiers supplémentaires/manquants, tailles/empreintes/version incompatibles sont refusés. La cible doit être neuve : base issue de `template0` (sans objet utilisateur), GED vide et configuration de restauration absente. La configuration générée par `init` est conservée séparément en `config-before-restore`. Les nouveaux secrets d’installation restent distincts ; les mots de passe et droits applicatifs reviennent dans le dump.
+
+`pg_restore --single-transaction --exit-on-error --no-owner --no-acl` restaure sous le rôle applicatif propriétaire de la base ; aucun `--clean` ni suppression de cible n’est utilisé. Les références et octets GED sont comparés de nouveau après restauration SQL, puis `ANALYZE` est exécuté. Une erreur après SQL laisse la cible isolée, avec staging privé ; elle ne déclenche ni ouverture du trafic ni effacement. Reprendre dans une autre cible neuve. L’ancienne installation reste intacte.
+
+Une sauvegarde n’est recevable qu’après ce parcours de restauration et vérification. Pour une mise à jour : sauvegarder, restaurer et réceptionner dans une installation neuve avec l’image candidate, puis basculer le proxy. Conserver ancienne image/configuration et installation ; un simple retour d’image ne revient pas à l’ancien schéma. Après de nouvelles écritures, revenir à une sauvegarde exige une décision explicite sur la perte de ces écritures. La bascule opérationnelle et les pannes à chaque frontière restent à qualifier au lot exploitation complet.
+
+## Secrets, profils et protection des copies
+
+Le dump contient mots de passe dérivés, sessions, droits et données cabinet : c’est une donnée privée. Chiffrement du disque et des copies, support de récupération, rotation et copie hors machine sont contrôlés par l’infrastructure du cabinet, avant réception réelle. Aucun outil n’envoie les copies à un service externe. Les secrets d’exploitation et futurs profils de fournisseurs ne figurent pas dans ce répertoire de sauvegarde ; les conserver dans une sauvegarde chiffrée séparée, liée à l’identifiant du manifeste, avec clé de récupération conservée séparément et essai de récupération. Aucun profil fournisseur réel n’existe dans ce lot. Ne purger aucune génération avant restauration vérifiée d’une nouvelle copie et conservation d’une génération antérieure.
+
+## Vérification et limites
+
+`npm run check` contrôle TypeScript, les empreintes Twenty, les 171 exigences inchangées et la correspondance des 27 routes à des tests nommés. `npm test` teste PGlite ; avec `DATABASE_URL`, les fixtures isolent leurs schémas et le test de restauration crée trois bases jetables sous un rôle applicatif limité. Les essais PostgreSQL exigent donc un compte de test autorisé à créer ces bases/rôles, jamais le compte runtime du cabinet.
+
+La CI Linux installe les dépendances verrouillées sans archive LFS, exécute check/tests sur les deux moteurs, build et navigateur isolé, construit un contexte avec sentinelles privées, puis le paquet et sa restauration Docker. Les seuls artefacts optionnels sont les diagnostics navigateur fictifs, conservés trois jours. Le 17 octobre 2026, une recette locale Colima/Linux ARM64 a vérifié le contexte, le build, les notices, le rôle DB limité, la persistance après recréation/crash et une sauvegarde/restauration de PDF sur cible neuve. Cette disponibilité du daemon a été constatée après le relevé initial qui le déclarait absent. La CI Linux standard reste en attente de publication/exécution ; le transport HTTP de la recette ne qualifie ni TLS ni Windows. Les validations réseau/TLS/Windows/charge/cabinet sont distinguées dans l’état de réalisation.

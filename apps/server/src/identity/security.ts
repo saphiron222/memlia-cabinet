@@ -29,3 +29,5 @@ export async function slowSecretFingerprint(
 ): Promise<string> {
   return ((await scrypt(secret, operationId, 64)) as Buffer).toString("hex");
 }
+
+export const normalizeEmail = (email: string) => email.toLowerCase();

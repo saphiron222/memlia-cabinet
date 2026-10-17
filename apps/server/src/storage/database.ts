@@ -21,19 +21,49 @@ export async function openDatabase(options: {
 }): Promise<Database> {
   if (options.databaseUrl) {
     const pool = new Pool({ connectionString: options.databaseUrl });
-    const query: Connection["query"] = async (sql, params) =>
-      (await pool.query(sql, params)).rows;
+    // Held through shutdown/drain. Offline tools require its exclusive counterpart.
+    const lifecycle = await pool.connect();
+    const locked = await lifecycle.query(
+      "SELECT pg_try_advisory_lock_shared(72461018) AS acquired",
+    );
+    if (!locked.rows[0]?.acquired) {
+      lifecycle.release();
+      await pool.end();
+      throw new Error("Installation en maintenance.");
+    }
+    let maintenanceConnectionLost = false;
+    lifecycle.on("error", () => {
+      maintenanceConnectionLost = true;
+    });
+    const available = () => {
+      if (maintenanceConnectionLost)
+        throw new Error(
+          "Connexion d’exploitation interrompue ; redémarrage requis.",
+        );
+    };
+    const query: Connection["query"] = async (sql, params) => {
+      available();
+      return (await pool.query(sql, params)).rows;
+    };
     const db: Database = {
       query,
       async transaction(run) {
+        available();
         const client = await pool.connect();
         try {
           await client.query("BEGIN");
+          // Keep an in-flight transaction protected even if the lifecycle session is lost.
+          const maintenance = await client.query(
+            "SELECT pg_try_advisory_xact_lock_shared(72461018) AS acquired",
+          );
+          if (!maintenance.rows[0]?.acquired)
+            throw new Error("Installation en maintenance.");
           await client.query("SELECT pg_advisory_xact_lock(72461017)");
           const result = await run({
             query: async (sql, params) =>
               (await client.query(sql, params)).rows,
           });
+          available();
           await client.query("COMMIT");
           return result;
         } catch (error) {
@@ -44,6 +74,9 @@ export async function openDatabase(options: {
         }
       },
       async close() {
+        if (!maintenanceConnectionLost)
+          await lifecycle.query("SELECT pg_advisory_unlock_shared(72461018)");
+        lifecycle.release();
         await pool.end();
       },
     };

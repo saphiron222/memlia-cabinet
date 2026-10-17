@@ -6041,10 +6041,29 @@
         "DECISIONS-MEMLIA.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial",
+        "files": [
+          "deploy/compose.yaml",
+          "Dockerfile",
+          "deploy/install.sh",
+          "deploy/backup.sh",
+          "deploy/restore.sh",
+          "deploy/operations.mjs",
+          "apps/server/src/index.ts",
+          ".github/workflows/ci.yml",
+          "docs/installation-locale.md"
+        ],
+        "tests": [
+          "apps/server/test/installation.test.ts",
+          "apps/server/test/preflight.test.ts",
+          "apps/server/test/backup.test.ts",
+          "scripts/container-smoke.mjs",
+          "scripts/context-smoke.mjs"
+        ],
+        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; Docker local indisponible.",
+        "ciValidation": "pending — workflow candidat, ne vaut pas exécution",
+        "fieldValidation": "last-phase",
+        "limitations": "Socle installé ; qualification HTTPS/Windows, charge, chiffrement/récupération des secrets, copie/rotation et mises à jour complètes restent obligatoires au lot exploitation et en cabinet."
       }
     },
     {
@@ -6089,10 +6108,29 @@
         "DECISIONS-MEMLIA.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial",
+        "files": [
+          "deploy/compose.yaml",
+          "Dockerfile",
+          "deploy/install.sh",
+          "deploy/backup.sh",
+          "deploy/restore.sh",
+          "deploy/operations.mjs",
+          "apps/server/src/index.ts",
+          ".github/workflows/ci.yml",
+          "docs/installation-locale.md"
+        ],
+        "tests": [
+          "apps/server/test/installation.test.ts",
+          "apps/server/test/preflight.test.ts",
+          "apps/server/test/backup.test.ts",
+          "scripts/container-smoke.mjs",
+          "scripts/context-smoke.mjs"
+        ],
+        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; Docker local indisponible.",
+        "ciValidation": "pending — workflow candidat, ne vaut pas exécution",
+        "fieldValidation": "last-phase",
+        "limitations": "Socle installé ; qualification HTTPS/Windows, charge, chiffrement/récupération des secrets, copie/rotation et mises à jour complètes restent obligatoires au lot exploitation et en cabinet."
       }
     },
     {

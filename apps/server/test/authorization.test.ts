@@ -335,3 +335,86 @@ it("requires audit permission on each historical dossier after a contact moves f
     await f.close();
   }
 });
+
+it("allows twenty accounts behind one proxy and limits concurrent account failures without trusting forwarded addresses", async () => {
+  let now = new Date("2026-10-17T10:00:00Z");
+  const f = await fixture(() => now);
+  const attempt = (
+    email: string,
+    password = credentials.password,
+    forwarded = "198.51.100.1",
+  ) =>
+    f.app.inject({
+      method: "POST",
+      url: "/api/v1/login",
+      remoteAddress: "192.0.2.10",
+      headers: { origin: f.options.publicOrigin, "x-forwarded-for": forwarded },
+      payload: { email, password },
+    });
+  try {
+    await f.setup();
+    for (let i = 0; i < 20; i++) {
+      const email = `proxy-${i}@example.test`;
+      expect(
+        (
+          await f.request("POST", "/users", {
+            operationId: operationId(),
+            name: "Compte fictif",
+            email,
+            password: credentials.password,
+            permissions: [],
+          })
+        ).statusCode,
+      ).toBe(201);
+      expect((await attempt(email)).statusCode).toBe(200);
+    }
+    const failures = await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        attempt(
+          i % 2 ? "PROXY-0@example.test" : "proxy-0@example.test",
+          "incorrect",
+          `198.51.100.${i + 2}`,
+        ),
+      ),
+    );
+    expect(failures.filter((r) => r.statusCode === 401)).toHaveLength(10);
+    expect(failures.filter((r) => r.statusCode === 429)).toHaveLength(10);
+    expect((await attempt("proxy-0@example.test")).statusCode).toBe(429);
+    expect((await attempt("proxy-1@example.test")).statusCode).toBe(200);
+    now = new Date("2026-10-17T10:16:00Z");
+    expect((await attempt("proxy-0@example.test")).statusCode).toBe(200);
+    for (let round = 0; round < 2; round++) {
+      for (let i = 0; i < 9; i++)
+        expect(
+          (await attempt("proxy-0@example.test", "incorrect")).statusCode,
+        ).toBe(401);
+      expect((await attempt("proxy-0@example.test")).statusCode).toBe(200);
+    }
+    // Saturate the separate real-peer guard despite a different forged XFF each time.
+    let limited = false;
+    for (let i = 0; i < 100; i++) {
+      const response = await attempt(
+        "proxy-2@example.test",
+        credentials.password,
+        `203.0.113.${i + 1}`,
+      );
+      if (response.statusCode === 429) {
+        limited = true;
+        break;
+      }
+      expect(response.statusCode).toBe(200);
+    }
+    expect(limited).toBe(true);
+    expect(
+      (
+        await attempt(
+          "proxy-3@example.test",
+          credentials.password,
+          "203.0.113.254",
+        )
+      ).statusCode,
+    ).toBe(429);
+  } finally {
+    await f.close();
+  }
+});

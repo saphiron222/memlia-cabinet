@@ -1,10 +1,14 @@
+import { LoginThrottle } from "./identity/login-throttle.js";
+import { registerWeb } from "./web.js";
+import { mkdir, access } from "node:fs/promises";
+import { constants } from "node:fs";
 import { JobRunner } from "./jobs/runner.js";
 import { CollectionService } from "./collections/service.js";
 import { registerCollectionRoutes } from "./collections/routes.js";
 import multipart from "@fastify/multipart";
 import { registerDocumentRoutes } from "./documents/routes.js";
 import { DocumentStore } from "./documents/store.js";
-import { DOCUMENT_MAX_BYTES } from "@memlia/contracts";
+import { DOCUMENT_MAX_BYTES, HealthSchema } from "@memlia/contracts";
 import { timingSafeEqual } from "node:crypto";
 import Fastify, { type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
@@ -36,14 +40,17 @@ export interface ApplicationOptions {
   allowEmbeddedDatabase?: boolean;
   clock?: () => Date;
   bootstrapToken?: string;
+  webDirectory?: string;
 }
 export async function createApplication(options: ApplicationOptions) {
   const publicOrigin = new URL(options.publicOrigin).origin;
   if (options.publicOrigin !== publicOrigin)
     throw new Error("publicOrigin doit être une origine sans chemin.");
-  const requiresToken = !["localhost", "127.0.0.1", "[::1]"].includes(
-    new URL(publicOrigin).hostname,
-  );
+  const requiresToken =
+    Boolean(options.bootstrapToken) ||
+    !["localhost", "127.0.0.1", "[::1]"].includes(
+      new URL(publicOrigin).hostname,
+    );
   if (options.bootstrapToken && options.bootstrapToken.length < 32)
     throw new Error(
       "Le jeton d’initialisation doit contenir au moins 32 caractères aléatoires.",
@@ -51,6 +58,7 @@ export async function createApplication(options: ApplicationOptions) {
   const db = await openDatabase(options);
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
   const now = options.clock ?? (() => new Date());
+  const loginThrottle = new LoginThrottle(now);
   await app.register(cookie);
   await app.register(multipart, {
     limits: {
@@ -156,42 +164,43 @@ export async function createApplication(options: ApplicationOptions) {
     });
   const user = (tx: Connection, req: FastifyRequest) =>
     authenticate(tx, req.cookies.memlia_session, now());
-  app.get("/api/v1/setup", async () =>
-    SetupStatusSchema.parse({
-      requiresToken,
-      needsSetup:
-        (await db.query("SELECT id FROM cabinet_users LIMIT 1")).length === 0,
-    }),
-  );
+  app.get("/api/v1/setup", async () => {
+    const needsSetup =
+      (await db.query("SELECT id FROM cabinet_users LIMIT 1")).length === 0;
+    return SetupStatusSchema.parse({
+      requiresToken: needsSetup && requiresToken,
+      needsSetup,
+    });
+  });
   app.post(
     "/api/v1/setup",
     { config: { rateLimit: { max: 5, timeWindow: "15 minutes" } } },
     async (req, reply) => {
-      if (requiresToken) {
-        const provided = req.headers["x-bootstrap-token"];
-        if (
-          !options.bootstrapToken ||
-          typeof provided !== "string" ||
-          !timingSafeEqual(
-            Buffer.from(digest(provided), "hex"),
-            Buffer.from(digest(options.bootstrapToken), "hex"),
-          )
-        )
-          fail(
-            403,
-            "BOOTSTRAP_TOKEN_REQUIRED",
-            "Jeton local d’initialisation requis ou incorrect.",
-          );
-      } else if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.ip))
-        fail(
-          403,
-          "LOCAL_SETUP_REQUIRED",
-          "Initialisation depuis la machine du cabinet requise.",
-        );
       const input = SetupInputSchema.parse(req.body);
       const result = await db.transaction(async (tx) => {
         if ((await tx.query("SELECT id FROM cabinet_users LIMIT 1")).length)
           fail(409, "ALREADY_CONFIGURED", "Installation déjà initialisée.");
+        if (requiresToken) {
+          const provided = req.headers["x-bootstrap-token"];
+          if (
+            !options.bootstrapToken ||
+            typeof provided !== "string" ||
+            !timingSafeEqual(
+              Buffer.from(digest(provided), "hex"),
+              Buffer.from(digest(options.bootstrapToken), "hex"),
+            )
+          )
+            fail(
+              403,
+              "BOOTSTRAP_TOKEN_REQUIRED",
+              "Jeton local d’initialisation requis ou incorrect.",
+            );
+        } else if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(req.ip))
+          fail(
+            403,
+            "LOCAL_SETUP_REQUIRED",
+            "Initialisation depuis la machine du cabinet requise.",
+          );
         const created = await createUser(tx, input, adminPermissions);
         const token = await issueSession(tx, created, now());
         return { created, token };
@@ -214,17 +223,22 @@ export async function createApplication(options: ApplicationOptions) {
   });
   app.post(
     "/api/v1/login",
-    { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
+    { config: { rateLimit: { max: 100, timeWindow: "15 minutes" } } },
     async (req, reply) => {
       const input = LoginInputSchema.parse(req.body);
-      const result = await db.transaction(async (tx) => {
-        const current = await login(tx, input.email, input.password);
-        if (req.cookies.memlia_session)
-          await tx.query("DELETE FROM cabinet_sessions WHERE token_hash=$1", [
-            digest(req.cookies.memlia_session),
-          ]);
-        return { user: current, token: await issueSession(tx, current, now()) };
-      });
+      const result = await loginThrottle.attempt(input.email, () =>
+        db.transaction(async (tx) => {
+          const current = await login(tx, input.email, input.password);
+          if (req.cookies.memlia_session)
+            await tx.query("DELETE FROM cabinet_sessions WHERE token_hash=$1", [
+              digest(req.cookies.memlia_session),
+            ]);
+          return {
+            user: current,
+            token: await issueSession(tx, current, now()),
+          };
+        }),
+      );
       setSession(reply, result.token);
       return SessionSchema.parse({ user: result.user });
     },
@@ -248,6 +262,17 @@ export async function createApplication(options: ApplicationOptions) {
     { db, now, user },
     new CollectionService(db, jobs, documents, now),
   );
+  await mkdir(options.dataDirectory, { recursive: true, mode: 0o700 });
+  app.get("/api/v1/health", async (_req, reply) => {
+    try {
+      await db.query("SELECT 1");
+      await access(options.dataDirectory, constants.R_OK | constants.W_OK);
+      return HealthSchema.parse({ ready: true });
+    } catch {
+      return reply.code(503).send(HealthSchema.parse({ ready: false }));
+    }
+  });
+  if (options.webDirectory) await registerWeb(app, options.webDirectory);
   jobs.start();
   return app;
 }

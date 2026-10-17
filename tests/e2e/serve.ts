@@ -14,6 +14,7 @@ const api = await createApplication({
 await api.listen({ port: apiPort, host: "127.0.0.1" });
 const web = await createServer({
   configFile: "apps/web/vite.config.ts",
+  configLoader: "native",
   server: { port: webPort, proxy: { "/api": `http://127.0.0.1:${apiPort}` } },
 });
 await web.listen();

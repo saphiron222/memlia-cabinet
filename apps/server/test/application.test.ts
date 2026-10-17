@@ -119,6 +119,81 @@ it("requires a local bootstrap secret for a network origin even behind a loopbac
     });
     expect(correct.statusCode).toBe(201);
     expect(correct.headers["set-cookie"]).toContain("Secure");
+    expect((await app.inject("/api/v1/setup")).json()).toEqual({
+      needsSetup: false,
+      requiresToken: false,
+    });
+    const login = await app.inject({
+      method: "POST",
+      url: "/api/v1/login",
+      headers: { origin: common.publicOrigin },
+      payload: { email: payload.email, password: payload.password },
+    });
+    expect(login.statusCode).toBe(200);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/setup",
+          headers: { origin: common.publicOrigin },
+          payload,
+        })
+      ).statusCode,
+    ).toBe(409);
+  } finally {
+    await app.close();
+  }
+});
+
+it("configured bootstrap token enables explicit loopback-origin setup through a container bridge without trusting its peer", async () => {
+  const dataDirectory = await mkdtemp(join(tmpdir(), "memlia-bridge-"));
+  roots.push(dataDirectory);
+  const bootstrapToken = "fictitious-loopback-bootstrap-token-123456789";
+  const options = {
+    dataDirectory,
+    publicOrigin: "http://localhost:3000",
+    bootstrapToken,
+    allowEmbeddedDatabase: true,
+  };
+  const app = await createApplication(options);
+  try {
+    expect((await app.inject("/api/v1/setup")).json()).toEqual({
+      needsSetup: true,
+      requiresToken: true,
+    });
+    const request = {
+      method: "POST" as const,
+      url: "/api/v1/setup",
+      remoteAddress: "172.20.0.2",
+      payload: {
+        email: "bridge@example.test",
+        name: "Bridge fictif",
+        password: "Mot-de-passe-fictif-2026!",
+      },
+    };
+    expect(
+      (
+        await app.inject({
+          ...request,
+          headers: { origin: options.publicOrigin },
+        })
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await app.inject({
+          ...request,
+          headers: {
+            origin: options.publicOrigin,
+            "x-bootstrap-token": bootstrapToken,
+          },
+        })
+      ).statusCode,
+    ).toBe(201);
+    expect((await app.inject("/api/v1/setup")).json()).toEqual({
+      needsSetup: false,
+      requiresToken: false,
+    });
   } finally {
     await app.close();
   }

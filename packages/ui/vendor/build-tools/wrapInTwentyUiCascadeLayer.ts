@@ -1,7 +1,7 @@
 import { type ChildNode, type Plugin } from 'postcss';
 
-import { isDefined } from '../src/utilities/utils/isDefined';
-import { TWENTY_UI_CASCADE_LAYER_NAME } from './twentyUiCascadeLayerName';
+import { isDefined } from '../src/utilities/utils/isDefined.ts';
+import { TWENTY_UI_CASCADE_LAYER_NAME } from './twentyUiCascadeLayerName.ts';
 
 const TOP_LEVEL_AT_RULE_NAMES = ['charset', 'import', 'namespace'];
 
