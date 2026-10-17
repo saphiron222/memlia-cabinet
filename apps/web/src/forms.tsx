@@ -53,6 +53,7 @@ export function ErrorSummary({
 }
 const fieldLabels: Record<string, string> = {
   piece: "Fichier original",
+  scope: "Dossier de la collecte",
   filename: "Nom de fichier",
   title: "Titre",
   name: "Nom complet",

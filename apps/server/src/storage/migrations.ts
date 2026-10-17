@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 3)
+  if (version > 4)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -36,6 +36,12 @@ export async function migrate(connection: Connection): Promise<void> {
       .filter(Boolean))
       await connection.query(statement);
   if (version < 3) await migrateDocumentSearch(connection);
+  if (version < 4)
+    for (const statement of jobMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(statement);
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -94,3 +100,16 @@ async function migrateDocumentSearch(connection: Connection) {
   );
   await connection.query("INSERT INTO schema_migrations(version) VALUES (3)");
 }
+
+// Shared queue, separate from the global command identity journal.
+const jobMigration = `
+CREATE TABLE cabinet_job_gate (id integer PRIMARY KEY CHECK(id=1), paused boolean NOT NULL);
+INSERT INTO cabinet_job_gate VALUES(1,false);
+CREATE TABLE cabinet_jobs (id uuid PRIMARY KEY, kind text NOT NULL, actor_id uuid NOT NULL REFERENCES cabinet_users(id), dossier_id uuid NOT NULL REFERENCES cabinet_records(id), resource_key text NOT NULL, input jsonb NOT NULL, checkpoint jsonb NOT NULL, result jsonb, state text NOT NULL CHECK(state IN ('queued','running','completed','failed')), attempts integer NOT NULL DEFAULT 0, owner uuid, lease_until timestamptz, created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL, error text);
+CREATE INDEX cabinet_jobs_pending ON cabinet_jobs(state,created_at);
+CREATE TABLE cabinet_job_events (job_id uuid NOT NULL REFERENCES cabinet_jobs(id), sequence integer NOT NULL, event jsonb NOT NULL, PRIMARY KEY(job_id,sequence));
+CREATE TABLE cabinet_collection_observations (identity text PRIMARY KEY, dossier_id uuid NOT NULL REFERENCES cabinet_records(id), content jsonb NOT NULL);
+CREATE TABLE cabinet_collection_links (job_id uuid NOT NULL REFERENCES cabinet_jobs(id), identity text NOT NULL REFERENCES cabinet_collection_observations(identity), PRIMARY KEY(job_id,identity));
+CREATE TABLE cabinet_collection_snapshots (job_id uuid NOT NULL REFERENCES cabinet_jobs(id), page integer NOT NULL, content jsonb NOT NULL, PRIMARY KEY(job_id,page));
+INSERT INTO schema_migrations(version) VALUES (4);
+`;

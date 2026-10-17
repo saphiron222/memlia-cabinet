@@ -533,3 +533,13 @@ textarea {
 .document-upload .actions {
   margin-top: 12px;
 }
+
+.collections {
+  padding: 24px;
+}
+.collections > .document-upload {
+  max-width: 800px;
+}
+.collections > p {
+  margin-bottom: 16px;
+}

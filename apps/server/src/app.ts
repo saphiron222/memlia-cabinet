@@ -1,3 +1,6 @@
+import { JobRunner } from "./jobs/runner.js";
+import { CollectionService } from "./collections/service.js";
+import { registerCollectionRoutes } from "./collections/routes.js";
 import multipart from "@fastify/multipart";
 import { registerDocumentRoutes } from "./documents/routes.js";
 import { DocumentStore } from "./documents/store.js";
@@ -64,7 +67,11 @@ export async function createApplication(options: ApplicationOptions) {
     max: 10,
     timeWindow: "15 minutes",
   });
-  app.addHook("onClose", async () => db.close());
+  const jobs = new JobRunner(db, now);
+  app.addHook("onClose", async () => {
+    await jobs.stop();
+    await db.close();
+  });
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {
       return reply.code(400).send(
@@ -93,26 +100,22 @@ export async function createApplication(options: ApplicationOptions) {
       message?: string;
     };
     if (err.statusCode === 413)
-      return reply
-        .code(413)
-        .send({
-          error: {
-            code: "PAYLOAD_TOO_LARGE",
-            message: "La requête dépasse la taille autorisée (pièce : 10 Mio).",
-          },
-        });
+      return reply.code(413).send({
+        error: {
+          code: "PAYLOAD_TOO_LARGE",
+          message: "La requête dépasse la taille autorisée (pièce : 10 Mio).",
+        },
+      });
     if (
       err.code === "ERR_STREAM_PREMATURE_CLOSE" ||
       err.message?.includes("Unexpected end of")
     )
-      return reply
-        .code(400)
-        .send({
-          error: {
-            code: "INTERRUPTED_UPLOAD",
-            message: "Transfert interrompu. Réessayez avec le fichier complet.",
-          },
-        });
+      return reply.code(400).send({
+        error: {
+          code: "INTERRUPTED_UPLOAD",
+          message: "Transfert interrompu. Réessayez avec le fichier complet.",
+        },
+      });
     if (err.statusCode === 429)
       return reply.code(429).send({
         error: {
@@ -238,10 +241,13 @@ export async function createApplication(options: ApplicationOptions) {
   });
   registerRecordRoutes(app, { db, now, user });
   registerUserRoutes(app, { db, now, user });
-  registerDocumentRoutes(
+  const documents = new DocumentStore(options.dataDirectory);
+  registerDocumentRoutes(app, { db, now, user }, documents);
+  registerCollectionRoutes(
     app,
     { db, now, user },
-    new DocumentStore(options.dataDirectory),
+    new CollectionService(db, jobs, documents, now),
   );
+  jobs.start();
   return app;
 }

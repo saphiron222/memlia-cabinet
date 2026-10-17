@@ -1,3 +1,4 @@
+import { Collections } from "./Collections";
 import { Documents } from "./Documents";
 import { Home, Records } from "./RecordScreens";
 import { useEffect, useState, useRef } from "react";
@@ -217,8 +218,9 @@ function Auth({
     </main>
   );
 }
-type Page = "accueil" | "documents" | RecordKind;
+type Page = "accueil" | "documents" | "collectes" | RecordKind;
 const icons = {
+  collectes: IconDownload,
   documents: IconDownload,
   accueil: IconHome,
   dossier: IconBuilding,
@@ -228,9 +230,14 @@ const icons = {
 };
 function route(): Page {
   const hash = location.hash.slice(1);
-  return ["dossier", "contact", "tache", "obligation", "documents"].includes(
-    hash,
-  )
+  return [
+    "dossier",
+    "contact",
+    "tache",
+    "obligation",
+    "documents",
+    "collectes",
+  ].includes(hash)
     ? (hash as Page)
     : "accueil";
 }
@@ -295,6 +302,7 @@ function Cabinet({
               "tache",
               "obligation",
               "documents",
+              "collectes",
             ] as Page[]
           ).map((p) => {
             const Icon = icons[p];
@@ -303,7 +311,9 @@ function Cabinet({
                 ? "Accueil"
                 : p === "documents"
                   ? "Documents"
-                  : labels[p];
+                  : p === "collectes"
+                    ? "Collectes"
+                    : labels[p];
             return (
               <a
                 key={p}
@@ -377,13 +387,17 @@ function Cabinet({
               ? "Accueil"
               : page === "documents"
                 ? "Documents"
-                : labels[page]}
+                : page === "collectes"
+                  ? "Collectes"
+                  : labels[page]}
           </h1>
           <span className="muted">Cabinet partagé</span>
         </header>
         <ErrorSummary message={fault || undefined} />
         {page === "accueil" ? (
           <Home key={page} />
+        ) : page === "collectes" ? (
+          <Collections user={user} />
         ) : page === "documents" ? (
           <Documents user={user} />
         ) : (

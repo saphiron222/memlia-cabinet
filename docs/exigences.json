@@ -2303,10 +2303,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Acquisition CFE fictive et contrat avis : référence, montant, années, échéance, établissement, prélèvement distinct du paiement et original GED. Vue fiscale complète et compte réel non livrés dans ce lot.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -2329,10 +2347,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Téléchargement unitaire des originaux fictifs et rapport de couverture ; export de lots multidossiers et collecte réelle non livrés.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -2680,10 +2716,28 @@
         "robots/approfondissement-dgfip.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Observation typée de nouveau message fiscal et PJ manquante ; état lu avant/après séparé. Conversation métier complète et lecture réelle à construire.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -2819,10 +2873,28 @@
         "robots/approfondissement-dgfip.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Contrats/simulations dette, apurement et paiement séparés ; remise sans règlement et couverture explicite. Vue métier de dette et historique fiscal réel à construire.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5278,10 +5350,28 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Catalogue/page Collectes : 17 IDs en simulation, mode réel explicitement indisponible. Configuration des vrais comptes et cartes de capacités détaillées restent à construire.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5306,10 +5396,28 @@
         "robots/approfondissement-urssaf.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Collecte seule, aucun envoi/paiement/génération ni changement d’accès ; observations sources typées distinctes des commandes métier. Les autres démarches restent leurs lots.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5332,10 +5440,28 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Provenance source simulée, connexion portefeuille vs partage fiscal, fraîcheur, done sans acceptation et paiement validé sans preuve bancaire. Mapping complet des champs fournisseur à valider.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5358,10 +5484,28 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Entrepôt fictif manquant produit une couverture partielle sans suppression de dossier. Connexions/configuration fournisseur et comptes réels à construire.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5829,10 +5973,28 @@
         "robots/approfondissement-urssaf.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Deux contextes fictifs de portefeuille normalisés vers une identité de compte/message ; identité vérifiée et pièce manquante explicite. Pagination réelle des échanges à valider au pilote.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5951,10 +6113,28 @@
         "DECISIONS-MEMLIA.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "File durable commune et reprise des simulateurs, checkpoint atomique GED/observations, leases et arrêt. Pilotes réels et reprise de leurs formats restent Task10/recette cabinet.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -6045,10 +6225,28 @@
         "observations/verifications-internes/registre-controles.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/collections.ts",
+          "packages/contracts/src/jobs.ts",
+          "apps/server/src/collections/service.ts",
+          "apps/server/src/jobs/runner.ts",
+          "apps/server/fixtures/collections.ts",
+          "apps/web/src/Collections.tsx",
+          "docs/collectes-simulees.md"
+        ],
+        "tests": [
+          "apps/server/test/collections.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "tests/e2e/collections.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Contrats bornés et 17 simulateurs explicites reliés à validation-connecteurs.md ; variantes métier et erreurs locales éprouvées. Aucun protocole ni portail réel implémenté.",
+        "verification": {
+          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {

@@ -293,15 +293,16 @@ function UploadForm({
       setErrors({ piece: "La pièce dépasse la limite de 10 Mio." });
       return;
     }
-    const mediaType = file.name.toLowerCase().endsWith(".pdf")
+    const filename = file.name.trim();
+    const mediaType = filename.toLowerCase().endsWith(".pdf")
       ? "application/pdf"
-      : file.name.toLowerCase().endsWith(".txt")
+      : filename.toLowerCase().endsWith(".txt")
         ? "text/plain"
         : "application/octet-stream";
     const parsed = DocumentInputSchema.safeParse({
       operationId,
       dossierId,
-      filename: file.name,
+      filename,
       mediaType,
       confidential,
       previousVersionId: previous?.id ?? null,
@@ -317,7 +318,11 @@ function UploadForm({
     }
     const data = new FormData();
     data.append("metadata", JSON.stringify(parsed.data));
-    data.append("file", new Blob([file], { type: mediaType }), file.name);
+    data.append(
+      "file",
+      new Blob([file], { type: mediaType }),
+      parsed.data.filename,
+    );
     setBusy(true);
     try {
       await request("/documents", DocumentSchema, signal, {

@@ -1,3 +1,4 @@
+import { request as httpRequest } from "node:http";
 import { expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
@@ -276,34 +277,116 @@ it("searches extracted text only in authorized documents and keeps missing/corru
     await f.close();
   }
 });
+// Core HTTP retains a complete early error response even when the request body is
+// still being written. Undici fetch can instead reject that exchange with EPIPE.
+async function postLarge(
+  url: string,
+  headers: Record<string, string>,
+  content: Uint8Array | string,
+) {
+  const bytes = Buffer.from(content);
+  return new Promise<{ status: number; body: unknown; bytesSent: number }>(
+    (resolve, reject) => {
+      let responseStarted = false,
+        complete = false,
+        offset = 0,
+        writeError: Error | undefined;
+      const timer = setTimeout(() => {
+        req.destroy();
+        reject(new Error("Réponse HTTP complète absente."));
+      }, 5000);
+      const req = httpRequest(
+        url,
+        {
+          method: "POST",
+          headers: {
+            ...headers,
+            "content-length": String(bytes.length),
+            expect: "100-continue",
+          },
+        },
+        (response) => {
+          responseStarted = true;
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+          response.on("error", (error) => {
+            clearTimeout(timer);
+            reject(error);
+          });
+          response.on("end", () => {
+            clearTimeout(timer);
+            if (!response.complete) {
+              reject(new Error("Réponse HTTP tronquée."));
+              return;
+            }
+            complete = true;
+            try {
+              resolve({
+                status: response.statusCode!,
+                body: JSON.parse(Buffer.concat(chunks).toString()),
+                bytesSent: offset,
+              });
+            } catch (error) {
+              reject(error);
+            }
+          });
+          req.end();
+        },
+      );
+      req.on("error", (error) => {
+        writeError = error;
+      });
+      req.on("close", () => {
+        if (!complete && !responseStarted) {
+          clearTimeout(timer);
+          reject(
+            writeError ?? new Error("Connexion fermée sans réponse HTTP."),
+          );
+        }
+      });
+      const send = () => {
+        if (responseStarted || req.destroyed) return;
+        if (offset === bytes.length) {
+          req.end();
+          return;
+        }
+        const end = Math.min(offset + 16384, bytes.length),
+          chunk = bytes.subarray(offset, end);
+        offset = end;
+        if (req.write(chunk)) setImmediate(send);
+        else req.once("drain", send);
+      };
+      req.once("continue", () => setImmediate(send));
+      req.flushHeaders();
+    },
+  );
+}
 it("returns structured 413 for a real oversized JSON request and multipart upload", async () => {
   const f = await fixture();
   try {
     await f.setup();
     const d = (await f.request("POST", "/records", dossier())).json();
     const address = await f.app.listen({ port: 0, host: "127.0.0.1" });
-    const res = await fetch(address + "/api/v1/records", {
-      method: "POST",
-      headers: { origin, cookie: f.cookie, "content-type": "application/json" },
-      body: JSON.stringify({ huge: "x".repeat(1024 * 1024 + 1) }),
-    });
+    const oversizedJson = JSON.stringify({ huge: "x".repeat(1024 * 1024 + 1) });
+    const res = await postLarge(
+      address + "/api/v1/records",
+      { origin, cookie: f.cookie, "content-type": "application/json" },
+      oversizedJson,
+    );
     expect(res.status).toBe(413);
-    expect(await res.json()).toMatchObject({
-      error: { code: "PAYLOAD_TOO_LARGE" },
-    });
-    const large = await fetch(address + "/api/v1/documents", {
-      method: "POST",
-      headers: {
+    expect(res.body).toMatchObject({ error: { code: "PAYLOAD_TOO_LARGE" } });
+    expect(res.bytesSent).toBeLessThan(Buffer.byteLength(oversizedJson));
+    const large = await postLarge(
+      address + "/api/v1/documents",
+      {
         origin,
         cookie: f.cookie,
         "content-type": "multipart/form-data; boundary=piece",
       },
-      body: multipart(metadata(d.id), Buffer.alloc(10 * 1024 * 1024 + 1)),
-    });
+      multipart(metadata(d.id), Buffer.alloc(10 * 1024 * 1024 + 1)),
+    );
     expect(large.status).toBe(413);
-    expect(await large.json()).toMatchObject({
-      error: { code: "PAYLOAD_TOO_LARGE" },
-    });
+    expect(large.body).toMatchObject({ error: { code: "PAYLOAD_TOO_LARGE" } });
     expect((await f.request("GET", "/documents")).json().total).toBe(0);
   } finally {
     await f.close();
@@ -500,6 +583,9 @@ it("upgrades a version-one database without losing cabinet records and reports a
     ).json();
     await f.maintainDatabase(async (db) => {
       await db.transaction(async (tx) => {
+        await tx.query(
+          "DROP TABLE cabinet_collection_snapshots, cabinet_collection_links, cabinet_collection_observations, cabinet_job_events, cabinet_jobs, cabinet_job_gate",
+        );
         await tx.query("DROP TABLE cabinet_documents");
         await tx.query("DELETE FROM schema_migrations WHERE version>=2");
       });
@@ -772,7 +858,10 @@ it("backfills indexed search from schema two and keeps a shared extension outsid
         await tx.query(
           "ALTER TABLE cabinet_documents DROP COLUMN IF EXISTS search_text",
         );
-        await tx.query("DELETE FROM schema_migrations WHERE version=3");
+        await tx.query(
+          "DROP TABLE cabinet_collection_snapshots, cabinet_collection_links, cabinet_collection_observations, cabinet_job_events, cabinet_jobs, cabinet_job_gate",
+        );
+        await tx.query("DELETE FROM schema_migrations WHERE version>=3");
       });
     });
     expect(

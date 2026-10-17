@@ -9,7 +9,7 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
   },
-  webServer: [4173, 4175].map((port) => ({
+  webServer: [4173, 4175, 4177].map((port) => ({
     command: "npx tsx tests/e2e/serve.ts",
     url: `http://127.0.0.1:${port}`,
     env: {
