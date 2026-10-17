@@ -1,3 +1,8 @@
+import {
+  WorkflowCalendarSchema,
+  FiscalNatureSchema,
+  CabinetRecordSchema,
+} from "@memlia/contracts";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { Button, Checkbox } from "@memlia/ui";
@@ -72,6 +77,13 @@ export function WorkflowModels({
     [targetIds, setTargetIds] = useState<string[]>([]),
     [recipients, setRecipients] = useState<string[]>([]),
     [records, setRecords] = useState<{ id: string; title: string }[]>([]),
+    [targetSearch, setTargetSearch] = useState(""),
+    [targetOffset, setTargetOffset] = useState(0),
+    [targetTotal, setTargetTotal] = useState(0),
+    [selectedRecords, setSelectedRecords] = useState<
+      { id: string; title: string }[]
+    >([]),
+    [targetError, setTargetError] = useState(""),
     [people, setPeople] = useState<{ id: string; name: string }[]>([]),
     [importing, setImporting] = useState(false);
   function edit(m: WorkflowModel | null, newKind = kind) {
@@ -125,32 +137,59 @@ export function WorkflowModels({
   }
   useEffect(() => {
     if (kind !== "reminder" || !showForm) return;
-    void Promise.all([
-      request(
-        "/records?limit=200",
-        z.object({
-          items: z.array(
-            z.object({ id: z.uuid(), title: z.string(), kind: z.string() }),
-          ),
-        }),
-        signal,
-      ),
-      request(
-        "/users",
-        z.object({
-          items: z.array(z.object({ id: z.uuid(), name: z.string() })),
-        }),
-        signal,
-      ),
-    ])
-      .then(([r, u]) => {
-        setRecords(
-          r.items.filter((x) => ["tache", "obligation"].includes(x.kind)),
-        );
-        setPeople(u.items);
-      })
+    void request(
+      "/users",
+      z.object({
+        items: z.array(z.object({ id: z.uuid(), name: z.string() })),
+      }),
+      signal,
+    )
+      .then((r) => setPeople(r.items))
       .catch((e) => setError(message(e)));
   }, [kind, showForm]);
+  useEffect(() => {
+    if (kind !== "reminder" || !showForm) return;
+    const c = new AbortController();
+    setTargetError("");
+    setRecords([]);
+    void request(
+      "/workflows/calendar?includeTasks=true&natures=" +
+        encodeURIComponent(FiscalNatureSchema.options.join(",")) +
+        "&limit=50&offset=" +
+        targetOffset +
+        "&q=" +
+        encodeURIComponent(targetSearch),
+      WorkflowCalendarSchema,
+      c.signal,
+    )
+      .then((r) => {
+        setRecords(r.items);
+        setTargetTotal(r.total);
+      })
+      .catch((e) => {
+        if (!c.signal.aborted) setTargetError(message(e));
+      });
+    return () => c.abort();
+  }, [kind, showForm, targetSearch, targetOffset]);
+  useEffect(() => {
+    if (kind !== "reminder" || !showForm) return;
+    const c = new AbortController();
+    void Promise.all(
+      targetIds.map(async (id) => {
+        try {
+          return await request("/records/" + id, CabinetRecordSchema, c.signal);
+        } catch {
+          return {
+            id,
+            title: "Travail inaccessible — retirer de la sélection",
+          };
+        }
+      }),
+    ).then((r) => {
+      if (!c.signal.aborted) setSelectedRecords(r);
+    });
+    return () => c.abort();
+  }, [kind, showForm, targetIds, targetSearch, targetOffset]);
   useEffect(() => {
     if (!job || ["completed", "failed"].includes(job.state)) return;
     const c = new AbortController();
@@ -571,7 +610,29 @@ export function WorkflowModels({
                 />
                 <fieldset>
                   <legend>Travaux concernés</legend>
-                  {records.map((r) => (
+                  <Field
+                    name="reminder-target-search"
+                    label="Rechercher un travail"
+                    value={targetSearch}
+                    onChange={(v) => {
+                      setTargetSearch(v);
+                      setTargetOffset(0);
+                    }}
+                  />
+                  <ErrorSummary message={targetError || undefined} />
+                  <p>
+                    {targetIds.length}{" "}
+                    {targetIds.length === 1
+                      ? "travail sélectionné"
+                      : "travaux sélectionnés"}{" "}
+                    · {targetTotal}{" "}
+                    {targetTotal === 1 ? "résultat" : "résultats"}
+                  </p>
+                  {[
+                    ...new Map(
+                      [...selectedRecords, ...records].map((r) => [r.id, r]),
+                    ).values(),
+                  ].map((r) => (
                     <label className="check" key={r.id}>
                       <Checkbox
                         checked={targetIds.includes(r.id)}
@@ -586,6 +647,22 @@ export function WorkflowModels({
                       {r.title}
                     </label>
                   ))}
+                  <div className="actions">
+                    <Button
+                      disabled={!targetOffset}
+                      onClick={() =>
+                        setTargetOffset(Math.max(0, targetOffset - 50))
+                      }
+                    >
+                      Travaux précédents
+                    </Button>
+                    <Button
+                      disabled={targetOffset + 50 >= targetTotal}
+                      onClick={() => setTargetOffset(targetOffset + 50)}
+                    >
+                      Travaux suivants
+                    </Button>
+                  </div>
                 </fieldset>
                 <fieldset>
                   <legend>Destinataires</legend>
@@ -970,9 +1047,39 @@ function ReminderRuns({ modelId }: { modelId: string }) {
     <section className="work-reminder-runs">
       <h4>Suivi des rappels programmés</h4>
       <Button onClick={() => void load()}>Actualiser les rappels</Button>
+      <Button
+        onClick={() => {
+          void request(
+            "/notifications/process",
+            z.object({ scheduled: z.number() }),
+            signal,
+            {
+              method: "POST",
+              body: JSON.stringify({ operationId: crypto.randomUUID() }),
+            },
+          )
+            .then(load)
+            .catch((e) => setError(message(e)));
+        }}
+      >
+        Reprendre la préparation
+      </Button>
       <ErrorSummary message={error || undefined} />
       {runs ? (
         <>
+          <p>
+            Rattrapage automatique : au plus 31 jours par version et 20 versions
+            par passage. Les droits sont contrôlés à chaque traitement.
+          </p>
+          {runs.preparation.map((p) => (
+            <p key={p.id}>
+              Modèle v{p.modelVersion} ·{" "}
+              {p.complete
+                ? "Période préparée"
+                : "À préparer à partir du " + p.nextDate}
+              {p.error && <span role="alert"> · {p.error}</span>}
+            </p>
+          ))}
           {!runs.items.length && (
             <p>Aucune occurrence traitée pour ce modèle.</p>
           )}

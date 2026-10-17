@@ -1,5 +1,6 @@
 import {
   WorkflowExportSchema,
+  WorkflowModelSchema,
   type WorkflowExport,
   type SessionUser,
 } from "@memlia/contracts";
@@ -31,6 +32,7 @@ export async function workflowExportPage(
  UNION ALL SELECT w.id,jsonb_build_object('entity','work_event','data',w.content,'actorId',w.actor_id,'operationId',w.operation_id) FROM cabinet_work_events w WHERE ${target("w.target_id")}
  UNION ALL SELECT n.id,jsonb_build_object('entity','notification','data',n.content) FROM cabinet_notifications n WHERE n.recipient_id=$3 AND ${target("n.target_id")}
  UNION ALL SELECT overlay(overlay(md5('notification_preferences:'||p.user_id::text) placing '4' from 13 for 1) placing 'a' from 17 for 1)::uuid,jsonb_build_object('entity','notification_preferences','userId',p.user_id,'data',p.content) FROM cabinet_notification_preferences p WHERE p.user_id=$3
+ UNION ALL SELECT p.id,jsonb_build_object('entity','reminder_preparation','data',p.content) FROM cabinet_reminder_preparation p JOIN cabinet_workflow_model_versions m ON m.id=p.model_id AND m.version=p.model_version JOIN cabinet_workflow_models current ON current.id=m.id WHERE p.actor_id=$3 AND ${modelScope("m.content")} AND ${modelScope("current.content")}
  UNION ALL SELECT i.id,jsonb_build_object('entity','checklist_import','data',i.content) FROM cabinet_workflow_imports i WHERE i.actor_id=$3
  ), page AS (SELECT id,payload||jsonb_build_object('id',id) content FROM entries WHERE ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 200), bounded AS (SELECT *,sum(octet_length(content::text)) OVER(ORDER BY id) bytes,row_number() OVER(ORDER BY id) ordinal FROM page) SELECT content FROM bounded WHERE bytes<=2097152 OR ordinal=1 ORDER BY id`;
   const rows = await tx.query(sql, [exportId, after, actor.id]);
@@ -43,6 +45,23 @@ export async function assertWorkflowExport(
   actor: SessionUser,
   e: WorkflowExport,
 ) {
+  if (e.entity === "reminder_preparation") {
+    if (e.data.actorId !== actor.id)
+      fail(403, "FORBIDDEN", "Sortie inaccessible.");
+    const versions = await tx.query(
+      "SELECT content FROM cabinet_workflow_model_versions WHERE id=$1 AND version=$2",
+      [e.data.modelId, e.data.modelVersion],
+    );
+    for (const model of [
+      WorkflowModelSchema.parse(versions[0]!.content),
+      await loadModel(tx, e.data.modelId),
+    ]) {
+      await requireModelAccess(tx, actor, model.model);
+      if (model.model.kind === "reminder")
+        for (const id of model.model.targetIds)
+          await workTarget(tx, actor, id, "export");
+    }
+  }
   if (e.entity === "work" || e.entity === "work_event") {
     await workTarget(tx, actor, e.data.id, "export");
     await requireAccess(tx, actor, "export", e.data.target);

@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 8)
+  if (version > 9)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -81,6 +81,12 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((s) => s.trim())
       .filter(Boolean))
       await connection.query(statement);
+  if (version < 9) {
+    await connection.query(
+      "CREATE TABLE cabinet_reminder_preparation(id uuid PRIMARY KEY,model_id uuid NOT NULL,model_version integer NOT NULL,actor_id uuid NOT NULL REFERENCES cabinet_users(id),content jsonb NOT NULL,UNIQUE(model_id,model_version))",
+    );
+    await connection.query("INSERT INTO schema_migrations(version) VALUES(9)");
+  }
 }
 
 // Additive migration: the published first migration above remains unchanged.

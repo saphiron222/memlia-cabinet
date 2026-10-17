@@ -385,7 +385,7 @@
   },
   "POST /api/v1/workflows/imports/preview": {
     "file": "apps/server/test/workflows.test.ts",
-    "test": "checklist exchange previews mapping and unmapped columns, requires explicit validation and persists versioned models"
+    "test": "checklist import preview isolates invalid and duplicate rows from valid models"
   },
   "POST /api/v1/workflows/imports/:id/commit": {
     "file": "apps/server/test/workflows.test.ts",
@@ -397,7 +397,7 @@
   },
   "POST /api/v1/notifications/process": {
     "file": "apps/server/test/workflows.test.ts",
-    "test": "reminders use cabinet hour, recipient access and deterministic single in-app occurrence"
+    "test": "reminder preparation catches up a missed civil date durably without duplicate after restart"
   },
   "GET /api/v1/notifications": {
     "file": "apps/server/test/workflows.test.ts",

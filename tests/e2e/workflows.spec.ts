@@ -237,6 +237,27 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
   await page
     .getByRole("button", { name: "Reprendre des modèles", exact: true })
     .click();
+  const invalidModel = crypto.randomUUID();
+  const invalidCsv = `id;name;targets;item;label;order\n${invalidModel};Reprise mixte;tache;${crypto.randomUUID()};Valide;1\n${invalidModel};Reprise mixte;tache;${crypto.randomUUID()};;2\n`;
+  await page.getByLabel("Fichier de modèles").setInputFiles({
+    name: "mixte.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(invalidCsv),
+  });
+  await page.getByRole("button", { name: "Prévisualiser la reprise" }).click();
+  await expect(page.getByRole("alert")).toContainText("Ligne 3");
+  await expect(
+    page.getByRole("checkbox", {
+      name: /Valider « Reprise mixte » — 1 éléments/,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Enregistrer les modèles validés" }),
+  ).toBeDisabled();
+  await page.screenshot({
+    path: "evidence/private/task3/r1-import-invalid.png",
+    fullPage: true,
+  });
   const csv =
     "id;name;targets;item;label;order;extra\n" +
     crypto.randomUUID() +
@@ -528,4 +549,226 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
       ).status(),
     ).toBe(404);
   await readerContext.close();
+});
+
+for (const zone of ["Europe/Paris", "Pacific/Auckland"]) {
+  test(`dates civiles : ${zone} garde détail liste semaine calendrier formulaire et export`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      baseURL: origin,
+      timezoneId: zone,
+      locale: "fr-FR",
+      viewport: {
+        width: zone === "Pacific/Auckland" ? 900 : 1440,
+        height: 1000,
+      },
+    });
+    const page = await context.newPage();
+    await page.goto("/");
+    await page.getByLabel("Adresse email").fill("workflows@example.test");
+    await page.getByLabel("Mot de passe").fill("MotDePasseFictif123!");
+    await page
+      .getByRole("button", { name: "Se connecter", exact: true })
+      .click();
+    await expect(
+      page.getByRole("navigation", { name: "Navigation principale" }),
+    ).toBeVisible();
+    const title = "Date civile " + zone;
+    const r = await page.request.post("/api/v1/records", {
+      headers: { origin },
+      data: {
+        operationId: crypto.randomUUID(),
+        record: {
+          kind: "tache",
+          title,
+          data: {
+            dueDate: "2026-10-31",
+            checklist: [
+              {
+                id: crypto.randomUUID(),
+                label: "Ancienne vérification",
+                done: false,
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(r.status()).toBe(201);
+    const t = await r.json();
+    await page.goto("/#tache?id=" + t.id);
+    await page
+      .getByRole("checkbox", { name: "Ancienne vérification", exact: true })
+      .click();
+    await expect(
+      page.getByRole("checkbox", {
+        name: "Ancienne vérification",
+        exact: true,
+      }),
+    ).toBeChecked();
+    await page.getByLabel("Déplacer la tâche").selectOption("terminee");
+    await expect(page.locator(".work-record-header .badge")).toHaveText(
+      "Terminée",
+    );
+    await expect(page.getByText("31/10/2026", { exact: true })).toBeVisible();
+    await expect(page.getByText("01/11/2026", { exact: true })).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Modifier la tâche", exact: true })
+      .click();
+    await expect(page.getByLabel("Échéance de la tâche")).toHaveValue(
+      "2026-10-31",
+    );
+    await page.getByRole("button", { name: "Annuler", exact: true }).click();
+    await page.screenshot({
+      path: `evidence/private/task3/r1-date-${zone.split("/")[1]}-detail.png`,
+      fullPage: true,
+    });
+    await page.getByRole("link", { name: "Revenir aux tâches" }).click();
+    await page.getByPlaceholder("Rechercher le travail…").fill(title);
+    for (const name of ["Liste", "Semaine", "Calendrier"]) {
+      await page.getByRole("tab", { name, exact: true }).click();
+      await expect(
+        page.getByRole("link", { name: title, exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText("31/10/2026", { exact: true })).toBeVisible();
+      await expect(page.getByText("01/11/2026", { exact: true })).toHaveCount(
+        0,
+      );
+    }
+    await page.screenshot({
+      path: `evidence/private/task3/r1-date-${zone.split("/")[1]}-calendar.png`,
+      fullPage: true,
+    });
+    const download = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Exporter en CSV", exact: true })
+      .click();
+    const stream = await (await download).createReadStream();
+    let csv = "";
+    for await (const chunk of stream!) csv += chunk.toString();
+    expect(csv).toContain(title);
+    expect(csv).toContain("2026-10-31");
+    expect(csv).not.toContain("2026-11-01");
+    await context.close();
+  });
+}
+
+test("rappel : rechercher au-delà de 200 objets et conserver la sélection entre les pages", async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  const setup = await (await page.request.get("/api/v1/setup")).json();
+  if (setup.needsSetup) {
+    await page.request.post("/api/v1/setup", {
+      headers: { origin },
+      data: {
+        name: "Admin workflows fictif",
+        email: "workflows@example.test",
+        password: "MotDePasseFictif123!",
+      },
+    });
+    await page.request.post("/api/v1/logout", {
+      headers: { origin },
+      data: {},
+    });
+  }
+  await page.goto("/");
+  await page.getByLabel("Adresse email").fill("workflows@example.test");
+  await page.getByLabel("Mot de passe").fill("MotDePasseFictif123!");
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Navigation principale" }),
+  ).toBeVisible();
+  const create = async (kind: string, title: string) => {
+    const r = await page.request.post("/api/v1/records", {
+      headers: { origin },
+      data: {
+        operationId: crypto.randomUUID(),
+        record: { kind, title, data: {} },
+      },
+    });
+    expect(r.status()).toBe(201);
+    return r.json();
+  };
+  for (let n = 0; n < 210; n++)
+    await create("contact", "AAA Contact " + String(n).padStart(3, "0"));
+  for (let n = 1; n <= 51; n++)
+    await create("tache", "ZZ Sélection " + String(n).padStart(2, "0"));
+  const general = await (
+    await page.request.get("/api/v1/records?limit=200")
+  ).json();
+  expect(general.items.every((r: any) => r.kind === "contact")).toBe(true);
+  await page.getByRole("link", { name: "Tâches", exact: true }).click();
+  await page.getByRole("button", { name: "Modèles et récurrences" }).click();
+  await page
+    .getByRole("button", { name: "Nouveau modèle · Rappel", exact: true })
+    .click();
+  await page
+    .getByLabel("Nom du modèle", { exact: true })
+    .fill("Périmètre paginé");
+  await page.getByLabel("Rechercher un travail").fill("ZZ Sélection");
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 01", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 51", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Travaux suivants" }).focus();
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("checkbox", { name: "ZZ Sélection 51", exact: true })
+    .focus();
+  await page.keyboard.press("Space");
+  await page.getByLabel("Rechercher un travail").fill("ZZ Sélection 01");
+  await page
+    .getByRole("checkbox", { name: "ZZ Sélection 01", exact: true })
+    .check();
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 51", exact: true }),
+  ).toBeChecked();
+  await page.getByLabel("Rechercher un travail").fill("Aucun résultat fictif");
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 01", exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 51", exact: true }),
+  ).toBeChecked();
+  await page
+    .getByRole("checkbox", { name: "Admin workflows fictif", exact: true })
+    .check();
+  await page
+    .getByRole("button", { name: "Enregistrer le modèle", exact: true })
+    .click();
+  await expect(
+    page.getByText("Modèle enregistré · version 1", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Reprendre la préparation", exact: true })
+    .click();
+  await expect(page.getByText(/À préparer à partir du/)).toBeVisible();
+  await page.screenshot({
+    path: "evidence/private/task3/r1-reminder-selection.png",
+    fullPage: true,
+  });
+  await page
+    .locator(".work-model-editor")
+    .screenshot({ path: "evidence/private/task3/r1-reminder-editor.png" });
+  await page.setViewportSize({ width: 900, height: 1000 });
+  await page.getByRole("button", { name: "Activer le thème sombre" }).click();
+  await expect(page.locator("html")).toHaveClass("dark");
+  await page
+    .locator(".work-model-editor")
+    .screenshot({
+      path: "evidence/private/task3/r1-reminder-editor-900-dark.png",
+    });
+  await page.reload();
+  await page.getByRole("button", { name: "Modèles et récurrences" }).click();
+  await page.getByRole("button", { name: /Périmètre paginé/ }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 01", exact: true }),
+  ).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: "ZZ Sélection 51", exact: true }),
+  ).toBeChecked();
 });

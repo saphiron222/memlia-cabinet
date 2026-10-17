@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   WorkflowModelSchema,
+  ReminderPreparationSchema,
   NotificationSchema,
   previewOccurrences,
   type SessionUser,
@@ -121,7 +122,27 @@ export class Reminders {
         job: run.job,
       });
     }
-    return { items, nextOffset: rows.length > 50 ? offset + 50 : null };
+    const prep = await tx.query(
+      "SELECT content FROM cabinet_reminder_preparation WHERE actor_id=$1 AND model_id=$2 ORDER BY model_version DESC OFFSET $3 LIMIT 50",
+      [actor.id, modelId, offset],
+    );
+    for (const row of prep) {
+      const p = ReminderPreparationSchema.parse(row.content);
+      const old = await tx.query(
+        "SELECT content FROM cabinet_workflow_model_versions WHERE id=$1 AND version=$2",
+        [modelId, p.modelVersion],
+      );
+      await this.authorize(
+        tx,
+        actor,
+        WorkflowModelSchema.parse(old[0]!.content),
+      );
+    }
+    return {
+      items,
+      preparation: prep.map((r) => ReminderPreparationSchema.parse(r.content)),
+      nextOffset: rows.length > 50 || prep.length === 50 ? offset + 50 : null,
+    };
   }
   async process(tx: Connection, actor: SessionUser) {
     const now = this.now(),
@@ -135,49 +156,101 @@ export class Reminders {
       hour = ["hour", "minute"]
         .map((k) => parts.find((p) => p.type === k)!.value)
         .join(":");
+    const addDays = (day: string, amount: number) => {
+      const d = new Date(day + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + amount);
+      return d.toISOString().slice(0, 10);
+    };
+    const localTime = (instant: Date) =>
+      new Intl.DateTimeFormat("en-GB", {
+        timeZone: this.zone,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+      }).format(instant);
     let scheduled = 0;
-    let after: string | null = null;
-    while (true) {
-      const rows: Record<string, unknown>[] = await tx.query(
-        "SELECT id,content FROM cabinet_workflow_models WHERE content->'model'->>'kind'='reminder' AND content->>'actorId'=$1 AND ($2::uuid IS NULL OR id>$2::uuid) ORDER BY id LIMIT 100",
-        [actor.id, after],
-      );
-      if (!rows.length) break;
-      for (const row of rows) {
-        const model = WorkflowModelSchema.parse(row.content),
-          m = model.model;
-        if (
-          m.kind !== "reminder" ||
-          !m.enabled ||
-          hour < m.hour ||
-          !previewOccurrences(m.rule, date, date).length
-        )
-          continue;
-        try {
-          await this.authorize(tx, actor, model);
-        } catch (e) {
-          if (e instanceof ApiFault && [403, 404].includes(e.status)) continue;
-          throw e;
+    // Immutable versions reconstruct an unprepared interval even if the app never ran on its due day.
+    const rows = await tx.query(
+      `WITH versions AS (SELECT v.*,lead(content->>'updatedAt') OVER(PARTITION BY id ORDER BY version) next_version_at FROM cabinet_workflow_model_versions v)
+      SELECT v.content,v.next_version_at,p.content preparation FROM versions v JOIN cabinet_workflow_models current_model ON current_model.id=v.id LEFT JOIN cabinet_reminder_preparation p ON p.model_id=v.id AND p.model_version=v.version
+      WHERE current_model.content->>'actorId'=$1 AND v.content->'model'->>'kind'='reminder' AND (v.content->'model'->>'enabled')::boolean
+      AND NOT COALESCE((p.content->>'complete')::boolean,false) AND (COALESCE(p.content->>'nextDate','0000-01-01')<=$2 OR v.next_version_at IS NOT NULL)
+      AND NOT EXISTS(SELECT 1 FROM versions older LEFT JOIN cabinet_reminder_preparation op ON op.model_id=older.id AND op.model_version=older.version WHERE older.id=v.id AND older.version<v.version AND (older.content->'model'->>'enabled')::boolean AND NOT COALESCE((op.content->>'complete')::boolean,false))
+      ORDER BY COALESCE(p.content->>'updatedAt',''),v.id,v.version LIMIT 20`,
+      [actor.id, date],
+    );
+    for (const row of rows) {
+      const model = WorkflowModelSchema.parse(row.content),
+        m = model.model;
+      if (m.kind !== "reminder") continue;
+      const changedAt = new Date(model.updatedAt);
+      const changedDay = this.civilDate(changedAt);
+      const start =
+        model.version === 1 || m.hour + ":00" >= localTime(changedAt)
+          ? changedDay
+          : addDays(changedDay, 1);
+      let p = row.preparation
+        ? ReminderPreparationSchema.parse(row.preparation)
+        : ReminderPreparationSchema.parse({
+            id: stableId(`reminder-preparation:${model.id}:${model.version}`),
+            modelId: model.id,
+            modelVersion: model.version,
+            actorId: actor.id,
+            nextDate: start > m.rule.start ? start : m.rule.start,
+            complete: false,
+            error: null,
+            updatedAt: now.toISOString(),
+          });
+      const nextVersion = row.next_version_at
+        ? new Date(String(row.next_version_at))
+        : null;
+      const endVersion = nextVersion
+        ? addDays(
+            this.civilDate(nextVersion),
+            m.hour + ":00" < localTime(nextVersion) ? 0 : -1,
+          )
+        : m.rule.end;
+      const end = endVersion < m.rule.end ? endVersion : m.rule.end;
+      const available = hour >= m.hour ? date : addDays(date, -1);
+      const stop = [end, available, addDays(p.nextDate, 30)].sort()[0]!;
+      p = {
+        ...p,
+        actorId: actor.id,
+        error: null,
+        updatedAt: now.toISOString(),
+      };
+      try {
+        await this.authorize(tx, actor, model);
+        await this.authorize(tx, actor, await loadModel(tx, model.id));
+        if (p.nextDate <= stop) {
+          for (const due of previewOccurrences(m.rule, p.nextDate, stop)) {
+            const operation = stableId(`reminder-job:${model.id}:${due}`);
+            const exists = await tx.query(
+              "SELECT id FROM cabinet_jobs WHERE kind='workflow-reminder' AND resource_key=$1 AND input->>'date'=$2 LIMIT 1",
+              ["reminder:" + model.id, due],
+            );
+            if (!exists.length) {
+              await this.enqueue(tx, actor, operation, { model, date: due });
+              scheduled++;
+            }
+            p.nextDate = addDays(due, 1);
+          }
+          p.nextDate = addDays(stop, 1);
         }
-        const operation = stableId(`reminder-job:${model.id}:${date}`);
-        if (
-          (
-            await tx.query(
-              "SELECT operation_id FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
-              [actor.id, operation],
-            )
-          ).length
-        )
-          continue;
-        await this.enqueue(
-          tx,
-          actor,
-          stableId(`reminder-job:${model.id}:${date}`),
-          { model, date },
-        );
-        scheduled++;
+        p.complete = p.nextDate > end;
+      } catch (e) {
+        if (!(e instanceof ApiFault)) throw e;
+        // Keep the exact interval retryable; do not expose inaccessible object names.
+        p.error =
+          e.code === "JOBS_PAUSED"
+            ? "Préparation suspendue ; reprise au prochain passage."
+            : "Préparation refusée ; vérifier les droits et reprendre.";
       }
-      after = String(rows.at(-1)!.id);
+      await tx.query(
+        "INSERT INTO cabinet_reminder_preparation(id,model_id,model_version,actor_id,content) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT(id) DO UPDATE SET actor_id=EXCLUDED.actor_id,content=EXCLUDED.content",
+        [p.id, p.modelId, p.modelVersion, p.actorId, JSON.stringify(p)],
+      );
     }
     return { scheduled, date, timeZone: this.zone };
   }

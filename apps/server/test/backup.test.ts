@@ -234,6 +234,54 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         workBefore.push(commented.json());
       }
 
+      const reminderId = randomUUID();
+      const reminderSaved = await app.inject({
+        method: "POST",
+        url: "/api/v1/workflows/models",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          id: reminderId,
+          expectedVersion: 0,
+          model: {
+            kind: "reminder",
+            name: "Point de reprise sauvegardé",
+            targetIds: [linked.id],
+            recipientIds: [setup.json().user.id],
+            event: "schedule",
+            message: "Fictif",
+            hour: "23:59",
+            enabled: true,
+            rule: {
+              frequency: "monthly",
+              start: "2026-01-01",
+              end: "2030-12-31",
+              nominalDay: 17,
+              lastDay: false,
+              weekDay: 1,
+            },
+          },
+        },
+      });
+      expect(reminderSaved.statusCode, reminderSaved.body).toBe(200);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/api/v1/notifications/process",
+            headers: { origin, cookie },
+            payload: { operationId: randomUUID() },
+          })
+        ).statusCode,
+      ).toBe(202);
+      const preparationBefore = (
+        await app.inject({
+          method: "GET",
+          url: "/api/v1/notifications/runs?modelId=" + reminderId,
+          headers: { cookie },
+        })
+      ).json().preparation;
+      expect(preparationBefore).toHaveLength(1);
       const options = {
         dataDirectory: source.dataDirectory,
         configFile: join(root, "config.json"),
@@ -439,6 +487,13 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       expect(restoredFiscal.statusCode, restoredFiscal.body).toBe(200);
       expect(restoredFiscal.json().timeline).toEqual(fiscalBefore.timeline);
       expect(restoredFiscal.json().record).toEqual(fiscalBefore.record);
+      const preparationAfter = await app.inject({
+        method: "GET",
+        url: "/api/v1/notifications/runs?modelId=" + reminderId,
+        headers: { cookie },
+      });
+      expect(preparationAfter.statusCode, preparationAfter.body).toBe(200);
+      expect(preparationAfter.json().preparation).toEqual(preparationBefore);
       for (const work of workBefore) {
         const restoredWork = await app.inject({
           method: "GET",

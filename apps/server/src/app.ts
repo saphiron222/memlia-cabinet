@@ -304,7 +304,11 @@ export async function createApplication(options: ApplicationOptions) {
     if (!reminderTick)
       reminderTick = reminders
         .tick()
-        .catch(() => undefined)
+        .catch(() => {
+          app.log.error(
+            "Préparation des rappels interrompue ; le point durable sera repris au prochain passage.",
+          );
+        })
         .finally(() => {
           reminderTick = undefined;
         });

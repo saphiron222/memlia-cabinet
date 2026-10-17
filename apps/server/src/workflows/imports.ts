@@ -106,7 +106,6 @@ export function registerChecklistImportRoutes(
                     model,
                     orders: [],
                   };
-                  groups.set(id, group);
                 }
                 if (
                   group.model.name !== model.name ||
@@ -115,12 +114,16 @@ export function registerChecklistImportRoutes(
                   group.orders.includes(order)
                 )
                   throw Error("Configuration incohérente ou ordre en double.");
-                group.model.items.push({
-                  id: itemId,
-                  label: fields.label ?? "",
+                const candidate = ChecklistModelSchema.parse({
+                  ...group.model,
+                  items: [
+                    ...group.model.items,
+                    { id: itemId, label: fields.label ?? "" },
+                  ],
                 });
+                group.model = candidate;
                 group.orders.push(order);
-                ChecklistModelSchema.parse(group.model);
+                groups.set(id, group);
               } catch {
                 errors.push({
                   line: row.number,

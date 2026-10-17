@@ -1,3 +1,4 @@
+import { formatCivilDate } from "./civil";
 import { columnLabels, columnValue } from "../records/columns";
 import { loadWorkflowModels } from "./models";
 import { tabKeys } from "./tabs";
@@ -26,9 +27,7 @@ import { WorkflowModels } from "./WorkflowModels";
 const link = (r: CabinetRecord) =>
   r.kind === "obligation" ? "#fiscal?id=" + r.id : "#tache?id=" + r.id;
 const dateLabel = (date: string | null) =>
-  date
-    ? new Date(date + "T12:00:00Z").toLocaleDateString("fr-FR")
-    : "Sans échéance";
+  date ? formatCivilDate(date) : "Sans échéance";
 const due = (r: CabinetRecord) =>
   r.kind === "tache" || r.kind === "obligation" ? r.data.dueDate : null;
 export function Workflows({

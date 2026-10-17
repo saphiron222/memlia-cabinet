@@ -1,3 +1,4 @@
+import { formatCivilDate } from "./civil";
 import { tabKeys } from "./tabs";
 import { useEffect, useState } from "react";
 import { Button } from "@memlia/ui";
@@ -227,9 +228,7 @@ export function TaskDetail({
                   <dt>Échéance</dt>
                   <dd>
                     {record.data.dueDate
-                      ? new Date(
-                          record.data.dueDate + "T12:00:00Z",
-                        ).toLocaleDateString("fr-FR")
+                      ? formatCivilDate(record.data.dueDate)
                       : "À préciser"}
                   </dd>
                 </div>

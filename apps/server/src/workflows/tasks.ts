@@ -49,7 +49,7 @@ export async function validateTask(
   const work = rows[0] ? WorkStateSchema.parse(rows[0].content) : null;
   if (
     record.data.state === "terminee" &&
-    work?.checklist?.items.some((x) => !x.done)
+    (work?.checklist?.items ?? record.data.checklist).some((x) => !x.done)
   )
     fail(
       409,

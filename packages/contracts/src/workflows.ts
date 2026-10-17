@@ -22,7 +22,7 @@ export const RecurrencePreviewSchema = z
   .refine(
     (x) =>
       x.to >= x.from &&
-      Number(x.to.slice(0, 4)) - Number(x.from.slice(0, 4)) <= 10,
+      x.to <= `${Number(x.from.slice(0, 4)) + 10}${x.from.slice(4)}`,
     "Période maximale : dix ans.",
   );
 /** Pure civil arithmetic: UTC is only a Gregorian arithmetic carrier, never a cabinet instant. */
@@ -330,7 +330,22 @@ export const ChecklistRepriseSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type ChecklistReprise = z.infer<typeof ChecklistRepriseSchema>;
+export const ReminderPreparationSchema = z.object({
+  id: z.uuid(),
+  modelId: z.uuid(),
+  modelVersion: z.number().int().positive(),
+  actorId: z.uuid(),
+  nextDate: CivilDateSchema,
+  complete: z.boolean(),
+  error: z.string().nullable(),
+  updatedAt: z.iso.datetime(),
+});
 export const WorkflowExportSchema = z.discriminatedUnion("entity", [
+  z.object({
+    id: z.uuid(),
+    entity: z.literal("reminder_preparation"),
+    data: ReminderPreparationSchema,
+  }),
   z.object({
     id: z.uuid(),
     entity: z.literal("model"),
@@ -374,6 +389,7 @@ export const WorkflowCalendarSchema = RecordListSchema.extend({
 
 import { JobSchema } from "./jobs.js";
 export const ReminderRunListSchema = z.object({
+  preparation: z.array(ReminderPreparationSchema),
   items: z.array(
     z.object({
       date: CivilDateSchema,

@@ -190,16 +190,6 @@ export async function saveRecord(
           "Utiliser la commande de transition pour changer l’étape.",
         );
       if (
-        record.kind === "tache" &&
-        record.data.state === "terminee" &&
-        record.data.checklist.some((item) => !item.done)
-      )
-        fail(
-          409,
-          "CHECKLIST_INCOMPLETE",
-          "Terminer la checklist avant de clôturer la tâche.",
-        );
-      if (
         previous?.kind === "tache" &&
         record.kind === "tache" &&
         action === "transitioned" &&
