@@ -457,3 +457,64 @@ it("révocation pendant préparation : aucun original publié, aucune observatio
     await f.close();
   }
 });
+
+it("détection issue de collecte : provenance simulée et rapprochement stable après deux collectes", async () => {
+  const f = await fixture();
+  try {
+    await f.setup();
+    const scope = dossier("Périmètre fournisseur fictif");
+    const d = (
+      await f.request("POST", "/records", {
+        ...scope,
+        record: { ...scope.record, data: { siren: null } },
+      })
+    ).json();
+    for (let i = 0; i < 2; i++) {
+      const response = await f.request(
+        "POST",
+        "/collections",
+        input(d.id, { connectorId: "pennylane-dossiers" }),
+      );
+      expect(response.statusCode).toBe(202);
+      const completed = await done(f, response.json().job.id);
+      expect(completed.job.state, JSON.stringify(completed)).toBe("completed");
+    }
+    const detected = await f.request("GET", "/administration/detections");
+    expect(detected.statusCode).toBe(200);
+    expect(detected.json().total).toBe(1);
+    const proposal = detected.json().items[0];
+    expect(proposal).toMatchObject({
+      scopeDossierId: d.id,
+      origin: { kind: "simulated" },
+      status: "pending",
+      automatic: false,
+    });
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/administration/detections/${proposal.id}/preview`,
+        )
+      ).json().target,
+    ).toBeNull();
+    const created = await f.request(
+      "POST",
+      `/administration/detections/${proposal.id}/decide`,
+      {
+        operationId: operationId(),
+        expectedVersion: proposal.version,
+        decision: "create",
+      },
+    );
+    expect(created.statusCode).toBe(200);
+    const record = (
+      await f.request("GET", `/records/${created.json().dossierId}`)
+    ).json();
+    expect(record.data.fieldOrigins.siren.kind).toBe("simulated");
+    expect((await f.request("GET", "/records?kind=dossier")).json().total).toBe(
+      2,
+    );
+  } finally {
+    await f.close();
+  }
+});

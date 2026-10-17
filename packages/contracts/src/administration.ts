@@ -1,3 +1,5 @@
+import { RecordListQuerySchema } from "./records.js";
+import { RecordKindSchema, CustomValueSchema } from "./records.js";
 import { z } from "zod";
 import { PermissionSchema, SessionUserSchema } from "./identity.js";
 const command = {
@@ -103,4 +105,90 @@ export const AssignmentListSchema = z.object({
   items: z.array(
     z.object({ subject: AssignmentSubjectSchema, roleId: z.uuid() }),
   ),
+});
+
+export const CustomFieldInputSchema = z
+  .object({
+    kind: RecordKindSchema,
+    name: z.string().trim().min(1).max(100),
+    type: z.enum(["text", "long_text", "number", "date", "boolean", "choice"]),
+    placement: z.enum(["header", "information", "parameters"]),
+    choices: z
+      .array(z.string().trim().min(1).max(100))
+      .max(100)
+      .refine((a) => new Set(a).size === a.length),
+  })
+  .strict();
+export const CustomFieldSchema = CustomFieldInputSchema.extend({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+});
+export type CustomField = z.infer<typeof CustomFieldSchema>;
+export const CustomFieldCommandSchema = CustomFieldInputSchema.extend({
+  operationId: z.uuid(),
+  expectedVersion: z.number().int().positive().optional(),
+  migration: z
+    .array(
+      z
+        .object({
+          recordId: z.uuid(),
+          expectedVersion: z.number().int().positive(),
+          value: CustomValueSchema,
+        })
+        .strict(),
+    )
+    .max(10000)
+    .refine((a) => new Set(a.map((x) => x.recordId)).size === a.length)
+    .optional(),
+});
+export const CustomFieldListSchema = z.object({
+  items: z.array(CustomFieldSchema),
+});
+
+export const CustomFieldValuesSchema = z.object({
+  offset: z.number().int().nonnegative().default(0),
+  items: z
+    .array(
+      z.object({
+        recordId: z.uuid(),
+        title: z.string(),
+        expectedVersion: z.number().int().positive(),
+        value: CustomValueSchema,
+      }),
+    )
+    .max(200),
+  total: z.number().int().nonnegative(),
+});
+
+export const SavedViewSchema = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  name: z.string().trim().min(1).max(100),
+  query: RecordListQuerySchema,
+});
+export type SavedView = z.infer<typeof SavedViewSchema>;
+export const SavedViewCommandSchema = SavedViewSchema.omit({
+  id: true,
+  version: true,
+})
+  .extend({
+    operationId: z.uuid(),
+    expectedVersion: z.number().int().positive().optional(),
+  })
+  .strict();
+export const SavedViewListSchema = z.object({
+  items: z.array(SavedViewSchema).max(100),
+});
+export const RecordScopesSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        title: z.string(),
+        kind: z.enum(["dossier", "team", "site"]),
+      }),
+    )
+    .max(100),
+  offset: z.number().int(),
+  total: z.number().int(),
 });

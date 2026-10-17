@@ -322,6 +322,7 @@ export function simulate(input: CollectionInput): FixturePage {
     case "pennylane-dossiers":
       add("SOCIETE-PL-FICTIVE", {
         kind: "company",
+        values: { title: "Société Pennylane fictive", siren: "001234567" },
         externalCompanyId: "PL-FICTIF-1",
         connection: "firm-api",
         visibility: "visible",

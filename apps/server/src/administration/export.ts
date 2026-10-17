@@ -1,0 +1,606 @@
+import { csvHeader, csvRow } from "../records/csv.js";
+import { randomUUID } from "node:crypto";
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+import {
+  CabinetExportSchema,
+  RecordListQuerySchema,
+  ExportManifestSchema,
+  DocumentSchema,
+  CabinetRecordSchema,
+  CustomFieldSchema,
+  ExportRunSchema,
+  ExportListSchema,
+  ExportCommandSchema,
+  type SessionUser,
+} from "@memlia/contracts";
+import type { RouteContext } from "../context.js";
+import type { Connection, Database } from "../storage/database.js";
+import { idempotent } from "../storage/operations.js";
+import { DocumentStore } from "../documents/store.js";
+import { JobRunner } from "../jobs/runner.js";
+import { authorizedPredicate, recordFilter } from "../records/query.js";
+import { effectiveUser } from "../identity/service.js";
+import { availablePermissions } from "./access.js";
+import { installation } from "./settings.js";
+import { ApiFault, fail } from "../errors.js";
+const checkpointSchema = z.object({
+  phase: z.enum(["planning", "records", "documents", "complete"]),
+  after: z.uuid().nullable(),
+  bytes: z.number().int().nonnegative(),
+  records: z.number().int().nonnegative(),
+  documents: z.number().int().nonnegative(),
+  part: z.number().int().positive(),
+  partBytes: z.number().int().nonnegative(),
+});
+const headerSchema = CabinetExportSchema.omit({
+  records: true,
+  documents: true,
+  customFields: true,
+  errors: true,
+});
+export class Exports {
+  private enqueue: ReturnType<JobRunner["register"]>["enqueue"];
+  constructor(
+    private db: Database,
+    private jobs: JobRunner,
+    private documents: DocumentStore,
+    private now: () => Date,
+    private partLimit = 8 * 1024 * 1024,
+  ) {
+    if (
+      !Number.isInteger(partLimit) ||
+      partLimit < 4096 ||
+      partLimit > 8 * 1024 * 1024
+    )
+      throw new Error("Taille de partie invalide.");
+    const worker = jobs.register({
+      kind: "export",
+      input: z.object({
+        exportId: z.uuid(),
+        query: RecordListQuerySchema.optional(),
+      }),
+      checkpoint: checkpointSchema,
+      result: z.object({ exportId: z.uuid() }),
+      initial: {
+        phase: "planning" as const,
+        after: null,
+        bytes: 1024,
+        records: 0,
+        documents: 0,
+        part: 1,
+        partBytes: 2048,
+      },
+      scope: (i) => ({ dossierId: null, resourceKey: "export:" + i.exportId }),
+      authorize: async (tx, actor, i) => {
+        await this.readable(tx, actor, i.exportId);
+      },
+      execute: async (input, ctx) => {
+        const started = performance.now();
+        try {
+          while (ctx.checkpoint.phase !== "complete") {
+            ctx.signal.throwIfAborted();
+            if (performance.now() - started > 10 * 60_000)
+              fail(
+                408,
+                "EXPORT_TIMEOUT",
+                "Préparation interrompue après dix minutes ; régénérer la sortie.",
+              );
+            const prior = ctx.checkpoint;
+            if (prior.phase === "planning") {
+              await ctx.commit(
+                { ...prior, phase: "records" },
+                "export.planned",
+                "Périmètre de préparation fixé.",
+                async (tx, actor) => {
+                  if (input.query) {
+                    const f = recordFilter(actor, input.query, "export");
+                    await tx.query(
+                      `INSERT INTO cabinet_export_plan(export_id,id,version,ordinal) SELECT $${f.params.length + 1},r.id,(r.content->>'version')::integer,row_number() OVER(ORDER BY ${f.sort}) FROM cabinet_records r WHERE ${f.where} ORDER BY ${f.sort} LIMIT 400001`,
+                      [...f.params, input.exportId],
+                    );
+                    const total = await tx.query(
+                      "SELECT count(*) AS n FROM cabinet_export_plan WHERE export_id=$1",
+                      [input.exportId],
+                    );
+                    if (Number(total[0]!.n) > 400000)
+                      fail(
+                        413,
+                        "EXPORT_COUNT_LIMIT",
+                        "Cette vue dépasse 400 000 objets ; affiner le périmètre.",
+                      );
+                  }
+                },
+              );
+              continue;
+            }
+            const page = await this.db.transaction(async (tx) => {
+              const rows = await tx.query(
+                "SELECT u.* FROM cabinet_users u JOIN cabinet_exports e ON e.actor_id=u.id WHERE e.id=$1 AND u.active=true",
+                [input.exportId],
+              );
+              if (!rows[0]) fail(403, "FORBIDDEN", "Sortie inaccessible.");
+              const actor = await effectiveUser(tx, rows[0]);
+              await this.readable(tx, actor, input.exportId);
+              if (prior.phase === "records") {
+                if (input.query) {
+                  const planned = await tx.query(
+                    "SELECT r.content,p.version FROM cabinet_export_plan p LEFT JOIN cabinet_records r ON r.id=p.id WHERE p.export_id=$1 AND p.ordinal>$2 ORDER BY p.ordinal LIMIT 1000",
+                    [input.exportId, prior.records],
+                  );
+                  return planned.map((r) => {
+                    if (!r.content)
+                      fail(
+                        409,
+                        "EXPORT_CHANGED",
+                        "Une fiche a changé pendant la préparation ; régénérer.",
+                      );
+                    const record = CabinetRecordSchema.parse(r.content);
+                    if (record.version !== Number(r.version))
+                      fail(
+                        409,
+                        "EXPORT_CHANGED",
+                        "Une fiche a changé pendant la préparation ; régénérer.",
+                      );
+                    return record;
+                  });
+                }
+                const params: unknown[] = [prior.after];
+                const predicate = authorizedPredicate(actor, "export", (v) => {
+                  params.push(v);
+                  return "$" + params.length;
+                });
+                return (
+                  await tx.query(
+                    `SELECT r.content FROM cabinet_records r WHERE ($1::uuid IS NULL OR r.id>$1::uuid) AND ${predicate} ORDER BY r.id LIMIT 1000`,
+                    params,
+                  )
+                ).map((r) => CabinetRecordSchema.parse(r.content));
+              }
+              const dossierIds = (
+                await tx.query(
+                  "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='record' AND content->>'kind'='dossier' ORDER BY id",
+                  [input.exportId],
+                )
+              ).map((r) => String(r.id));
+              return (
+                await this.documents.exportReferences(
+                  tx,
+                  actor,
+                  dossierIds,
+                  prior.after,
+                )
+              ).items;
+            });
+            const fields = await this.db.transaction(async (tx) => {
+              if (input.query) return [];
+              const ids = [
+                ...new Set(
+                  page.flatMap((r) =>
+                    "data" in r ? Object.keys(r.data.customFields) : [],
+                  ),
+                ),
+              ];
+              if (!ids.length) return [];
+              return tx.query(
+                "SELECT f.id,f.content,p.content AS previous FROM cabinet_custom_fields f LEFT JOIN cabinet_export_rows p ON p.export_id=$1 AND p.kind='field' AND p.id=f.id WHERE f.id=ANY($2::uuid[])",
+                [input.exportId, ids],
+              );
+            });
+            const entries = page.map((value, index) => ({
+              ordinal:
+                (prior.phase === "records" ? prior.records : prior.documents) +
+                index +
+                1,
+              id: value.id,
+              kind: prior.phase === "records" ? "record" : "document",
+              content: value,
+            }));
+            for (const field of fields) {
+              if (
+                field.previous &&
+                CustomFieldSchema.parse(field.previous).version !==
+                  CustomFieldSchema.parse(field.content).version
+              )
+                fail(
+                  409,
+                  "EXPORT_DEFINITION_CHANGED",
+                  "Un champ a changé pendant la sortie ; régénérer.",
+                );
+              if (!field.previous)
+                entries.push({
+                  ordinal: 0,
+                  id: String(field.id),
+                  kind: "field",
+                  content: field.content as never,
+                });
+            }
+            const overhead = input.query
+              ? Math.max(2048, Buffer.byteLength(csvHeader(input.query)))
+              : 2048;
+            let part = prior.part,
+              partBytes = Math.max(prior.partBytes, overhead),
+              bytes = prior.bytes;
+            const partitioned = entries.map((entry) => {
+              // Includes JSON separators, the document URL and any availability error.
+              const size = Math.max(
+                Buffer.byteLength(JSON.stringify(entry.content)) +
+                  (entry.kind === "document" ? 512 : 2),
+                input.query
+                  ? Buffer.byteLength(
+                      csvRow(
+                        CabinetRecordSchema.parse(entry.content),
+                        input.query,
+                      ),
+                    )
+                  : 0,
+              );
+              if (size + overhead > this.partLimit)
+                fail(
+                  413,
+                  "EXPORT_OBJECT_LIMIT",
+                  "Un objet dépasse la taille maximale d’une partie de sortie.",
+                );
+              if (partBytes + size > this.partLimit) {
+                part++;
+                partBytes = overhead;
+              }
+              partBytes += size;
+              bytes += size;
+              return { ...entry, part, size };
+            });
+            if (prior.records + prior.documents + page.length > 400_000)
+              fail(
+                413,
+                "EXPORT_COUNT_LIMIT",
+                "Cette sortie dépasse 400 000 objets et références ; une préparation opérateur est nécessaire.",
+              );
+            const next = checkpointSchema.parse({
+              ...prior,
+              bytes,
+              part,
+              partBytes,
+              after: page.at(-1)?.id ?? null,
+              phase: page.length
+                ? prior.phase
+                : prior.phase === "records"
+                  ? input.query
+                    ? "complete"
+                    : "documents"
+                  : "complete",
+              records:
+                prior.records + (prior.phase === "records" ? page.length : 0),
+              documents:
+                prior.documents +
+                (prior.phase === "documents" ? page.length : 0),
+            });
+            await ctx.commit(
+              next,
+              "export.batch",
+              prior.phase === "records"
+                ? "Lot d’objets préparé."
+                : "Lot de références documentaires préparé.",
+              async (tx, actor) => {
+                for (const field of fields) {
+                  const current = await tx.query(
+                    "SELECT content FROM cabinet_custom_fields WHERE id=$1",
+                    [field.id],
+                  );
+                  if (
+                    !current[0] ||
+                    CustomFieldSchema.parse(current[0].content).version !==
+                      CustomFieldSchema.parse(field.content).version
+                  )
+                    fail(
+                      409,
+                      "EXPORT_DEFINITION_CHANGED",
+                      "Un champ a changé pendant la sortie ; régénérer.",
+                    );
+                }
+                if (partitioned.length)
+                  await tx.query(
+                    "INSERT INTO cabinet_export_rows(export_id,kind,id,content,part,size,ordinal) SELECT $1,x.kind,x.id,x.content,x.part,x.size,x.ordinal FROM jsonb_to_recordset($2::jsonb) AS x(kind text,id uuid,content jsonb,part integer,size integer,ordinal integer) ON CONFLICT(export_id,kind,id) DO NOTHING",
+                    [input.exportId, JSON.stringify(partitioned)],
+                  );
+                await this.readable(tx, actor, input.exportId);
+                if (next.phase === "complete")
+                  await tx.query(
+                    "UPDATE cabinet_exports SET content=jsonb_set(content,'{generatedAt}',to_jsonb($2::text)) WHERE id=$1",
+                    [input.exportId, this.now().toISOString()],
+                  );
+              },
+            );
+          }
+          return { exportId: input.exportId };
+        } catch (e) {
+          if (!ctx.signal.aborted)
+            await this.db.transaction((tx) =>
+              tx.query(
+                "UPDATE cabinet_exports SET content=jsonb_set(content,'{failure}',to_jsonb($2::text)) WHERE id=$1",
+                [
+                  input.exportId,
+                  e instanceof ApiFault
+                    ? e.message
+                    : "Préparation interrompue ; régénérer la sortie.",
+                ],
+              ),
+            );
+          throw e;
+        }
+      },
+    });
+    this.enqueue = worker.enqueue as typeof this.enqueue;
+  }
+  private permit(actor: SessionUser) {
+    if (!availablePermissions(actor).some((p) => p.action === "export"))
+      fail(403, "FORBIDDEN", "Export non autorisé.");
+  }
+  private async readable(tx: Connection, actor: SessionUser, id: string) {
+    this.permit(actor);
+    const rows = await tx.query(
+      "SELECT id,job_id,content,created_at FROM cabinet_exports WHERE id=$1 AND actor_id=$2",
+      [id, actor.id],
+    );
+    if (!rows[0]) fail(404, "NOT_FOUND", "Sortie inaccessible.");
+    const params: unknown[] = [id];
+    const predicate = authorizedPredicate(actor, "export", (v) => {
+      params.push(v);
+      return "$" + params.length;
+    });
+    const denied = await tx.query(
+      `WITH saved AS (SELECT id,content,content->>'kind' AS kind FROM cabinet_export_rows WHERE export_id=$1 AND kind='record') SELECT 1 WHERE EXISTS(SELECT 1 FROM saved r WHERE (${predicate}) IS NOT TRUE) OR EXISTS(SELECT 1 FROM saved s LEFT JOIN cabinet_records r ON r.id=s.id WHERE r.id IS NULL OR (${predicate}) IS NOT TRUE)`,
+      params,
+    );
+    if (denied.length)
+      fail(
+        403,
+        "EXPORT_SCOPE_CHANGED",
+        "Les droits de cette sortie ont changé. Régénérer le fichier.",
+      );
+    const ids = (
+      await tx.query(
+        "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='document'",
+        [id],
+      )
+    ).map((r) => String(r.id));
+    await this.documents.assertExportReferences(tx, actor, ids);
+    return rows[0];
+  }
+  async start(
+    tx: Connection,
+    actor: SessionUser,
+    command: z.infer<typeof ExportCommandSchema>,
+  ) {
+    this.permit(actor);
+    const id = await idempotent(
+      tx,
+      actor,
+      command.operationId,
+      { action: "export.start", query: command.query ?? null },
+      async () => {
+        await tx.query(
+          "DELETE FROM cabinet_exports WHERE id IN (SELECT e.id FROM cabinet_exports e JOIN cabinet_jobs j ON j.id=e.job_id WHERE e.actor_id=$1 AND j.state IN ('completed','failed') ORDER BY e.created_at DESC OFFSET 4)",
+          [actor.id],
+        );
+        const count = await tx.query(
+          "SELECT count(*) AS n FROM cabinet_exports WHERE actor_id=$1",
+          [actor.id],
+        );
+        if (Number(count[0]!.n) >= 5)
+          fail(
+            409,
+            "EXPORT_LIMIT",
+            "Cinq sorties sont déjà conservées ; attendre la fin d’un traitement.",
+          );
+        const source = await installation(tx),
+          id = randomUUID();
+        const header = headerSchema.parse({
+          format: "memlia-cabinet-1",
+          generatedAt: this.now().toISOString(),
+          sourceInstallation: { id: source.id, name: source.name },
+          scope:
+            "objets autorisés actifs et archivés, avec leurs références documentaires",
+        });
+        await tx.query(
+          "INSERT INTO cabinet_exports(id,actor_id,created_at,content) VALUES($1,$2,$3,$4::jsonb)",
+          [
+            id,
+            actor.id,
+            this.now(),
+            JSON.stringify({ ...header, query: command.query ?? null }),
+          ],
+        );
+        const job = await this.enqueue(tx, actor, randomUUID(), {
+          exportId: id,
+          query: command.query,
+        });
+        await tx.query("UPDATE cabinet_exports SET job_id=$2 WHERE id=$1", [
+          id,
+          job,
+        ]);
+        return id;
+      },
+    );
+    return this.get(tx, actor, id);
+  }
+  async get(tx: Connection, actor: SessionUser, id: string) {
+    const stored = await this.readable(tx, actor, id),
+      job = await this.jobs.get(tx, String(stored.job_id)),
+      progress = checkpointSchema.parse(job.checkpoint);
+    return ExportRunSchema.parse({
+      id,
+      createdAt: new Date(String(stored.created_at)).toISOString(),
+      job: job.job,
+      records: progress.records,
+      documents: progress.documents,
+      error: (stored.content as { failure?: string }).failure ?? null,
+      encoding: (stored.content as { query?: unknown }).query ? "csv" : "json",
+      query: (stored.content as { query?: unknown }).query ?? null,
+    });
+  }
+  async list(tx: Connection, actor: SessionUser) {
+    this.permit(actor);
+    const rows = await tx.query(
+      "SELECT id FROM cabinet_exports WHERE actor_id=$1 ORDER BY created_at DESC LIMIT 5",
+      [actor.id],
+    );
+    const items = [];
+    for (const row of rows) {
+      try {
+        items.push(await this.get(tx, actor, String(row.id)));
+      } catch (e) {
+        if (
+          !(
+            e instanceof Error &&
+            "code" in e &&
+            e.code === "EXPORT_SCOPE_CHANGED"
+          )
+        )
+          throw e;
+      }
+    }
+    return { items };
+  }
+  async download(
+    tx: Connection,
+    actor: SessionUser,
+    id: string,
+    part?: number,
+  ) {
+    const stored = await this.readable(tx, actor, id),
+      job = await this.jobs.get(tx, String(stored.job_id));
+    if (job.job.state !== "completed")
+      fail(409, "EXPORT_NOT_READY", "La sortie n’est pas terminée.");
+    const query = RecordListQuerySchema.nullable().parse(
+      (stored.content as { query?: unknown }).query ?? null,
+    );
+    if (part === undefined) {
+      const parts = await tx.query(
+        "SELECT part,count(*) AS count,sum(size)+$2::integer AS bytes FROM cabinet_export_rows WHERE export_id=$1 GROUP BY part ORDER BY part",
+        [
+          id,
+          query ? Math.max(2048, Buffer.byteLength(csvHeader(query))) : 2048,
+        ],
+      );
+      return ExportManifestSchema.parse({
+        ...headerSchema.parse(stored.content),
+        format: "memlia-cabinet-manifest-1",
+        encoding: query ? "csv" : "json",
+        query,
+        parts: parts.map((p) => ({
+          number: Number(p.part),
+          count: Number(p.count),
+          maximumBytes: Number(p.bytes),
+          downloadUrl: `/api/v1/administration/exports/${id}/parts/${p.part}`,
+        })),
+        records: checkpointSchema.parse(job.checkpoint).records,
+        documents: checkpointSchema.parse(job.checkpoint).documents,
+      });
+    }
+    const rows = await tx.query(
+      "SELECT kind,content FROM cabinet_export_rows WHERE export_id=$1 AND part=$2 ORDER BY ordinal,kind,id",
+      [id, part],
+    );
+    if (!rows.length) fail(404, "NOT_FOUND", "Partie inaccessible.");
+    if (query)
+      return (
+        csvHeader(query) +
+        rows
+          .map((r) => csvRow(CabinetRecordSchema.parse(r.content), query))
+          .join("")
+      );
+    const records = rows
+        .filter((r) => r.kind === "record")
+        .map((r) => r.content),
+      customFields = rows
+        .filter((r) => r.kind === "field")
+        .map((r) => r.content),
+      documents = rows
+        .filter((r) => r.kind === "document")
+        .map((r) => ({
+          ...DocumentSchema.parse(r.content),
+          downloadUrl: `/api/v1/documents/${(r.content as { id: string }).id}/download`,
+        }));
+    return CabinetExportSchema.parse({
+      ...headerSchema.parse(stored.content),
+      records,
+      customFields,
+      documents,
+      errors: documents
+        .filter((d) => d.availability !== "available")
+        .map((d) => ({
+          documentId: d.id,
+          code:
+            d.availability === "missing"
+              ? "DOCUMENT_MISSING"
+              : "DOCUMENT_CORRUPT",
+          message:
+            d.availability === "missing"
+              ? "Original absent du stockage local."
+              : "Intégrité de l’original altérée.",
+        })),
+    });
+  }
+}
+export function registerExportRoutes(
+  app: FastifyInstance,
+  { db, user }: RouteContext,
+  exports: Exports,
+) {
+  const id = (params: unknown) => z.object({ id: z.uuid() }).parse(params).id;
+  app.post("/api/v1/administration/exports", async (req, reply) => {
+    const command = ExportCommandSchema.parse(req.body);
+    return reply
+      .code(202)
+      .send(
+        await db.transaction(async (tx) =>
+          exports.start(tx, await user(tx, req), command),
+        ),
+      );
+  });
+  app.get("/api/v1/administration/exports", async (req) =>
+    db.transaction(async (tx) =>
+      ExportListSchema.parse(await exports.list(tx, await user(tx, req))),
+    ),
+  );
+  app.get("/api/v1/administration/exports/:id", async (req) =>
+    db.transaction(async (tx) =>
+      exports.get(tx, await user(tx, req), id(req.params)),
+    ),
+  );
+  app.get("/api/v1/administration/exports/:id/download", async (req, reply) => {
+    const result = await db.transaction(async (tx) =>
+      exports.download(tx, await user(tx, req), id(req.params)),
+    );
+    return reply
+      .header("content-type", "application/json; charset=utf-8")
+      .header(
+        "content-disposition",
+        'attachment; filename="memlia-sortie.json"',
+      )
+      .send(result);
+  });
+  app.get(
+    "/api/v1/administration/exports/:id/parts/:part",
+    async (req, reply) => {
+      const params = z
+        .object({ id: z.uuid(), part: z.coerce.number().int().positive() })
+        .parse(req.params);
+      const result = await db.transaction(async (tx) =>
+        exports.download(tx, await user(tx, req), params.id, params.part),
+      );
+      return reply
+        .header(
+          "content-type",
+          typeof result === "string"
+            ? "text/csv; charset=utf-8"
+            : "application/json; charset=utf-8",
+        )
+        .header(
+          "content-disposition",
+          `attachment; filename="memlia-partie-${params.part}.${typeof result === "string" ? "csv" : "json"}"`,
+        )
+        .send(result);
+    },
+  );
+}

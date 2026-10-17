@@ -154,5 +154,145 @@
   "GET /api/v1/capabilities/create": {
     "file": "apps/server/test/administration.test.ts",
     "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/administration/companies/search": {
+    "file": "apps/server/test/company-search.test.ts",
+    "test": "recherche entreprise : vrai HTTP local, sélection propose seulement, SIRET demandé distinct du siège"
+  },
+  "POST /api/v1/administration/companies/propose": {
+    "file": "apps/server/test/company-search.test.ts",
+    "test": "recherche entreprise : vrai HTTP local, sélection propose seulement, SIRET demandé distinct du siège"
+  },
+  "POST /api/v1/administration/detections/simulate": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/detections": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/detections/:id/preview": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "POST /api/v1/administration/detections/:id/decide": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/fields": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "GET /api/v1/administration/fields/:id/values": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "migration explicite paginée : plus de 200 valeurs, version figée et renommage sans perte"
+  },
+  "POST /api/v1/administration/fields": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "PUT /api/v1/administration/fields/:id": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "POST /api/v1/administration/exports": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id/download": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id/parts/:part": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/scopes": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues personnelles et périmètres : aucun partage implicite, contacts multi-dossiers et révocation"
+  },
+  "GET /api/v1/administration/installation": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "PUT /api/v1/administration/installation": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "GET /api/v1/account": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "PUT /api/v1/account": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "GET /api/v1/administration/views": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "POST /api/v1/administration/views": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "PUT /api/v1/administration/views/:id": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "POST /api/v1/administration/views/:id/remove": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues personnelles et périmètres : aucun partage implicite, contacts multi-dossiers et révocation"
+  },
+  "GET /api/v1/imports/catalogue": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "GET /api/v1/imports": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "POST /api/v1/imports/preview": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id/rows": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id/accepted": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "PUT /api/v1/imports/:id/mapping": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "PUT /api/v1/imports/:id/selection": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "POST /api/v1/imports/:id/commit": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "POST /api/v1/imports/:id/remove": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "GET /api/v1/imports/:id/report.csv": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
   }
 }

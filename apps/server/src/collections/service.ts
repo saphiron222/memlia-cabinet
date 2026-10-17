@@ -1,3 +1,6 @@
+import { isDeepStrictEqual } from "node:util";
+import { observeCompany } from "../administration/companies.js";
+import { requireModule } from "../administration/settings.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   CollectionInputSchema,
@@ -38,6 +41,7 @@ async function authorize(
   input: CollectionInput,
   write = true,
 ) {
+  if (write) await requireModule(tx, "collectes");
   const dossier = await loadRecord(tx, input.scope.dossierId);
   if (dossier.kind !== "dossier")
     fail(404, "NOT_FOUND", "Ressource inaccessible.");
@@ -247,7 +251,7 @@ export class CollectionExecutor {
                   existing[0].content,
                 );
                 if (
-                  hash(previous.data) !== hash(record.data) ||
+                  !isDeepStrictEqual(previous.data, record.data) ||
                   previous.rawState !== record.rawState
                 )
                   fail(
@@ -307,6 +311,30 @@ export class CollectionExecutor {
                     input.scope.dossierId,
                     JSON.stringify(observation),
                   ],
+                );
+              }
+              if (record.data.kind === "company" && record.data.values) {
+                await observeCompany(
+                  tx,
+                  actor,
+                  "collection:" +
+                    hash([
+                      input.mode,
+                      input.connectorId,
+                      input.cabinetRef,
+                      input.scope.accountId,
+                      record.data.externalCompanyId,
+                    ]),
+                  {
+                    kind: "simulated",
+                    reference: `${input.connectorId}:${record.data.externalCompanyId}`,
+                    version: record.version,
+                    at: this.now().toISOString(),
+                  },
+                  record.data.values,
+                  false,
+                  this.now(),
+                  input.scope.dossierId,
                 );
               }
               await tx.query(

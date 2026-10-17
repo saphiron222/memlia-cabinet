@@ -38,10 +38,15 @@ export async function canAccess(
     !(await scopedPermission(tx, user, "confidential", record.kind, scope))
   )
     return false;
-  if (record.dossierId) {
+  for (const parentId of new Set(
+    [
+      record.dossierId,
+      ...(record.kind === "contact" ? record.data.relatedDossierIds : []),
+    ].filter((id): id is string => id !== null),
+  )) {
     const rows = await tx.query(
       "SELECT content FROM cabinet_records WHERE id=$1 AND kind=$2",
-      [record.dossierId, "dossier"],
+      [parentId, "dossier"],
     );
     if (!rows[0]) return false;
     const parent = rows[0].content as CabinetRecord;

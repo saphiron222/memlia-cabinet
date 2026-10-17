@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 5)
+  if (version > 6)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -48,6 +48,27 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((s) => s.trim())
       .filter(Boolean))
       await connection.query(statement);
+  if (version < 6) {
+    for (const statement of referentialMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(statement);
+    let after: string | null = null;
+    while (true) {
+      const rows: Record<string, unknown>[] = await connection.query(
+        "SELECT id,content->>'title' AS title FROM cabinet_records WHERE ($1::uuid IS NULL OR id>$1::uuid) ORDER BY id LIMIT 200",
+        [after],
+      );
+      if (!rows.length) break;
+      for (const row of rows)
+        await connection.query(
+          "UPDATE cabinet_records SET search_title=$1 WHERE id=$2",
+          [String(row.title).toLocaleLowerCase("fr"), row.id],
+        );
+      after = String(rows.at(-1)!.id);
+    }
+  }
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -130,4 +151,23 @@ CREATE TABLE cabinet_assignments (dossier_id uuid NOT NULL REFERENCES cabinet_re
 CREATE INDEX cabinet_assignments_subject ON cabinet_assignments(subject_kind,subject_id,dossier_id);
 CREATE TABLE cabinet_assignment_versions (dossier_id uuid PRIMARY KEY REFERENCES cabinet_records(id), version integer NOT NULL);
 INSERT INTO schema_migrations(version) VALUES (5);
+`;
+
+const referentialMigration = `
+ALTER TABLE cabinet_records ADD COLUMN search_title text NOT NULL DEFAULT '';
+CREATE INDEX cabinet_records_search ON cabinet_records USING gin(search_title public.gin_trgm_ops);
+ALTER TABLE cabinet_jobs ALTER COLUMN dossier_id DROP NOT NULL;
+CREATE TABLE cabinet_custom_fields (id uuid PRIMARY KEY, content jsonb NOT NULL);
+CREATE TABLE cabinet_installation (id integer PRIMARY KEY CHECK(id=1), content jsonb NOT NULL);
+CREATE TABLE cabinet_preferences (user_id uuid PRIMARY KEY REFERENCES cabinet_users(id), content jsonb NOT NULL);
+CREATE TABLE cabinet_saved_views (id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES cabinet_users(id), content jsonb NOT NULL);
+CREATE TABLE cabinet_detections (id uuid PRIMARY KEY, source_key text NOT NULL UNIQUE, content jsonb NOT NULL);
+CREATE TABLE cabinet_company_candidates (id uuid PRIMARY KEY, actor_id uuid NOT NULL REFERENCES cabinet_users(id), expires_at timestamptz NOT NULL, content jsonb NOT NULL);
+CREATE TABLE cabinet_import_previews (id uuid PRIMARY KEY, actor_id uuid NOT NULL REFERENCES cabinet_users(id), content jsonb NOT NULL, source_bytes bytea NOT NULL);
+CREATE TABLE cabinet_import_rows (preview_id uuid NOT NULL REFERENCES cabinet_import_previews(id), line_id text NOT NULL, ordinal integer NOT NULL, content jsonb NOT NULL, commit_selected boolean NOT NULL DEFAULT false, PRIMARY KEY(preview_id,line_id));
+CREATE TABLE cabinet_exports (id uuid PRIMARY KEY, actor_id uuid NOT NULL REFERENCES cabinet_users(id), job_id uuid REFERENCES cabinet_jobs(id), created_at timestamptz NOT NULL, content jsonb NOT NULL);
+CREATE TABLE cabinet_export_rows (export_id uuid NOT NULL REFERENCES cabinet_exports(id) ON DELETE CASCADE, kind text NOT NULL CHECK(kind IN ('record','document','field')), id uuid NOT NULL, content jsonb NOT NULL, part integer NOT NULL, size integer NOT NULL, ordinal integer NOT NULL, PRIMARY KEY(export_id,kind,id));
+CREATE INDEX cabinet_export_parts ON cabinet_export_rows(export_id,part);
+CREATE TABLE cabinet_export_plan (export_id uuid NOT NULL REFERENCES cabinet_exports(id) ON DELETE CASCADE,id uuid NOT NULL,version integer NOT NULL,ordinal integer NOT NULL,PRIMARY KEY(export_id,ordinal));
+INSERT INTO schema_migrations(version) VALUES (6);
 `;

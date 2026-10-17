@@ -1,3 +1,9 @@
+import { Account } from "./features/administration/Account";
+import {
+  useAccountSettings,
+  useInstallation,
+} from "./features/administration/preferences";
+import { Imports } from "./features/imports/Imports";
 import { Administration } from "./features/administration/Administration";
 import { Collections } from "./Collections";
 import { Documents } from "./Documents";
@@ -223,12 +229,16 @@ function Auth({
   );
 }
 type Page =
+  | "compte"
+  | "imports"
   | "administration"
   | "accueil"
   | "documents"
   | "collectes"
   | RecordKind;
 const icons = {
+  compte: IconUsers,
+  imports: IconDownload,
   administration: IconUsers,
   collectes: IconDownload,
   documents: IconDownload,
@@ -239,7 +249,7 @@ const icons = {
   obligation: IconCalendar,
 };
 function route(): Page {
-  const hash = location.hash.slice(1);
+  const hash = location.hash.slice(1).split("?")[0];
   return [
     "dossier",
     "contact",
@@ -247,6 +257,8 @@ function route(): Page {
     "obligation",
     "documents",
     "collectes",
+    "compte",
+    "imports",
     "administration",
   ].includes(hash)
     ? (hash as Page)
@@ -260,14 +272,25 @@ function Cabinet({
   onLogout: () => void;
 }) {
   const signal = useScope();
+  const {
+    account,
+    error: accountError,
+    busy: settingsBusy,
+    save: saveSettings,
+  } = useAccountSettings();
+  const { info: installation } = useInstallation();
   const [page, setPage] = useState<Page>(route),
-    [theme, setTheme] = useState(() =>
-      localStorage.getItem("memlia-theme") === "dark" ? "dark" : "light",
-    ),
-    [collapsed, setCollapsed] = useState(
-      () => localStorage.getItem("memlia-navigation") === "collapsed",
+    [systemDark, setSystemDark] = useState(
+      () => matchMedia("(prefers-color-scheme: dark)").matches,
     ),
     [fault, setFault] = useState("");
+  const theme =
+    account?.preferences.theme === "system"
+      ? systemDark
+        ? "dark"
+        : "light"
+      : (account?.preferences.theme ?? "light");
+  const collapsed = account?.preferences.sidebarCollapsed ?? false;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     const change = () => setPage(route());
@@ -275,15 +298,16 @@ function Cabinet({
     return () => window.removeEventListener("hashchange", change);
   }, []);
   useEffect(() => {
-    document.documentElement.className = theme;
-    localStorage.setItem("memlia-theme", theme);
-  }, [theme]);
+    const media = matchMedia("(prefers-color-scheme: dark)"),
+      change = () => setSystemDark(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
   useEffect(() => {
-    localStorage.setItem(
-      "memlia-navigation",
-      collapsed ? "collapsed" : "expanded",
-    );
-  }, [collapsed]);
+    document.documentElement.className = theme;
+    document.documentElement.dataset.density =
+      account?.preferences.density ?? "normal";
+  }, [theme, account?.preferences.density]);
   useEffect(() => {
     heading.current?.focus();
   }, [page]);
@@ -314,20 +338,26 @@ function Cabinet({
               "obligation",
               "documents",
               "collectes",
+              "compte",
+              "imports",
               "administration",
             ] as Page[]
           ).map((p) => {
             const Icon = icons[p];
             const title =
-              p === "administration"
-                ? "Administration"
-                : p === "accueil"
-                  ? "Accueil"
-                  : p === "documents"
-                    ? "Documents"
-                    : p === "collectes"
-                      ? "Collectes"
-                      : labels[p];
+              p === "compte"
+                ? "Mon compte"
+                : p === "imports"
+                  ? "Reprise"
+                  : p === "administration"
+                    ? "Administration"
+                    : p === "accueil"
+                      ? "Accueil"
+                      : p === "documents"
+                        ? "Documents"
+                        : p === "collectes"
+                          ? "Collectes"
+                          : labels[p];
             return (
               <a
                 key={p}
@@ -345,7 +375,7 @@ function Cabinet({
         <div className="sidebar-bottom">
           {!collapsed && (
             <div className="user-name" title={user.email}>
-              {user.name}
+              {account?.profile.name ?? user.name}
             </div>
           )}
           <Button
@@ -354,7 +384,8 @@ function Cabinet({
             aria-label={
               collapsed ? "Déplier la navigation" : "Replier la navigation"
             }
-            onClick={() => setCollapsed((v) => !v)}
+            disabled={settingsBusy || !account}
+            onClick={() => void saveSettings({ sidebarCollapsed: !collapsed })}
           >
             {collapsed ? (
               <IconLayoutSidebarLeftExpand size={16} />
@@ -370,7 +401,10 @@ function Cabinet({
                 ? "Activer le thème sombre"
                 : "Activer le thème clair"
             }
-            onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+            disabled={settingsBusy || !account}
+            onClick={() =>
+              void saveSettings({ theme: theme === "light" ? "dark" : "light" })
+            }
           >
             {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
           </Button>
@@ -397,20 +431,30 @@ function Cabinet({
       <main id="main" className="main">
         <header className="app-header">
           <h1 ref={heading} tabIndex={-1}>
-            {page === "administration"
-              ? "Administration"
-              : page === "accueil"
-                ? "Accueil"
-                : page === "documents"
-                  ? "Documents"
-                  : page === "collectes"
-                    ? "Collectes"
-                    : labels[page]}
+            {page === "compte"
+              ? "Mon compte"
+              : page === "imports"
+                ? "Reprise"
+                : page === "administration"
+                  ? "Administration"
+                  : page === "accueil"
+                    ? "Accueil"
+                    : page === "documents"
+                      ? "Documents"
+                      : page === "collectes"
+                        ? "Collectes"
+                        : labels[page]}
           </h1>
-          <span className="muted">Cabinet partagé</span>
+          <span className="muted">
+            {installation?.name ?? "Cabinet partagé"}
+          </span>
         </header>
-        <ErrorSummary message={fault || undefined} />
-        {page === "administration" ? (
+        <ErrorSummary message={fault || accountError || undefined} />
+        {page === "compte" ? (
+          <Account />
+        ) : page === "imports" ? (
+          <Imports />
+        ) : page === "administration" ? (
           <Administration user={user} />
         ) : page === "accueil" ? (
           <Home key={page} />

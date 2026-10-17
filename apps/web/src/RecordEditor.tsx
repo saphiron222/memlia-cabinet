@@ -1,4 +1,15 @@
 import {
+  DossierChoices,
+  useDossierChoices,
+} from "./features/referential/DossierChoices";
+import { Origins } from "./features/referential/Origins";
+import { RelatedRecords } from "./features/referential/RelatedRecords";
+import { ReferentialFields } from "./features/referential/ReferentialFields";
+import {
+  CustomValues,
+  useCustomFields,
+} from "./features/referential/CustomValues";
+import {
   useRecordCapabilities,
   useCreationCapabilities,
 } from "./features/administration/capabilities";
@@ -56,6 +67,10 @@ export function RecordEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const dossierChoices = useDossierChoices(kind !== "dossier");
+  const dossiers = dossierChoices.items;
+  const { fields: customFields, error: customFieldsError } =
+    useCustomFields(kind);
   const signal = useScope(),
     dialog = useRef<HTMLDialogElement>(null);
   const [saved, setSaved] = useState<CabinetRecord | null>(null),
@@ -77,7 +92,6 @@ export function RecordEditor({
     [notice, setNotice] = useState(""),
     [conflict, setConflict] = useState(false),
     [latest, setLatest] = useState<CabinetRecord | null>(null),
-    [dossiers, setDossiers] = useState<CabinetRecord[]>([]),
     [users, setUsers] = useState<z.infer<typeof UserListSchema>["items"]>([
       user,
     ]),
@@ -132,26 +146,6 @@ export function RecordEditor({
             setLoading(false);
           }
         });
-    if (kind !== "dossier") {
-      const load = async () => {
-        let offset = 0,
-          all: CabinetRecord[] = [];
-        do {
-          const result = await request(
-            "/records?" + queryString({ kind: "dossier", offset, limit: 200 }),
-            RecordListSchema,
-            signal,
-          );
-          all.push(...result.items);
-          offset += result.items.length;
-          if (offset >= result.total || !result.items.length) break;
-        } while (true);
-        setDossiers(all);
-      };
-      load().catch((e) => {
-        if (!signal.aborted) setLookupError(message(e));
-      });
-    }
     if (
       kind === "tache" &&
       [...user.permissions, ...user.scopedPermissions].some(
@@ -377,6 +371,13 @@ export function RecordEditor({
                 )}
               </section>
             )}
+            {saved && (
+              <>
+                <RelatedRecords record={saved} onNavigate={onClose} />
+                <Origins record={saved} />
+              </>
+            )}
+            <ErrorSummary message={customFieldsError || undefined} />
             <fieldset disabled={!editable || busy || conflict}>
               <Field
                 name="title"
@@ -386,8 +387,15 @@ export function RecordEditor({
                 required
                 errors={errors}
               />
+              <CustomValues
+                fields={customFields}
+                placement="header"
+                values={draft.data.customFields}
+                onChange={(v) => data("customFields", v)}
+              />
               {kind !== "dossier" && (
                 <>
+                  <DossierChoices choices={dossierChoices} />
                   <Select
                     name="dossierId"
                     label="Dossier lié"
@@ -413,52 +421,18 @@ export function RecordEditor({
                   )}
                 </>
               )}
-              {draft.kind === "dossier" && (
-                <>
-                  <Field
-                    name="siren"
-                    label="SIREN"
-                    value={draft.data.siren ?? ""}
-                    onChange={(v) => data("siren", v || null)}
-                    errors={errors}
-                    hint="9 chiffres, zéros initiaux conservés."
-                  />
-                  <Field
-                    name="legalForm"
-                    label="Forme juridique"
-                    value={draft.data.legalForm}
-                    onChange={(v) => data("legalForm", v)}
-                    errors={errors}
-                  />
-                </>
-              )}
-              {draft.kind === "contact" && (
-                <>
-                  <Select
-                    name="contactType"
-                    label="Type de contact"
-                    value={draft.data.contactType}
-                    onChange={(v) => data("contactType", v)}
-                  >
-                    <option value="personne">Personne</option>
-                    <option value="organisation">Organisation</option>
-                  </Select>
-                  <Field
-                    name="email"
-                    label="Adresse email"
-                    value={draft.data.email ?? ""}
-                    onChange={(v) => data("email", v || null)}
-                    errors={errors}
-                  />
-                  <Field
-                    name="phone"
-                    label="Téléphone"
-                    value={draft.data.phone}
-                    onChange={(v) => data("phone", v)}
-                    errors={errors}
-                  />
-                </>
-              )}
+              <ReferentialFields
+                record={draft}
+                setData={data}
+                errors={errors}
+                dossiers={dossiers}
+              />
+              <CustomValues
+                fields={customFields}
+                placement="information"
+                values={draft.data.customFields}
+                onChange={(v) => data("customFields", v)}
+              />
               {"notes" in draft.data && (
                 <div className="field">
                   <label htmlFor="notes">Notes</label>
@@ -668,6 +642,12 @@ export function RecordEditor({
                   </small>
                 </>
               )}
+              <CustomValues
+                fields={customFields}
+                placement="parameters"
+                values={draft.data.customFields}
+                onChange={(v) => data("customFields", v)}
+              />
               <label className="check">
                 <Checkbox
                   checked={draft.confidential}
@@ -690,10 +670,7 @@ export function RecordEditor({
                 type="submit"
                 variant="solid"
                 loading={busy}
-                disabled={
-                  conflict ||
-                  !proposed.actions.includes(saved ? "update" : "create")
-                }
+                disabled={conflict}
               >
                 Enregistrer
               </Button>

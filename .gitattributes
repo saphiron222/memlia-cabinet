@@ -3,3 +3,6 @@
 *.jpg binary
 *.woff2 binary
 evidence/upstream/*.tar.gz filter=lfs diff=lfs merge=lfs -text
+
+# Original published metadata: byte identity is checked by the notice generator.
+apps/server/licenses/worker-f-0.1.20/package.json -text whitespace=cr-at-eol

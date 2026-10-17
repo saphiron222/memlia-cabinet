@@ -1,3 +1,4 @@
+import { requireModule } from "../administration/settings.js";
 import { assignmentScope } from "../administration/access.js";
 import { randomUUID, createHash } from "node:crypto";
 import { mkdir, open, rename, rm } from "node:fs/promises";
@@ -113,6 +114,7 @@ export class DocumentStore {
     return effectiveUser(tx, rows[0]);
   }
   async authorize(tx: Connection, actor: SessionUser, input: DocumentInput) {
+    await requireModule(tx, "ged");
     const current = await this.actor(tx, actor),
       parent = await loadRecord(tx, input.dossierId);
     if (parent.kind !== "dossier")
@@ -293,6 +295,29 @@ export class DocumentStore {
     };
   }
   async list(tx: Connection, actor: SessionUser, query: DocumentQuery) {
+    return this.listAuthorized(tx, actor, query);
+  }
+  async exportReferences(
+    tx: Connection,
+    actor: SessionUser,
+    dossierIds: string[],
+    after: string | null = null,
+  ) {
+    return this.listAuthorized(
+      tx,
+      actor,
+      DocumentQuerySchema.parse({ limit: 100 }),
+      dossierIds,
+      after,
+    );
+  }
+  private async listAuthorized(
+    tx: Connection,
+    actor: SessionUser,
+    query: DocumentQuery,
+    exportDossierIds?: string[],
+    afterDocumentId?: string | null,
+  ) {
     const current = await this.actor(tx, actor),
       filter = DocumentQuerySchema.parse(query);
     const params: unknown[] = [];
@@ -300,7 +325,7 @@ export class DocumentStore {
       params.push(value);
       return "$" + params.length;
     };
-    const scope = (action: "read" | "confidential") => {
+    const scope = (action: "read" | "confidential" | "export") => {
       if (hasPermission(current, action, "dossier")) return "TRUE";
       const dossierIds = [
         ...new Set(current.permissions.map((p) => p.dossierId)),
@@ -314,6 +339,12 @@ export class DocumentStore {
       scope("read"),
       `(NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR (${scope("confidential")}))`,
     ];
+    if (afterDocumentId) where.push(`d.id>${parameter(afterDocumentId)}::uuid`);
+    if (exportDossierIds)
+      where.push(
+        scope("export"),
+        `d.dossier_id=ANY(${parameter(exportDossierIds)}::uuid[])`,
+      );
     if (filter.dossierId)
       where.push(`d.dossier_id=${parameter(filter.dossierId)}::uuid`);
     if (filter.logicalId)
@@ -330,19 +361,64 @@ export class DocumentStore {
     // Both statements enforce exactly the same current scope before count/page.
     // Extracted text is never projected or transferred to the application here.
     const totals = await tx.query(`SELECT count(*) AS total ${from}`, params);
-    const limit = parameter(filter.limit),
+    const limit = parameter(exportDossierIds ? 1000 : filter.limit),
       offset = parameter(filter.offset);
     const rows = await tx.query(
-      `SELECT d.content ${from} ORDER BY d.logical_id,d.version LIMIT ${limit} OFFSET ${offset}`,
+      `SELECT d.content ${from} ORDER BY ${exportDossierIds ? "d.id" : "d.logical_id,d.version"} LIMIT ${limit} OFFSET ${offset}`,
       params,
     );
-    const items = await Promise.all(
-      rows.map(async (row) => {
-        const ref = DocumentReferenceSchema.parse(row.content);
-        return { ...ref, availability: (await this.read(ref)).availability };
-      }),
-    );
+    const items = [];
+    // Bounded I/O even when an export prepares 1 000 references per checkpoint.
+    for (let offset = 0; offset < rows.length; offset += 8) {
+      items.push(
+        ...(await Promise.all(
+          rows.slice(offset, offset + 8).map(async (row) => {
+            const ref = DocumentReferenceSchema.parse(row.content);
+            return {
+              ...ref,
+              availability: (await this.read(ref)).availability,
+            };
+          }),
+        )),
+      );
+    }
     return { items, total: Number(totals[0]!.total) };
+  }
+
+  async assertExportReferences(
+    tx: Connection,
+    actor: SessionUser,
+    ids: string[],
+  ) {
+    if (!ids.length) return;
+    const current = await this.actor(tx, actor),
+      params: unknown[] = [ids];
+    const parameter = (v: unknown) => {
+      params.push(v);
+      return "$" + params.length;
+    };
+    const scope = (action: "read" | "export" | "confidential") => {
+      if (hasPermission(current, action, "dossier")) return "TRUE";
+      const allowed = current.permissions
+        .filter(
+          (p) =>
+            p.action === action &&
+            (p.kind === "dossier" || p.kind === "*") &&
+            p.dossierId,
+        )
+        .map((p) => p.dossierId);
+      return `(d.dossier_id=ANY(${parameter(allowed)}::uuid[]) OR ${assignmentScope(current.id, action, "dossier", "d.dossier_id", parameter)})`;
+    };
+    const rows = await tx.query(
+      `SELECT count(*) AS n FROM cabinet_documents d JOIN cabinet_records r ON r.id=d.dossier_id AND r.kind='dossier' WHERE d.id=ANY($1::uuid[]) AND ${scope("read")} AND ${scope("export")} AND (NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR ${scope("confidential")})`,
+      params,
+    );
+    if (Number(rows[0]!.n) !== ids.length)
+      fail(
+        403,
+        "EXPORT_SCOPE_CHANGED",
+        "Les droits de cette sortie ont changé. Régénérer le fichier.",
+      );
   }
 
   async download(tx: Connection, actor: SessionUser, id: string) {

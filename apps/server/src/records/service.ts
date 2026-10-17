@@ -1,3 +1,6 @@
+import { queryRecords } from "./query.js";
+import { RecordListQuerySchema } from "@memlia/contracts";
+import { validateReferentialContent } from "./validation.js";
 import { randomUUID } from "node:crypto";
 import {
   CabinetRecordSchema,
@@ -6,6 +9,7 @@ import {
   type SessionUser,
   type CreateRecordInput,
   type UpdateRecordInput,
+  type FieldOrigin,
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
 import { fail } from "../errors.js";
@@ -27,32 +31,11 @@ export async function listRecords(
   user: SessionUser,
   action: "read" | "export" = "read",
 ) {
-  const rows = await tx.query(
-    "SELECT content FROM cabinet_records ORDER BY id",
-  );
-  const records: CabinetRecord[] = [];
-  for (const row of rows) {
-    const record = CabinetRecordSchema.parse(row.content);
-    if (await canRead(tx, user, action, record)) records.push(record);
-  }
-  return records;
+  return (
+    await queryRecords(tx, user, RecordListQuerySchema.parse({}), action, false)
+  ).items;
 }
-async function canRead(
-  tx: Connection,
-  user: SessionUser,
-  action: "read" | "export",
-  record: CabinetRecord,
-) {
-  try {
-    await requireAccess(tx, user, "read", record);
-    if (action === "export") await requireAccess(tx, user, "export", record);
-    return true;
-  } catch (error) {
-    if (error instanceof Error && "status" in error && error.status === 404)
-      return false;
-    throw error;
-  }
-}
+
 type ObligationRecord = Extract<CabinetRecord, { kind: "obligation" }>;
 function obligationApprovalContent(record: ObligationRecord) {
   const { validation, archived, ...data } = record.data;
@@ -66,6 +49,7 @@ export async function saveRecord(
   id?: string,
   action: "created" | "updated" | "transitioned" = id ? "updated" : "created",
   command?: unknown,
+  origin?: FieldOrigin,
 ) {
   const previous = id ? await loadRecord(tx, id) : null;
   if (previous)
@@ -98,30 +82,32 @@ export async function saveRecord(
         createdAt: previous?.createdAt ?? now.toISOString(),
         updatedAt: now.toISOString(),
       });
+      record.data.fieldOrigins = { ...(previous?.data.fieldOrigins ?? {}) };
+      const changed: Record<string, unknown> = {
+        title: record.title,
+        ...record.data,
+      };
+      const oldValues: Record<string, unknown> = previous
+        ? { title: previous.title, ...previous.data }
+        : {};
+      for (const key of Object.keys(changed))
+        if (
+          key !== "fieldOrigins" &&
+          JSON.stringify(changed[key]) !== JSON.stringify(oldValues[key])
+        )
+          record.data.fieldOrigins[key] = origin ?? {
+            kind: "manual",
+            reference: user.id,
+            version: String(record.version),
+            at: now.toISOString(),
+          };
+      await validateReferentialContent(tx, user, record);
       if (previous && previous.kind !== record.kind)
         fail(
           400,
           "IMMUTABLE_KIND",
           "Le type de ressource ne peut pas changer.",
         );
-      if (record.kind === "dossier" && record.dossierId !== null)
-        fail(
-          400,
-          "INVALID_RELATION",
-          "Un dossier ne dépend pas d’un autre dossier.",
-        );
-      if (record.kind === "obligation" && !record.dossierId)
-        fail(
-          400,
-          "DOSSIER_REQUIRED",
-          "Une obligation doit être rattachée à un dossier.",
-        );
-      if (record.dossierId) {
-        const parent = await loadRecord(tx, record.dossierId);
-        if (parent.kind !== "dossier")
-          fail(400, "INVALID_RELATION", "Dossier attendu.");
-        await requireAccess(tx, user, "read", parent);
-      }
       await requireAccess(
         tx,
         user,
@@ -207,8 +193,13 @@ export async function saveRecord(
           "Cette ressource a changé. Rechargez-la avant de modifier.",
         );
       await tx.query(
-        "INSERT INTO cabinet_records(id,kind,content) VALUES($1,$2,$3::jsonb) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content",
-        [record.id, record.kind, JSON.stringify(record)],
+        "INSERT INTO cabinet_records(id,kind,content,search_title) VALUES($1,$2,$3::jsonb,$4) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content,search_title=EXCLUDED.search_title",
+        [
+          record.id,
+          record.kind,
+          JSON.stringify(record),
+          record.title.toLocaleLowerCase("fr"),
+        ],
       );
       const event = HistoryEventSchema.parse({
         id: randomUUID(),

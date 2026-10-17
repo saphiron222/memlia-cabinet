@@ -89,15 +89,54 @@
       "acceptanceCriteria": [
         {
           "id": "F-DASHBOARD-AC-01",
-          "expected": "Les compteurs, cartes et graphiques correspondent au même périmètre, à la même période et aux lignes accessibles en détail."
+          "expected": "Les compteurs, cartes et graphiques correspondent au même périmètre, à la même période et aux lignes accessibles en détail.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/query.ts",
+              "apps/web/src/features/records/Dashboard.tsx"
+            ],
+            "tests": [
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DASHBOARD-AC-02",
-          "expected": "La disposition personnelle des widgets est retrouvée après reconnexion sans modifier celle des autres utilisateurs."
+          "expected": "La disposition personnelle des widgets est retrouvée après reconnexion sans modifier celle des autres utilisateurs.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/query.ts",
+              "apps/web/src/features/records/Dashboard.tsx"
+            ],
+            "tests": [
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DASHBOARD-AC-03",
-          "expected": "Un filtre appliqué au tableau de bord est conservé en ouvrant le détail et dans l'export de ce sous-ensemble."
+          "expected": "Un filtre appliqué au tableau de bord est conservé en ouvrant le détail et dans l'export de ce sous-ensemble.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/query.ts",
+              "apps/web/src/features/records/Dashboard.tsx"
+            ],
+            "tests": [
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -456,15 +495,60 @@
       "acceptanceCriteria": [
         {
           "id": "F-DOSSIERS-AC-01",
-          "expected": "Créer ou modifier un dossier/contact conserve identifiants textuels, champs adaptés, relations et historique après rechargement."
+          "expected": "Créer ou modifier un dossier/contact conserve identifiants textuels, champs adaptés, relations et historique après rechargement.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/validation.ts",
+              "apps/server/src/administration/companies.ts",
+              "apps/web/src/features/referential/ReferentialFields.tsx"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "apps/server/test/company-search.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DOSSIERS-AC-02",
-          "expected": "La recherche et les filtres retournent uniquement les ressources autorisées ; un lien dossier/contact ouvre la bonne fiche."
+          "expected": "La recherche et les filtres retournent uniquement les ressources autorisées ; un lien dossier/contact ouvre la bonne fiche.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/validation.ts",
+              "apps/server/src/administration/companies.ts",
+              "apps/web/src/features/referential/ReferentialFields.tsx"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "apps/server/test/company-search.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DOSSIERS-AC-03",
-          "expected": "Un dossier détecté peut être créé, masqué puis restauré ; rejouer la même décision ou le même rapprochement ne crée pas de doublon."
+          "expected": "Un dossier détecté peut être créé, masqué puis restauré ; rejouer la même décision ou le même rapprochement ne crée pas de doublon.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/records/validation.ts",
+              "apps/server/src/administration/companies.ts",
+              "apps/web/src/features/referential/ReferentialFields.tsx"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "apps/server/test/company-search.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -765,15 +849,53 @@
       "acceptanceCriteria": [
         {
           "id": "F-COMPTE-AC-01",
-          "expected": "Profil, préférences d'affichage et notifications sont conservés pour l'utilisateur après reconnexion."
+          "expected": "Profil, préférences d'affichage et notifications sont conservés pour l'utilisateur après reconnexion.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase",
+            "remaining": "Notifications événement/canal : Task3 ; profil et affichage construits ici."
+          }
         },
         {
           "id": "F-COMPTE-AC-02",
-          "expected": "Un changement de mot de passe exige les éléments attendus, rejette confirmation incohérente et applique la politique de session prévue."
+          "expected": "Un changement de mot de passe exige les éléments attendus, rejette confirmation incohérente et applique la politique de session prévue.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase",
+            "remaining": "Mot de passe/récupération et sessions : Task10."
+          }
         },
         {
           "id": "F-COMPTE-AC-03",
-          "expected": "Les réglages personnels ne modifient ni les préférences des autres utilisateurs ni les paramètres globaux du cabinet."
+          "expected": "Les réglages personnels ne modifient ni les préférences des autres utilisateurs ni les paramètres globaux du cabinet.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -848,15 +970,58 @@
       "acceptanceCriteria": [
         {
           "id": "F-DROITS-AC-01",
-          "expected": "Le service évalue action, ressource, permission globale ou affectation, puis confidentialité ; l'absence de menu ne remplace pas ce contrôle."
+          "expected": "Le service évalue action, ressource, permission globale ou affectation, puis confidentialité ; l'absence de menu ne remplace pas ce contrôle.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/records/permissions.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DROITS-AC-02",
-          "expected": "Nom, ordre et permissions d'un rôle sont persistés ; une modification prend effet sur la commande suivante."
+          "expected": "Nom, ordre et permissions d'un rôle sont persistés ; une modification prend effet sur la commande suivante.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/records/permissions.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-DROITS-AC-03",
-          "expected": "Le retrait d'un droit bloque aussi lien direct, pièce, recherche, export et notification sans divulguer l'existence d'une ressource inaccessible."
+          "expected": "Le retrait d'un droit bloque aussi lien direct, pièce, recherche, export et notification sans divulguer l'existence d'une ressource inaccessible.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/records/permissions.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase",
+            "remaining": "Notification : Task3 ; autres surfaces construites et testées ici."
+          }
         }
       ]
     },
@@ -875,15 +1040,57 @@
       "acceptanceCriteria": [
         {
           "id": "F-MODULES-AC-01",
-          "expected": "Chaque module affiche séparément disponibilité, activation interne, connexion fournisseur et capacité réellement utilisable."
+          "expected": "Chaque module affiche séparément disponibilité, activation interne, connexion fournisseur et capacité réellement utilisable.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts",
+              "apps/server/src/administration/companies.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/collections.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-MODULES-AC-02",
-          "expected": "La création automatique et la décision manuelle sur les dossiers détectés utilisent le même rapprochement idempotent."
+          "expected": "La création automatique et la décision manuelle sur les dossiers détectés utilisent le même rapprochement idempotent.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts",
+              "apps/server/src/administration/companies.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/collections.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-MODULES-AC-03",
-          "expected": "Un module sans source affiche son absence de production ; l'activer ne marque aucune collecte ou opération externe comme réussie."
+          "expected": "Un module sans source affiche son absence de production ; l'activer ne marque aucune collecte ou opération externe comme réussie.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts",
+              "apps/server/src/administration/companies.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/collections.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -1018,15 +1225,52 @@
       "acceptanceCriteria": [
         {
           "id": "F-CUSTOMFIELDS-AC-01",
-          "expected": "Un champ possède identité stable, type, validation et emplacement ; renommer son libellé préserve les valeurs."
+          "expected": "Un champ possède identité stable, type, validation et emplacement ; renommer son libellé préserve les valeurs.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/custom-fields.ts"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-CUSTOMFIELDS-AC-02",
-          "expected": "Les types texte, nombre, date, booléen et choix rejettent les valeurs incompatibles ; une conversion exige une migration explicite."
+          "expected": "Les types texte, nombre, date, booléen et choix rejettent les valeurs incompatibles ; une conversion exige une migration explicite.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/custom-fields.ts"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-CUSTOMFIELDS-AC-03",
-          "expected": "Une étape réutilisable conserve statuts ordonnés, couleur et icône et rend le même état dans grille, formulaire et aperçu."
+          "expected": "Une étape réutilisable conserve statuts ordonnés, couleur et icône et rend le même état dans grille, formulaire et aperçu.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "apps/server/src/administration/custom-fields.ts"
+            ],
+            "tests": [
+              "apps/server/test/referential.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase",
+            "remaining": "Types d’étape réutilisables : Task4."
+          }
         }
       ]
     },
@@ -1044,15 +1288,51 @@
       "acceptanceCriteria": [
         {
           "id": "F-ABONNEMENT-AC-01",
-          "expected": "L'installation affiche version, capacités activées et consommation locale mesurable, sans présenter une consommation fictive du SaaS de référence."
+          "expected": "L'installation affiche version, capacités activées et consommation locale mesurable, sans présenter une consommation fictive du SaaS de référence.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-ABONNEMENT-AC-02",
-          "expected": "Les documents commerciaux éventuellement fournis sont consultables avec leur origine ; aucun prix, prélèvement ou prorata n'est généré depuis les exemples Teradion."
+          "expected": "Les documents commerciaux éventuellement fournis sont consultables avec leur origine ; aucun prix, prélèvement ou prorata n'est généré depuis les exemples Teradion.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-ABONNEMENT-AC-03",
-          "expected": "Une modification des capacités explique son impact et conserve les données ; aucun abonnement cloud ni moyen de paiement n'est requis pour démarrer l'installation locale."
+          "expected": "Une modification des capacités explique son impact et conserve les données ; aucun abonnement cloud ni moyen de paiement n'est requis pour démarrer l'installation locale.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ],
       "limits": [
@@ -1074,15 +1354,58 @@
       "acceptanceCriteria": [
         {
           "id": "F-IMPORT-AC-01",
-          "expected": "L'aperçu associe les colonnes et détecte formats invalides, doublons et identifiants textuels avant engagement."
+          "expected": "L'aperçu associe les colonnes et détecte formats invalides, doublons et identifiants textuels avant engagement.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/imports/service.ts",
+              "apps/server/src/imports/parser.ts"
+            ],
+            "tests": [
+              "apps/server/test/imports.test.ts",
+              "apps/server/test/import-parser.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-IMPORT-AC-02",
-          "expected": "Le rapport distingue lignes importées, mises à jour et refusées ; un rejeu identique ne duplique ni objet ni affectation."
+          "expected": "Le rapport distingue lignes importées, mises à jour et refusées ; un rejeu identique ne duplique ni objet ni affectation.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/imports/service.ts",
+              "apps/server/src/imports/parser.ts"
+            ],
+            "tests": [
+              "apps/server/test/imports.test.ts",
+              "apps/server/test/import-parser.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-IMPORT-AC-03",
-          "expected": "La reprise accompagnée transforme pipeline, statuts et checklists en modèles explicitement validés sans prétendre à un connecteur automatique non retenu."
+          "expected": "La reprise accompagnée transforme pipeline, statuts et checklists en modèles explicitement validés sans prétendre à un connecteur automatique non retenu.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "apps/server/src/imports/service.ts",
+              "apps/server/src/imports/parser.ts"
+            ],
+            "tests": [
+              "apps/server/test/imports.test.ts",
+              "apps/server/test/import-parser.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase",
+            "remaining": "Reprise de modèles pipeline/checklist/étapes : Tasks3/4/6."
+          }
         }
       ]
     },
@@ -1346,15 +1669,54 @@
       "acceptanceCriteria": [
         {
           "id": "F-EQUIPES-AC-01",
-          "expected": "Une équipe et un site conservent leurs membres et affectations ; une opération en lot produit un rapport par dossier."
+          "expected": "Une équipe et un site conservent leurs membres et affectations ; une opération en lot produit un rapport par dossier.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/administration/assignments.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-EQUIPES-AC-02",
-          "expected": "Le retrait d'un membre modifie ses accès à la commande suivante sans effacer l'historique de ses réalisations."
+          "expected": "Le retrait d'un membre modifie ses accès à la commande suivante sans effacer l'historique de ses réalisations.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/administration/assignments.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-EQUIPES-AC-03",
-          "expected": "Une consolidation direction n'agrège que les sites et dossiers autorisés et ne donne pas accès au contenu d'un dossier confidentiel."
+          "expected": "Une consolidation direction n'agrège que les sites et dossiers autorisés et ne donne pas accès au contenu d'un dossier confidentiel.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/access.ts",
+              "apps/server/src/administration/assignments.ts"
+            ],
+            "tests": [
+              "apps/server/test/administration.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -1372,15 +1734,57 @@
       "acceptanceCriteria": [
         {
           "id": "F-ENTERPRISE-AC-01",
-          "expected": "Deux cabinets de test conservent des contextes, données et permissions séparés ; un identifiant de l'autre cabinet ne donne aucun accès."
+          "expected": "Deux cabinets de test conservent des contextes, données et permissions séparés ; un identifiant de l'autre cabinet ne donne aucun accès.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "docs/referentiel-reprise.md",
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/imports.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-ENTERPRISE-AC-02",
-          "expected": "Chaque installation affiche son identité cabinet ; listes, recherche, pièces, compteurs et commandes utilisent uniquement son contexte autorisé."
+          "expected": "Chaque installation affiche son identité cabinet ; listes, recherche, pièces, compteurs et commandes utilisent uniquement son contexte autorisé.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "docs/referentiel-reprise.md",
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/imports.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-ENTERPRISE-AC-03",
-          "expected": "Les interfaces d'intégration exposées par Memlia ont contrat versionné, authentification et portée ; aucune API privée Teradion n'est requise ou présentée comme acquise."
+          "expected": "Les interfaces d'intégration exposées par Memlia ont contrat versionné, authentification et portée ; aucune API privée Teradion n'est requise ou présentée comme acquise.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "docs/referentiel-reprise.md",
+              "apps/server/src/administration/settings.ts"
+            ],
+            "tests": [
+              "apps/server/test/settings.test.ts",
+              "apps/server/test/imports.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ],
       "limits": [
@@ -1458,15 +1862,57 @@
       "acceptanceCriteria": [
         {
           "id": "F-EXPORT-AC-01",
-          "expected": "Chaque export reprend les colonnes et lignes de la vue choisie dans le format annoncé, avec identifiants et dates non altérés."
+          "expected": "Chaque export reprend les colonnes et lignes de la vue choisie dans le format annoncé, avec identifiants et dates non altérés.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/export.ts",
+              "apps/server/src/records/query.ts"
+            ],
+            "tests": [
+              "apps/server/test/export.test.ts",
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-EXPORT-AC-02",
-          "expected": "Les droits et la confidentialité sont contrôlés au moment de l'export, y compris pour les relations et pièces jointes."
+          "expected": "Les droits et la confidentialité sont contrôlés au moment de l'export, y compris pour les relations et pièces jointes.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/export.ts",
+              "apps/server/src/records/query.ts"
+            ],
+            "tests": [
+              "apps/server/test/export.test.ts",
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         },
         {
           "id": "F-EXPORT-AC-03",
-          "expected": "Une sortie complète fournit les objets et références documentaires prévus ; les erreurs ou pièces absentes sont décrites au lieu d'être silencieusement omises."
+          "expected": "Une sortie complète fournit les objets et références documentaires prévus ; les erreurs ou pièces absentes sont décrites au lieu d'être silencieusement omises.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "apps/server/src/administration/export.ts",
+              "apps/server/src/records/query.ts"
+            ],
+            "tests": [
+              "apps/server/test/export.test.ts",
+              "apps/server/test/views-dashboard.test.ts",
+              "tests/e2e/administration.spec.ts"
+            ],
+            "ci": "not-run-for-task1",
+            "fieldValidation": "last-phase"
+          }
         }
       ]
     },
@@ -1913,10 +2359,19 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "apps/server/src/records/query.ts",
+          "apps/web/src/features/records/Dashboard.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
+        "fieldValidation": "last-phase",
+        "remaining": "Fraîcheur temporelle versionnée : Task2/10 ; état non vérifié/manuelle/simulée explicite maintenant."
       }
     },
     {
@@ -1940,9 +2395,17 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/records/query.ts",
+          "apps/web/src/features/records/Dashboard.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -2845,9 +3308,19 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/records/validation.ts",
+          "apps/server/src/administration/companies.ts",
+          "apps/web/src/features/referential/ReferentialFields.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/referential.test.ts",
+          "apps/server/test/company-search.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -3403,10 +3876,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
+        "fieldValidation": "last-phase",
+        "remaining": "Notifications événement/canal : Task3."
       }
     },
     {
@@ -3487,7 +3968,8 @@
         "status": "planned",
         "files": [],
         "tests": [],
-        "fieldValidation": "last-phase"
+        "fieldValidation": "last-phase",
+        "remaining": "Task10"
       }
     },
     {
@@ -3518,9 +4000,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/records/permissions.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -3549,9 +4040,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/records/permissions.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -3578,9 +4078,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/records/permissions.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -3609,10 +4118,20 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "apps/server/src/administration/companies.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "apps/server/test/collections.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
+        "fieldValidation": "last-phase",
+        "remaining": "Connexions fournisseurs réelles : Task10 ; capacités locales et simulations explicites."
       }
     },
     {
@@ -3690,9 +4209,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "apps/server/src/administration/companies.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "apps/server/test/collections.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4129,7 +4657,8 @@
         "status": "planned",
         "files": [],
         "tests": [],
-        "fieldValidation": "last-phase"
+        "fieldValidation": "last-phase",
+        "remaining": "Task4"
       }
     },
     {
@@ -4153,9 +4682,16 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/custom-fields.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/referential.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4178,9 +4714,16 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4203,9 +4746,16 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4230,9 +4780,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/imports/service.ts",
+          "apps/server/src/imports/parser.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/imports.test.ts",
+          "apps/server/test/import-parser.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4262,9 +4821,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/imports/service.ts",
+          "apps/server/src/imports/parser.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/imports.test.ts",
+          "apps/server/test/import-parser.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4290,9 +4858,18 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/settings.ts",
+          "apps/server/src/administration/companies.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "apps/server/test/collections.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -4982,9 +5559,17 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/records/query.ts",
+          "apps/web/src/features/records/Dashboard.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5007,9 +5592,17 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/records/query.ts",
+          "apps/web/src/features/records/Dashboard.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5040,9 +5633,17 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/administration/assignments.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5073,9 +5674,17 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/administration/assignments.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5300,9 +5909,18 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "docs/referentiel-reprise.md",
+          "apps/server/src/administration/settings.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "apps/server/test/imports.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5324,9 +5942,18 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "docs/referentiel-reprise.md",
+          "apps/server/src/administration/settings.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/settings.test.ts",
+          "apps/server/test/imports.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5578,9 +6205,18 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/export.ts",
+          "apps/server/src/records/query.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/export.test.ts",
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -5603,9 +6239,18 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/administration/export.ts",
+          "apps/server/src/records/query.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/export.test.ts",
+          "apps/server/test/views-dashboard.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -6017,10 +6662,20 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "apps/server/src/administration/access.ts",
+          "apps/server/src/records/permissions.ts",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/administration.test.ts",
+          "apps/server/test/settings.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
+        "fieldValidation": "last-phase",
+        "remaining": "Envois notifications : Task3 ; GED/collectes/imports recontrôlés."
       }
     },
     {
@@ -6238,9 +6893,19 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "apps/server/src/records/validation.ts",
+          "apps/server/src/administration/companies.ts",
+          "apps/web/src/features/referential/ReferentialFields.tsx",
+          "docs/referentiel-reprise.md"
+        ],
+        "tests": [
+          "apps/server/test/referential.test.ts",
+          "apps/server/test/company-search.test.ts",
+          "tests/e2e/administration.spec.ts"
+        ],
+        "ci": "not-run-for-task1",
         "fieldValidation": "last-phase"
       }
     },
@@ -6382,7 +7047,8 @@
         "status": "planned",
         "files": [],
         "tests": [],
-        "fieldValidation": "last-phase"
+        "fieldValidation": "last-phase",
+        "remaining": "Tasks3/4/6"
       }
     },
     {

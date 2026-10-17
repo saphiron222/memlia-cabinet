@@ -49,3 +49,9 @@ Deux notices complètes sont dans les README installés (`pg-types@2.2.0`, `pgpa
 ## Traçabilité locale
 
 `PUB-006-S1`, `REA-SC-12`, `F-GED-AC-01/02`, `TR-ACCESS`, `TR-PERSIST`, `TR-PROVENANCE` et la règle transversale Pièces : tests comportementaux dans `apps/server/test/documents.test.ts`, parcours dans `tests/e2e/documents.spec.ts`. Partage/demande client (`F-GED-AC-03`, `PUB-006-S2`), collecte fournisseur, sauvegarde cohérente et charge restent leurs lots propres. Aucune validation CI ni cabinet n’est déclarée par cette preuve locale.
+
+## Consommateur référentiel et sortie locale
+
+L’activation du module GED est désormais vérifiée par `authorize` et donc à nouveau par `commit`, après rechargement des droits effectifs (rôles et affectations compris). Désactiver GED conserve les pièces et leur lecture autorisée ; une préparation antérieure ne peut plus engager une nouvelle pièce.
+
+`exportReferences(tx, actor, dossierIds, after)` fournit jusqu’à 1 000 références couramment lisibles **et exportables**, dans l’ordre stable des UUID, avec disponibilité observée (lectures d’originaux par groupes de huit). `assertExportReferences(tx, actor, ids)` revérifie les droits/confidentialités courants avant restitution d’une préparation ; il n’affirme pas que le fichier reste présent après l’observation initiale. Le téléchargement original conserve ses propres contrôles. Le manifeste et les parties préparées par JobRunner sont décrits dans `referentiel-reprise.md` ; ils ne copient pas les octets des originaux.

@@ -1,3 +1,5 @@
+import { DossierChoices, useDossierChoices } from "./features/referential/DossierChoices";
+import { useModuleEnabled } from "./features/administration/preferences";
 import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useRef, useState } from "react";
 import { Button, Checkbox, Input } from "@memlia/ui";
@@ -51,12 +53,15 @@ export function Documents({
     ...(dossier ? [dossier.id] : []),
     ...(items ?? []).map((d) => d.dossierId),
   ]);
-  const canUpload = dossier
-    ? (rights.grants[dossier.id]?.includes("update") ?? false)
-    : [...user.permissions, ...user.scopedPermissions].some(
-        (p) =>
-          p.action === "update" && (p.kind === "*" || p.kind === "dossier"),
-      );
+  const moduleEnabled = useModuleEnabled("ged");
+  const canUpload =
+    moduleEnabled &&
+    (dossier
+      ? (rights.grants[dossier.id]?.includes("update") ?? false)
+      : [...user.permissions, ...user.scopedPermissions].some(
+          (p) =>
+            p.action === "update" && (p.kind === "*" || p.kind === "dossier"),
+        ));
   useEffect(() => {
     const epoch = ++generation.current;
     const controller = new AbortController();
@@ -241,13 +246,13 @@ function UploadForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const moduleEnabled = useModuleEnabled("ged");
   const signal = useScope(),
     form = useRef<HTMLFormElement>(null),
     [operationId] = useState(() => crypto.randomUUID());
-  const [dossiers, setDossiers] = useState<CabinetRecord[]>(
-      dossier ? [dossier] : [],
-    ),
-    [dossierId, setDossierId] = useState(
+  const choices = useDossierChoices(!dossier && !previous);
+  const dossiers = dossier ? [dossier] : choices.items;
+  const [dossierId, setDossierId] = useState(
       previous?.dossierId ?? dossier?.id ?? "",
     ),
     [file, setFile] = useState<File | null>(null),
@@ -261,25 +266,7 @@ function UploadForm({
   ]);
   useEffect(() => {
     form.current?.querySelector<HTMLElement>("select,input")?.focus();
-    if (!dossier && !previous) {
-      void (async () => {
-        const all: CabinetRecord[] = [];
-        let offset = 0;
-        while (!signal.aborted) {
-          const result = await request(
-            "/records?kind=dossier&limit=100&offset=" + offset,
-            RecordListSchema,
-            signal,
-          );
-          all.push(...result.items);
-          offset += result.items.length;
-          if (offset >= result.total || !result.items.length) break;
-        }
-        if (!signal.aborted) setDossiers(all);
-      })().catch((e) => {
-        if (!signal.aborted) setError(message(e));
-      });
-    }
+
   }, []);
   async function submit() {
     setErrors({});
@@ -378,7 +365,8 @@ function UploadForm({
         <p>Rattachée au même dossier, version {previous.version + 1}.</p>
       ) : dossier ? (
         <p>{dossier.title}</p>
-      ) : (
+      ) : (<>
+        <DossierChoices choices={choices}/>
         <Select
           name="dossierId"
           label="Dossier de la pièce"
@@ -387,6 +375,7 @@ function UploadForm({
           errors={errors}
         >
           <option value="">Choisir un dossier</option>
+          {dossierId && !dossiers.some(d=>d.id===dossierId) && <option value={dossierId}>Dossier actuellement choisi</option>}
           {dossiers
             .filter((d) => rights.grants[d.id]?.includes("update"))
             .map((d) => (
@@ -394,7 +383,7 @@ function UploadForm({
                 {d.title}
               </option>
             ))}
-        </Select>
+        </Select></>
       )}
       <div className="field">
         <label htmlFor="piece">Fichier original</label>
@@ -432,7 +421,9 @@ function UploadForm({
           type="submit"
           variant="solid"
           loading={busy}
-          disabled={!rights.grants[dossierId]?.includes("update")}
+          disabled={
+            !moduleEnabled || (!!dossierId && !rights.grants[dossierId]?.includes("update"))
+          }
         >
           Conserver la pièce
         </Button>

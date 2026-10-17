@@ -8,6 +8,7 @@ export default defineConfig({
   clean: true,
   async onSuccess() {
     await copyFile("src/documents/pdf-worker.mjs", "dist/pdf-worker.mjs");
+    await copyFile("src/imports/parser-worker.mjs", "dist/parser-worker.mjs");
   },
   external: ["@electric-sql/pglite"],
   noExternal: ["@memlia/contracts"],

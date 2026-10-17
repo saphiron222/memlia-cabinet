@@ -1,3 +1,5 @@
+import { Installation } from "./Installation";
+import { CustomFieldAdministration } from "./CustomFieldAdministration";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { Button, Loader } from "@memlia/ui";
@@ -110,9 +112,9 @@ function Permissions({
 }
 export function Administration({ user }: { user: SessionUser }) {
   const signal = useScope();
-  const [tab, setTab] = useState<"roles" | "groups" | "users" | "assignments">(
-      "roles",
-    ),
+  const [tab, setTab] = useState<
+      "roles" | "groups" | "users" | "assignments" | "fields" | "installation"
+    >("roles"),
     [roles, setRoles] = useState<Role[]>([]),
     [groups, setGroups] = useState<Group[]>([]),
     [users, setUsers] = useState<AdminUser[]>([]),
@@ -189,6 +191,8 @@ export function Administration({ user }: { user: SessionUser }) {
             {(
               [
                 ["roles", "Rôles"],
+                ["fields", "Champs personnalisés"],
+                ["installation", "Installation et capacités"],
                 ["groups", "Équipes et sites"],
                 ["users", "Utilisateurs"],
                 ["assignments", "Affectations"],
@@ -214,6 +218,8 @@ export function Administration({ user }: { user: SessionUser }) {
             </div>
           ) : (
             <>
+              {tab === "fields" && <CustomFieldAdministration />}
+              {tab === "installation" && <Installation />}
               {tab === "roles" && (
                 <div className="admin-layout">
                   <div>

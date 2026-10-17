@@ -10,6 +10,7 @@ const api = await createApplication({
   dataDirectory: directory,
   publicOrigin: `http://127.0.0.1:${webPort}`,
   allowEmbeddedDatabase: true,
+  csvSyncRows: 2,
 });
 await api.listen({ port: apiPort, host: "127.0.0.1" });
 const web = await createServer({

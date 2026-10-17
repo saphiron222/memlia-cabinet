@@ -1,3 +1,4 @@
+import { CompanyValuesSchema } from "./companies.js";
 import { z } from "zod";
 import { DocumentReferenceSchema } from "./documents.js";
 import { JobSchema, JobEventSchema } from "./jobs.js";
@@ -213,6 +214,7 @@ export const ObservationDataSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("company"),
+      values: CompanyValuesSchema.optional(),
       externalCompanyId: ref,
       connection: z.literal("firm-api"),
       visibility: z.enum(["visible", "unknown"]),

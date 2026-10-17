@@ -1,3 +1,13 @@
+import { registerExportRoutes, Exports } from "./administration/export.js";
+import { registerScopeRoutes } from "./administration/scopes.js";
+import { registerViewRoutes } from "./administration/views.js";
+import { initializeInstallation } from "./administration/settings.js";
+import { registerSettingsRoutes } from "./administration/settings-routes.js";
+import { ImportParser } from "./imports/parser.js";
+import { Imports } from "./imports/service.js";
+import { registerImportRoutes } from "./imports/routes.js";
+import { registerCompanyRoutes } from "./administration/companies.js";
+import { registerCustomFieldRoutes } from "./administration/custom-fields.js";
 import { registerCapabilitiesRoutes } from "./administration/capabilities.js";
 import { registerAdministrationRoutes } from "./administration/routes.js";
 import { createCabinetCalendar } from "./civil-date.js";
@@ -38,6 +48,10 @@ import { registerRecordRoutes } from "./records/routes.js";
 import { digest } from "./identity/security.js";
 export interface ApplicationOptions {
   dataDirectory: string;
+  /** Fixed public API or local HTTP fixture only. */
+  companySearchOrigin?: string;
+  exportPartBytes?: number;
+  csvSyncRows?: number;
   publicOrigin: string;
   databaseUrl?: string;
   allowEmbeddedDatabase?: boolean;
@@ -75,6 +89,7 @@ export async function createApplication(options: ApplicationOptions) {
   const db = await openDatabase(options);
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
   const now = options.clock ?? (() => new Date());
+  await db.transaction((tx) => initializeInstallation(tx, now()));
   const loginThrottle = new LoginThrottle(now, loginCapacity);
   await app.register(cookie);
   await app.register(multipart, {
@@ -93,8 +108,10 @@ export async function createApplication(options: ApplicationOptions) {
     timeWindow: "15 minutes",
   });
   const jobs = new JobRunner(db, now);
+  const importParser = new ImportParser();
   app.addHook("onClose", async () => {
     await jobs.stop();
+    await importParser.stop();
     await db.close();
   });
   app.setErrorHandler((error, _request, reply) => {
@@ -270,12 +287,32 @@ export async function createApplication(options: ApplicationOptions) {
     reply.clearCookie("memlia_session", { path: "/" });
     return SessionSchema.parse({ user: null });
   });
-  registerRecordRoutes(app, { db, now, user }, civilDate);
+  registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });
   registerAdministrationRoutes(app, { db, now, user });
   registerCapabilitiesRoutes(app, { db, now, user });
+  registerSettingsRoutes(
+    app,
+    { db, now, user },
+    options.cabinetTimeZone ?? "Europe/Paris",
+  );
+  registerImportRoutes(
+    app,
+    { db, now, user },
+    new Imports(db, jobs, now),
+    importParser,
+  );
+  registerScopeRoutes(app, { db, now, user });
+  registerViewRoutes(app, { db, now, user });
+  registerCustomFieldRoutes(app, { db, now, user });
+  registerCompanyRoutes(app, { db, now, user }, options.companySearchOrigin);
   const documents = new DocumentStore(options.dataDirectory);
   registerDocumentRoutes(app, { db, now, user }, documents);
+  registerExportRoutes(
+    app,
+    { db, now, user },
+    new Exports(db, jobs, documents, now, options.exportPartBytes),
+  );
   registerCollectionRoutes(
     app,
     { db, now, user },

@@ -22,7 +22,7 @@ test("installation, dossiers, tâches : persistance, checklist, transitions et e
   await page.getByRole("link", { name: "Dossiers", exact: true }).click();
   await page.getByRole("button", { name: "Créer un dossier" }).click();
   await page.getByLabel("Titre", { exact: true }).fill("Atelier Fictif");
-  await page.getByLabel("SIREN").fill("001234567");
+  await page.getByLabel("SIREN", { exact: true }).fill("001234567");
   await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
   await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
   await page.getByRole("button", { name: "Fermer la fiche" }).click();
@@ -32,15 +32,15 @@ test("installation, dossiers, tâches : persistance, checklist, transitions et e
     .getByLabel("Titre", { exact: true })
     .fill("Préparer le bilan fictif");
   await page
-    .getByLabel("Dossier lié")
+    .getByLabel("Dossier lié", { exact: true })
     .selectOption({ label: "Atelier Fictif" });
-  await page.getByLabel("Échéance").fill("2026-10-31");
+  await page.getByLabel("Échéance", { exact: true }).fill("2026-10-31");
   await page
     .getByLabel("Nouvel élément de checklist")
     .fill("Vérifier les pièces");
   await page.getByRole("button", { name: "Ajouter à la checklist" }).click();
   await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await page.getByLabel("Échéance").fill("2026-11-30");
+  await page.getByLabel("Échéance", { exact: true }).fill("2026-11-30");
   await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
   await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
   await page.getByRole("button", { name: "Fermer la fiche" }).click();
@@ -48,7 +48,9 @@ test("installation, dossiers, tâches : persistance, checklist, transitions et e
   await page
     .getByRole("button", { name: "Préparer le bilan fictif", exact: true })
     .click();
-  await expect(page.getByLabel("Échéance")).toHaveValue("2026-11-30");
+  await expect(page.getByLabel("Échéance", { exact: true })).toHaveValue(
+    "2026-11-30",
+  );
   await page.getByRole("button", { name: "Terminer", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("checklist");
   await page
@@ -158,11 +160,11 @@ test("erreurs reliées aux champs, clavier, thèmes et mesures Twenty", async ({
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.getByRole("button", { name: "Replier la navigation" }).click();
-  expect(
-    await page
-      .locator("aside")
-      .evaluate((e) => e.getBoundingClientRect().width),
-  ).toBe(48);
+  await expect
+    .poll(() =>
+      page.locator("aside").evaluate((e) => e.getBoundingClientRect().width),
+    )
+    .toBe(48);
   await page.screenshot({
     path: "test-results/task2-dark.png",
     fullPage: true,
@@ -230,7 +232,7 @@ test("conflit réel entre deux éditions : saisie conservée et résolution expl
     .getByRole("button", { name: "Consulter la dernière version" })
     .click();
   await expect(
-    page.getByText("Changement concurrent", { exact: true }),
+    page.getByRole("cell", { name: "Changement concurrent", exact: true }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Conserver ma saisie", exact: true })
@@ -253,7 +255,7 @@ test("obligations : décimal exact, validation locale et invalidation du contenu
   await page.getByRole("button", { name: "Créer une obligation" }).click();
   await page.getByLabel("Titre", { exact: true }).fill("TVA fictive");
   await page
-    .getByLabel("Dossier lié")
+    .getByLabel("Dossier lié", { exact: true })
     .selectOption({ label: "Dossier obligation" });
   await page.getByLabel("Nature", { exact: true }).fill("TVA");
   await page.getByLabel("Période", { exact: true }).fill("2026-10");
@@ -541,8 +543,12 @@ test.describe("Droits par dossier", () => {
       .getByLabel("Description", { exact: true })
       .fill("Notes à conserver malgré le rattachement refusé.");
     for (const destination of ["", b.id]) {
-      await page.getByLabel("Dossier lié").selectOption(destination);
-      await expect(page.getByLabel("Dossier lié")).toBeEnabled();
+      await page
+        .getByLabel("Dossier lié", { exact: true })
+        .selectOption(destination);
+      await expect(
+        page.getByLabel("Dossier lié", { exact: true }),
+      ).toBeEnabled();
       await expect(page.getByLabel("Titre", { exact: true })).toBeEnabled();
       const refused = page.waitForResponse(
         (response) =>
@@ -554,13 +560,14 @@ test.describe("Droits par dossier", () => {
         .click();
       expect((await refused).status()).toBe(404);
       await expect(page.getByRole("alert")).toBeFocused();
-      await expect(page.getByLabel("Dossier lié")).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      );
+      await expect(
+        page.getByLabel("Dossier lié", { exact: true }),
+      ).toHaveAttribute("aria-invalid", "true");
       await page.getByRole("link", { name: /^Dossier lié :/ }).click();
-      await expect(page.getByLabel("Dossier lié")).toBeFocused();
-      await page.getByLabel("Dossier lié").selectOption(a.id);
+      await expect(
+        page.getByLabel("Dossier lié", { exact: true }),
+      ).toBeFocused();
+      await page.getByLabel("Dossier lié", { exact: true }).selectOption(a.id);
       await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
         "Saisie conservée sur A",
       );
@@ -577,7 +584,9 @@ test.describe("Droits par dossier", () => {
     await page
       .getByRole("button", { name: "Saisie conservée sur A", exact: true })
       .click();
-    await expect(page.getByLabel("Dossier lié")).toHaveValue(a.id);
+    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
+      a.id,
+    );
     await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
       "Notes à conserver malgré le rattachement refusé.",
     );
@@ -588,13 +597,17 @@ test.describe("Droits par dossier", () => {
   }) => {
     const { a, b } = await limitedDossierUser(page, "creation");
     await page.getByRole("button", { name: "Créer une tâche" }).click();
-    await expect(page.getByLabel("Dossier lié")).toHaveValue("");
-    await expect(page.getByLabel("Dossier lié")).toBeEnabled();
+    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
+      "",
+    );
+    await expect(page.getByLabel("Dossier lié", { exact: true })).toBeEnabled();
     await page
       .getByLabel("Titre", { exact: true })
       .fill("Création autorisée sur A");
     for (const destination of ["", b.id]) {
-      await page.getByLabel("Dossier lié").selectOption(destination);
+      await page
+        .getByLabel("Dossier lié", { exact: true })
+        .selectOption(destination);
       const refused = page.waitForResponse(
         (response) =>
           response.url().endsWith("/records") &&
@@ -604,16 +617,17 @@ test.describe("Droits par dossier", () => {
         .getByRole("button", { name: "Enregistrer", exact: true })
         .click();
       expect((await refused).status()).toBe(403);
-      await expect(page.getByLabel("Dossier lié")).toBeEnabled();
-      await expect(page.getByLabel("Dossier lié")).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      );
+      await expect(
+        page.getByLabel("Dossier lié", { exact: true }),
+      ).toBeEnabled();
+      await expect(
+        page.getByLabel("Dossier lié", { exact: true }),
+      ).toHaveAttribute("aria-invalid", "true");
       await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
         "Création autorisée sur A",
       );
     }
-    await page.getByLabel("Dossier lié").selectOption(a.id);
+    await page.getByLabel("Dossier lié", { exact: true }).selectOption(a.id);
     await page
       .getByRole("button", { name: "Enregistrer", exact: true })
       .click();
@@ -623,7 +637,9 @@ test.describe("Droits par dossier", () => {
     await page
       .getByRole("button", { name: "Création autorisée sur A", exact: true })
       .click();
-    await expect(page.getByLabel("Dossier lié")).toHaveValue(a.id);
+    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
+      a.id,
+    );
   });
 });
 

@@ -1,3 +1,5 @@
+import { DossierChoices, useDossierChoices } from "./features/referential/DossierChoices";
+import { useModuleEnabled } from "./features/administration/preferences";
 import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@memlia/ui";
@@ -5,7 +7,7 @@ import {
   CollectionCatalogueSchema,
   CollectionInputSchema,
   CollectionRunSchema,
-  RecordListSchema,
+  CabinetRecordSchema,
   type CabinetRecord,
   type CollectionRun,
   type SessionUser,
@@ -131,12 +133,12 @@ const scenarios: Record<CollectionInput["scenario"], string> = {
   "source-failure": "Échec source",
 };
 export function Collections({ user }: { user: SessionUser }) {
+  const moduleEnabled = useModuleEnabled("collectes");
   const signal = useScope();
   const operationId = useRef(crypto.randomUUID());
   const [catalogue, setCatalogue] = useState<z.infer<
       typeof CollectionCatalogueSchema
     > | null>(null),
-    [dossiers, setDossiers] = useState<CabinetRecord[]>([]),
     [dossierId, setDossierId] = useState(""),
     [connectorId, setConnectorId] = useState<ConnectorId>("dgfip-cfe"),
     [scenario, setScenario] = useState<CollectionInput["scenario"]>("nominal"),
@@ -152,28 +154,16 @@ export function Collections({ user }: { user: SessionUser }) {
     [runId, setRunId] = useState(() =>
       sessionStorage.getItem("memlia-collection-" + user.id),
     );
-  const rights = useRecordCapabilities(dossiers.map((d) => d.id));
+  const choices = useDossierChoices();
+  const dossiers = choices.items;
+  const rights = useRecordCapabilities([...dossiers.map(d=>d.id),...(dossierId ? [dossierId] : [])]);
   useEffect(() => {
     void request("/collections/catalogue", CollectionCatalogueSchema, signal)
       .then(setCatalogue)
       .catch((e) => {
         if (!signal.aborted) setError(message(e));
       });
-    void (async () => {
-      const all: CabinetRecord[] = [];
-      for (let offset = 0; !signal.aborted; offset += 100) {
-        const page = await request(
-          "/records?kind=dossier&limit=100&offset=" + offset,
-          RecordListSchema,
-          signal,
-        );
-        all.push(...page.items);
-        if (offset + page.items.length >= page.total) break;
-      }
-      if (!signal.aborted) setDossiers(all);
-    })().catch((e) => {
-      if (!signal.aborted) setError(message(e));
-    });
+
   }, [signal, revision]);
   useEffect(() => {
     if (!runId) return;
@@ -207,7 +197,11 @@ export function Collections({ user }: { user: SessionUser }) {
     if (!catalogue) return;
     setError("");
     setErrors({});
-    const selected = dossiers.find((d) => d.id === dossierId);
+    let selected = dossiers.find((d) => d.id === dossierId);
+    if (!selected && dossierId) {
+      try { selected = await request("/records/"+dossierId,CabinetRecordSchema,signal); }
+      catch(e) { if(!signal.aborted)setError(message(e)); return; }
+    }
     const parsed = CollectionInputSchema.safeParse({
       operationId: operationId.current,
       connectorId,
@@ -307,6 +301,7 @@ export function Collections({ user }: { user: SessionUser }) {
               ))}
             </>
           </Select>
+          <DossierChoices choices={choices}/>
           <Select
             name="dossierId"
             label="Dossier de la collecte"
@@ -315,6 +310,7 @@ export function Collections({ user }: { user: SessionUser }) {
             errors={errors}
           >
             <option value="">Choisir un dossier</option>
+            {dossierId && !dossiers.some(d=>d.id===dossierId) && <option value={dossierId}>Dossier actuellement choisi</option>}
             {dossiers
               .filter((d) => rights.grants[d.id]?.includes("update"))
               .map((d) => (
@@ -373,7 +369,9 @@ export function Collections({ user }: { user: SessionUser }) {
             variant="solid"
             loading={busy}
             disabled={
-              !!running || !rights.grants[dossierId]?.includes("update")
+              !moduleEnabled ||
+              !!running ||
+              (!!dossierId && !rights.grants[dossierId]?.includes("update"))
             }
           >
             Lancer la simulation

@@ -1,3 +1,12 @@
+import { CsvExport } from "./features/records/CsvExport";
+import { useCustomFields } from "./features/referential/CustomValues";
+import { ViewControls } from "./features/records/ViewControls";
+import {
+  defaultColumns,
+  columnLabels,
+  columnValue,
+} from "./features/records/columns";
+import { Companies } from "./features/referential/Companies";
 import { useState, useEffect, useRef } from "react";
 import { Button, Input, Checkbox, Loader } from "@memlia/ui";
 import { IconPlus, IconDownload, IconBuilding } from "@tabler/icons-react";
@@ -7,6 +16,7 @@ import {
   RecordListQuerySchema,
   type Dashboard,
   type RecordList,
+  type RecordListQuery,
   type RecordKind,
   type SessionUser,
 } from "@memlia/contracts";
@@ -14,59 +24,7 @@ import { request, useScope, queryString, message, RequestError } from "./api";
 import { ErrorSummary } from "./forms";
 import { RecordEditor } from "./RecordEditor";
 import { labels, stateLabels } from "./RecordLabels";
-export function Home() {
-  const signal = useScope();
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null),
-    [error, setError] = useState("");
-  async function load() {
-    setError("");
-    try {
-      setDashboard(await request("/dashboard", DashboardSchema, signal));
-    } catch (e) {
-      if (!signal.aborted) setError(message(e));
-    }
-  }
-  useEffect(() => {
-    void load();
-  }, []);
-  return (
-    <div className="home">
-      <h2>Le travail du cabinet</h2>
-      <p className="muted">Vos dossiers, contacts et échéances autorisés.</p>
-      {error ? (
-        <>
-          <ErrorSummary message={error} />
-          <Button onClick={() => void load()}>Réessayer</Button>
-        </>
-      ) : !dashboard ? (
-        <p role="status">Chargement de la synthèse…</p>
-      ) : (
-        <>
-          <div className="summary-grid">
-            {Object.entries(dashboard.counts).map(([kind, count]) => (
-              <a href={"#" + kind} key={kind}>
-                <span>{labels[kind as RecordKind]}</span>
-                <strong>{count}</strong>
-              </a>
-            ))}
-          </div>
-          <section className="overview">
-            <h3>À suivre</h3>
-            <p>
-              <strong>{dashboard.openTasks}</strong> tâches ouvertes
-            </p>
-            <p>
-              <strong>{dashboard.overdueTasks}</strong> tâches en retard
-            </p>
-          </section>
-          <p className="muted">
-            Actualisé le {new Date(dashboard.asOf).toLocaleString("fr-FR")}
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
+export { Dashboard as Home } from "./features/records/Dashboard";
 const createLabels = {
   dossier: "Créer un dossier",
   contact: "Créer un contact",
@@ -80,29 +38,43 @@ export function Records({
   kind: RecordKind;
   user: SessionUser;
 }) {
+  const { fields: customFields } = useCustomFields(kind);
   const signal = useScope();
-  const [q, setQ] = useState(""),
-    [archived, setArchived] = useState(false),
-    [offset, setOffset] = useState(0),
-    [result, setResult] = useState<RecordList | null>(null),
+  const [filters, setFilters] = useState<RecordListQuery>(() => {
+    const raw = Object.fromEntries(
+      new URLSearchParams(location.hash.split("?")[1]),
+    );
+    delete raw.id;
+    const parsed = RecordListQuerySchema.safeParse({
+      ...raw,
+      kind,
+      columns: raw.columns ?? defaultColumns(kind),
+    });
+    return parsed.success
+      ? parsed.data
+      : RecordListQuerySchema.parse({ kind, columns: defaultColumns(kind) });
+  });
+  const q = filters.q ?? "",
+    archived = filters.archived === "true",
+    offset = filters.offset,
+    columns = (filters.columns ?? defaultColumns(kind)).split(",");
+  const patch = (values: Partial<RecordListQuery>) =>
+    setFilters((previous) => ({ ...previous, ...values }));
+  const [result, setResult] = useState<RecordList | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0),
-    [editor, setEditor] = useState<{ id: string | null } | null>(null),
-    [exporting, setExporting] = useState(false);
+    [editor, setEditor] = useState<{ id: string | null } | null>(() => {
+      const id = new URLSearchParams(location.hash.split("?")[1]).get("id");
+      return id ? { id } : null;
+    });
   const generation = useRef(0);
   const can = (action: SessionUser["permissions"][number]["action"]) =>
     (action === "create" && kind === "dossier"
       ? user.permissions
       : [...user.permissions, ...user.scopedPermissions]
     ).some((p) => p.action === action && (p.kind === "*" || p.kind === kind));
-  const query = queryString({
-    kind,
-    q,
-    archived: archived ? "true" : "false",
-    offset,
-    limit: 50,
-  });
+  const query = queryString(filters);
   useEffect(() => {
     const serial = ++generation.current;
     const controller = new AbortController();
@@ -128,38 +100,12 @@ export function Records({
       });
     return () => controller.abort();
   }, [query, revision]);
-  async function exportCsv() {
-    setExporting(true);
-    setError("");
-    try {
-      const response = await fetch("/api/v1/records/export.csv?" + query, {
-        signal,
-      });
-      if (!response.ok) {
-        if (response.status === 401)
-          window.dispatchEvent(new Event("memlia-session-expired"));
-        throw new Error(
-          response.status === 403
-            ? "Export non autorisé."
-            : "Export impossible. Réessayez.",
-        );
-      }
-      const blob = await response.blob();
-      if (signal.aborted) return;
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = "memlia-" + kind + ".csv";
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (e) {
-      if (!signal.aborted) setError(message(e));
-    } finally {
-      if (!signal.aborted) setExporting(false);
-    }
-  }
   return (
     <>
+      {kind === "dossier" && (
+        <Companies user={user} onChanged={() => setRevision((v) => v + 1)} />
+      )}
+      <ViewControls query={filters} onChange={setFilters} />
       <div className="toolbar">
         <div className="search">
           <label className="sr-only" htmlFor="search">
@@ -173,8 +119,7 @@ export function Records({
             placeholder={"Rechercher dans " + labels[kind].toLowerCase()}
             value={q}
             onChange={(e) => {
-              setQ(e.target.value);
-              setOffset(0);
+              patch({ q: e.target.value, offset: 0 });
             }}
           />
         </div>
@@ -182,22 +127,13 @@ export function Records({
           <Checkbox
             checked={archived}
             onCheckedChange={(v) => {
-              setArchived(v);
-              setOffset(0);
+              patch({ archived: v ? "true" : "false", offset: 0 });
             }}
           />
           Archives
         </label>
         <div className="toolbar-end">
-          {can("export") && (
-            <Button
-              startIcon={<IconDownload size={16} />}
-              loading={exporting}
-              onClick={() => void exportCsv()}
-            >
-              Exporter en CSV
-            </Button>
-          )}
+          {can("export") && <CsvExport query={filters} />}
           {can("create") && (
             <Button
               variant="solid"
@@ -244,22 +180,16 @@ export function Records({
                   <thead>
                     <tr>
                       <th className="record-icon" aria-label="Type" />
-                      <th scope="col">Titre</th>
-                      <th scope="col">
-                        {kind === "dossier"
-                          ? "SIREN"
-                          : kind === "contact"
-                            ? "Email"
-                            : "Échéance"}
-                      </th>
-                      <th scope="col">
-                        {kind === "tache"
-                          ? "Étape"
-                          : kind === "obligation"
-                            ? "Validation"
-                            : "Informations"}
-                      </th>
-                      <th scope="col">Version</th>
+                      {columns.map((key) => (
+                        <th key={key} scope="col">
+                          {columnLabels[key] ??
+                            (key.startsWith("custom.")
+                              ? (customFields.find(
+                                  (f) => "custom." + f.id === key,
+                                )?.name ?? "Champ personnalisé")
+                              : key)}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -268,50 +198,25 @@ export function Records({
                         <td className="record-icon">
                           <span aria-hidden>◈</span>
                         </td>
-                        <td>
-                          <button
-                            className="record-link"
-                            onClick={() => setEditor({ id: record.id })}
-                          >
-                            {record.title}
-                          </button>
-                          {record.confidential && (
-                            <span className="badge">Confidentiel</span>
-                          )}
-                        </td>
-                        <td className="mono">
-                          {"dueDate" in record.data
-                            ? (record.data.dueDate ?? "Non renseignée")
-                            : record.kind === "dossier"
-                              ? (record.data.siren ?? "Non renseigné")
-                              : record.kind === "contact"
-                                ? (record.data.email ?? "Non renseigné")
-                                : ""}
-                        </td>
-                        <td>
-                          {record.kind === "tache" ? (
-                            <span className="badge">
-                              {stateLabels[record.data.state]}
-                            </span>
-                          ) : record.kind === "obligation" ? (
-                            record.data.validation === "validee_localement" ? (
-                              "Validée localement"
+                        {columns.map((key) => (
+                          <td key={key}>
+                            {key === "title" ? (
+                              <>
+                                <button
+                                  className="record-link"
+                                  onClick={() => setEditor({ id: record.id })}
+                                >
+                                  {record.title}
+                                </button>
+                                {record.confidential && (
+                                  <span className="badge">Confidentiel</span>
+                                )}
+                              </>
                             ) : (
-                              "Non validée"
-                            )
-                          ) : record.kind === "dossier" ? (
-                            record.data.legalForm
-                          ) : record.kind === "contact" ? (
-                            record.data.contactType === "personne" ? (
-                              "Personne"
-                            ) : (
-                              "Organisation"
-                            )
-                          ) : (
-                            ""
-                          )}
-                        </td>
-                        <td className="mono">{record.version}</td>
+                              columnValue(record, key)
+                            )}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -327,14 +232,16 @@ export function Records({
               <Button
                 size="sm"
                 disabled={offset === 0}
-                onClick={() => setOffset((v) => Math.max(0, v - 50))}
+                onClick={() =>
+                  patch({ offset: Math.max(0, offset - filters.limit) })
+                }
               >
                 Précédent
               </Button>
               <Button
                 size="sm"
                 disabled={offset + result.limit >= result.total}
-                onClick={() => setOffset((v) => v + 50)}
+                onClick={() => patch({ offset: offset + filters.limit })}
               >
                 Suivant
               </Button>

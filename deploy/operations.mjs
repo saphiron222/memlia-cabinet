@@ -241,7 +241,7 @@ export async function backup(options) {
     const migrations = (
       await db.query("SELECT version FROM schema_migrations ORDER BY version")
     ).rows.map((r) => r.version);
-    if (!["1,2,3,4", "1,2,3,4,5"].includes(migrations.join(",")))
+    if (!["1,2,3,4", "1,2,3,4,5", "1,2,3,4,5,6"].includes(migrations.join(",")))
       fail("Version de schéma non prise en charge.");
     const documents = (
       await db.query("SELECT id,content FROM cabinet_documents ORDER BY id")
@@ -326,7 +326,7 @@ export async function validateBackup(root) {
   );
   if (
     manifest.format !== 1 ||
-    ![4, 5].includes(manifest.schema) ||
+    ![4, 5, 6].includes(manifest.schema) ||
     manifest.application !== "0.1.0" ||
     manifest.postgresMajor !== 17 ||
     !Array.isArray(manifest.files) ||

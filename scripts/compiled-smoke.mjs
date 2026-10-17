@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import { xlsxFixture } from "../apps/server/test/xlsx-fixture.ts";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -76,8 +78,44 @@ try {
     }),
   });
   if (response.status !== 201) throw Error("Setup compilé refusé.");
+  const cookie = response.headers.get("set-cookie").split(";")[0];
+  for (const format of ["csv", "xlsx"]) {
+    const bytes =
+      format === "csv"
+        ? Buffer.from("Nom;SIREN\nCompilation fictive;001234567\n")
+        : xlsxFixture([
+            ["Nom", "SIREN"],
+            ["Compilation fictive", "001234567"],
+          ]);
+    const preview = await fetch(origin + "/api/v1/imports/preview", {
+      method: "POST",
+      headers: { origin, cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        operationId: randomUUID(),
+        filename: "compilation." + format,
+        format,
+        kind: "dossier",
+        delimiter: ";",
+        mapping: { 0: "title", 1: "siren" },
+        bytes: bytes.toString("base64"),
+      }),
+    });
+    if (preview.status !== 201)
+      throw Error("Lecteur compilé refusé : " + format);
+    const { id } = await preview.json();
+    const rows = await (
+      await fetch(origin + `/api/v1/imports/${id}/rows`, {
+        headers: { cookie },
+      })
+    ).json();
+    if (
+      rows.items[0]?.record?.data?.siren !== "001234567" ||
+      rows.items[0].errors.length
+    )
+      throw Error("Identifiant altéré par le lecteur compilé : " + format);
+  }
   console.log(
-    "Serveur compilé : UI, JavaScript, notices, santé et setup HTTP loopback vérifiés.",
+    "Serveur compilé : UI, notices, santé, setup et vrais aperçus CSV/XLSX via le lecteur enfant compilé vérifiés.",
   );
 } finally {
   child.kill("SIGTERM");

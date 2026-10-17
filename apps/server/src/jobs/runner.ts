@@ -28,7 +28,7 @@ export interface JobDefinition<I, C, R> {
   checkpoint: z.ZodType<C>;
   result: z.ZodType<R>;
   initial: C;
-  scope(input: I): { dossierId: string; resourceKey: string };
+  scope(input: I): { dossierId: string | null; resourceKey: string };
   authorize(tx: Connection, actor: SessionUser, input: I): Promise<void>;
   execute(input: I, context: JobContext<C>): Promise<R>;
 }

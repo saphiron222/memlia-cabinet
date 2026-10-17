@@ -17,7 +17,10 @@ export async function fixture(
   clock?: () => Date,
   configuration: Pick<
     ApplicationOptions,
-    "loginThrottleCapacity" | "cabinetTimeZone"
+    | "loginThrottleCapacity"
+    | "cabinetTimeZone"
+    | "companySearchOrigin"
+    | "exportPartBytes"
   > = {},
 ) {
   const dataDirectory = await mkdtemp(join(tmpdir(), "memlia-"));

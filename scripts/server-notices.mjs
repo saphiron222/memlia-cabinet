@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { createHash } from "node:crypto";
 import {
   readFileSync,
   readdirSync,
@@ -44,6 +45,74 @@ function visit(directory) {
         license: pkg.license,
         files: [file],
         source: "https://jsumners.mit-license.org/license.txt",
+      });
+    } else if (!files.length && key === "saxes@6.0.0") {
+      const directorySource = resolve(root, "apps/server/licenses");
+      const file = "saxes-6.0.0-LICENSE",
+        provenanceFile = "saxes-6.0.0-provenance.json";
+      const provenance = JSON.parse(
+        readFileSync(join(directorySource, provenanceFile), "utf8"),
+      );
+      const hash = (path) =>
+        createHash("sha256").update(readFileSync(path)).digest("hex");
+      const locked = JSON.parse(
+        readFileSync(join(root, "package-lock.json"), "utf8"),
+      ).packages["node_modules/saxes"];
+      if (
+        hash(join(directory, "package.json")) !== provenance.metadataSha256 ||
+        hash(join(directorySource, file)) !== provenance.licenseSha256 ||
+        locked.integrity !== provenance.integrity
+      )
+        throw Error("Notice amont à requalifier : " + key);
+      for (const name of [file, provenanceFile])
+        copyFileSync(join(directorySource, name), join(output, name));
+      notices.push({
+        name: pkg.name,
+        version: pkg.version,
+        license: pkg.license,
+        files: [file, provenanceFile],
+        source: provenance.source,
+      });
+    } else if (!files.length && key === "worker-f@0.1.20") {
+      const source = resolve(root, "apps/server/licenses/worker-f-0.1.20");
+      const provenance = JSON.parse(
+        readFileSync(join(source, "provenance.json"), "utf8"),
+      );
+      const hash = (path) =>
+        createHash("sha256").update(readFileSync(path)).digest("hex");
+      const locked = JSON.parse(
+        readFileSync(join(root, "package-lock.json"), "utf8"),
+      ).packages["node_modules/worker-f"];
+      if (
+        provenance.name !== pkg.name ||
+        provenance.version !== pkg.version ||
+        locked.integrity !== provenance.integrity ||
+        locked.resolved !== provenance.tarball ||
+        hash(join(directory, "package.json")) !== provenance.metadataSha256 ||
+        hash(join(directory, provenance.embeddedSource)) !==
+          provenance.embeddedSourceSha256
+      )
+        throw Error("Exception de notice périmée : " + key);
+      const copied = [];
+      for (const [file, expected] of Object.entries(provenance.files)) {
+        if (hash(join(source, file)) !== expected)
+          throw Error("Notice locale altérée : " + file);
+        const target = key + "-" + file;
+        copyFileSync(join(source, file), join(output, target));
+        copied.push(target);
+      }
+      copyFileSync(
+        join(source, "provenance.json"),
+        join(output, key + "-provenance.json"),
+      );
+      copied.push(key + "-provenance.json");
+      notices.push({
+        name: pkg.name,
+        version: pkg.version,
+        license: pkg.license,
+        files: copied,
+        source: provenance.source,
+        qualification: provenance.qualification,
       });
     } else if (!files.length && pkg.name.startsWith("@napi-rs/canvas-")) {
       const file = key.replaceAll("/", "-") + "-LICENSE";

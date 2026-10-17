@@ -600,9 +600,14 @@ it("upgrades a version-one database without losing cabinet records and reports a
     await f.maintainDatabase(async (db) => {
       await db.transaction(async (tx) => {
         await tx.query(
+          "DROP TABLE cabinet_export_plan, cabinet_export_rows, cabinet_exports",
+        );
+        await tx.query(
           "DROP TABLE cabinet_collection_snapshots, cabinet_collection_links, cabinet_collection_observations, cabinet_job_events, cabinet_jobs, cabinet_job_gate",
         );
         await tx.query("DROP TABLE cabinet_documents");
+        await tx.query("DROP TABLE cabinet_import_rows, cabinet_import_previews, cabinet_company_candidates, cabinet_detections, cabinet_saved_views, cabinet_preferences, cabinet_installation, cabinet_custom_fields, cabinet_assignment_versions, cabinet_assignments, cabinet_user_roles, cabinet_memberships, cabinet_groups, cabinet_roles");
+        await tx.query("ALTER TABLE cabinet_records DROP COLUMN search_title");
         await tx.query("DELETE FROM schema_migrations WHERE version>=2");
       });
     });
@@ -770,12 +775,14 @@ it("bounds SQL reads before pagination and searches large originals across autho
         // the actual production query can execute using the installed index.
         await tx.query("SET LOCAL enable_seqscan=off");
         await tx.query("SET LOCAL enable_indexscan=off");
+        await tx.query("SET LOCAL enable_nestloop=off");
         const plan = await tx.query(
           "EXPLAIN (ANALYZE, FORMAT JSON) " + search.sql,
           search.params,
         );
         const planText = JSON.stringify(plan);
         expect(planText).toContain("cabinet_documents_search");
+        await tx.query("SET LOCAL enable_nestloop=on");
         const listingPlan = await tx.query(
           "EXPLAIN (ANALYZE, FORMAT JSON) " + listing.sql,
           listing.params,
@@ -875,8 +882,15 @@ it("backfills indexed search from schema two and keeps a shared extension outsid
           "ALTER TABLE cabinet_documents DROP COLUMN IF EXISTS search_text",
         );
         await tx.query(
+          "DROP TABLE cabinet_export_plan, cabinet_export_rows, cabinet_exports",
+        );
+        await tx.query(
           "DROP TABLE cabinet_collection_snapshots, cabinet_collection_links, cabinet_collection_observations, cabinet_job_events, cabinet_jobs, cabinet_job_gate",
         );
+        await tx.query(
+          "DROP TABLE cabinet_import_rows, cabinet_import_previews, cabinet_company_candidates, cabinet_detections, cabinet_saved_views, cabinet_preferences, cabinet_installation, cabinet_custom_fields, cabinet_assignment_versions, cabinet_assignments, cabinet_user_roles, cabinet_memberships, cabinet_groups, cabinet_roles",
+        );
+        await tx.query("ALTER TABLE cabinet_records DROP COLUMN search_title");
         await tx.query("DELETE FROM schema_migrations WHERE version>=3");
       });
     });

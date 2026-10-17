@@ -8,6 +8,11 @@ export class ApiFault extends Error {
     super(message);
   }
 }
-export function fail(status: number, code: string, message: string): never {
-  throw new ApiFault(status, code, message);
+export function fail(
+  status: number,
+  code: string,
+  message: string,
+  details?: unknown,
+): never {
+  throw new ApiFault(status, code, message, details);
 }
