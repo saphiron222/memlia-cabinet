@@ -81,19 +81,21 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 
 ### Task 3: Tâches avancées, récurrence, calendrier et notifications
 
+Réception du lot : revue indépendante puis deux corrections ciblées approuvées, et [CI Linux réussie au commit `40c11ce`](https://github.com/saphiron222/memlia-cabinet/actions/runs/39046849667) le 17 octobre 2026. 139 tests PGlite réussis (deux tests PostgreSQL ignorés), 141 tests PostgreSQL 17 réussis, 31 parcours navigateur réussis ; restauration réelle, serveur compilé, contexte privé et cycle du conteneur vérifiés. Les portions temps réalisé/rapports (lot 5), client/mail (lot 9), occurrences personnalisées (lot 4) et qualification consolidée (lots 11/12) restent à leurs propriétaires.
+
 **Files:** Create `packages/contracts/src/workflows.ts`, `apps/server/src/workflows/*`, `apps/server/src/notifications/*`, `apps/web/src/features/workflows/*`; tests `apps/server/test/workflows.test.ts`, `tests/e2e/workflows.spec.ts`.
 
 **Interfaces:** Versioned checklist and recurrence templates; `previewOccurrences` and `generateOccurrences` share one pure civil-date rule engine. Occurrence identity is template+target+period; one job transaction never recreates processed history. API `/api/v1/workflows` and `/api/v1/notifications`; calendar/list/Kanban/week query the same task IDs. Comments, mentions, subscriptions and reminders remain authenticated and scoped.
 
 **Coverage:** F-TACHES, F-CHECKLIST, F-CALENDRIER, F-ALERTS, F-STATES.
 
-- [ ] RED then GREEN: monthly nominal day 31 gives 2027-02-28 and 2028-02-29; quarter/year/week rules, past start and DST respect civil dates and configured zone; repeat generation after interruption yields identical IDs without duplicates.
-- [ ] Implement full task fields (type, billing, urgency, assignees, tags, dossier/prospect, files), drag actions with keyboard alternative, list/Kanban/week/calendar, saved views and time links.
-- [ ] Apply the common checklist/comment commands to both tasks and the existing canonical fiscal obligations, and wire them into the fiscal detail. Verify a TVA and a DAS2 retain the same checklist, comments and evidence after reload/view change and permission revocation, using the Task2 obligation identity rather than parallel fiscal-comment storage.
-- [ ] RED then GREEN: editing a checklist model affects future occurrences only unless an explicit merge is requested; existing checked/removed/reordered items and completed tasks remain unchanged; conflicting concurrent edits return 409.
-- [ ] Complete the assisted reprise criterion for supplied checklist models: announced exchange format, preview/mapping, explicit model validation and report of unmapped elements. Reuse the import boundary and create real versioned models, not a claimed private Teradion importer.
-- [ ] RED then GREEN: a subscription or mention grants no read access; after permission removal, pending notifications omit protected content; client messages and internal comments with identical text never cross their audiences.
-- [ ] Implement in-app notification read/dismiss/preferences and deterministic reminder scheduling, test reload consistency through browser, check/test/build, commit and report.
+- [x] RED then GREEN: monthly nominal day 31 gives 2027-02-28 and 2028-02-29; quarter/year/week rules, past start and DST respect civil dates and configured zone; repeat generation after interruption yields identical IDs without duplicates.
+- [x] Implement full task fields (type, billing, urgency, assignees, tags, dossier/prospect, files), drag actions with keyboard alternative, list/Kanban/week/calendar, saved views and time links.
+- [x] Apply the common checklist/comment commands to both tasks and the existing canonical fiscal obligations, and wire them into the fiscal detail. Verify a TVA and a DAS2 retain the same checklist, comments and evidence after reload/view change and permission revocation, using the Task2 obligation identity rather than parallel fiscal-comment storage.
+- [x] RED then GREEN: editing a checklist model affects future occurrences only unless an explicit merge is requested; existing checked/removed/reordered items and completed tasks remain unchanged; conflicting concurrent edits return 409.
+- [x] Complete the assisted reprise criterion for supplied checklist models: announced exchange format, preview/mapping, explicit model validation and report of unmapped elements. Reuse the import boundary and create real versioned models, not a claimed private Teradion importer.
+- [x] RED then GREEN: a subscription or mention grants no read access; after permission removal, pending notifications omit protected content; client messages and internal comments with identical text never cross their audiences.
+- [x] Implement in-app notification read/dismiss/preferences and deterministic reminder scheduling, test reload consistency through browser, check/test/build, commit and report.
 
 ### Task 4: Bilans, étapes, obligations personnalisées, process et suivi
 
