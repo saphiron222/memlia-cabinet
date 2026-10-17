@@ -87,3 +87,19 @@ _Avoid_ : bilan réalisé, preuve de dépôt
 **Type d’étape** :
 Liste réutilisable de statuts ordonnés, chacun avec identité, couleur, icône et caractère final.
 _Avoid_ : validation humaine, reçu officiel
+
+**Saisie de temps** :
+Durée réalisée par un utilisateur, à une date et pour une nature, reliée explicitement à un objet ou conservée sous un libellé libre.
+_Avoid_ : estimation, rapprochement implicite
+
+**Prévision de charge** :
+Durée attendue, héritée du cabinet puis du dossier ou remplacée explicitement pour une occurrence.
+_Avoid_ : durée réalisée
+
+**Forfait de charge** :
+Contribution fixe datée d’un dossier et d’un rôle, répartie selon une base de prorata et des poids explicitement choisis par le cabinet.
+_Avoid_ : règle fiscale, facturation réalisée
+
+**Capacité** :
+Durée de travail disponible selon l’horaire journalier du cabinet ou une dérogation individuelle datée.
+_Avoid_ : temps saisi, disponibilité supposée

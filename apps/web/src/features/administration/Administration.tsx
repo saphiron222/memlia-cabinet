@@ -42,6 +42,9 @@ const actionLabels: Record<Permission["action"], string> = {
   audit: "Consulter l’historique",
   confidential: "Consulter le confidentiel",
   manage_users: "Administrer les utilisateurs",
+  time_read: "Consulter les temps des collaborateurs",
+  time_manage: "Configurer les temps et la charge",
+  time_lock: "Verrouiller ou rouvrir les temps",
 };
 function Permissions({
   value,

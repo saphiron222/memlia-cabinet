@@ -29,6 +29,9 @@ export const adminPermissions = [
   "audit",
   "confidential",
   "manage_users",
+  "time_read",
+  "time_manage",
+  "time_lock",
 ].map((action) => ({ action, kind: "*", dossierId: null }));
 export function asUser(row: Record<string, unknown>): SessionUser {
   return SessionUserSchema.parse({

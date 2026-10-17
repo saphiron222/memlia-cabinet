@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 10)
+  if (version > 11)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -87,7 +87,18 @@ export async function migrate(connection: Connection): Promise<void> {
     );
     await connection.query("INSERT INTO schema_migrations(version) VALUES(9)");
   }
-  if(version < 10) for(const sql of productionMigration.split(';').map(s=>s.trim()).filter(Boolean)) await connection.query(sql);
+  if (version < 10)
+    for (const sql of productionMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(sql);
+  if (version < 11)
+    for (const sql of timeMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(sql);
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -228,4 +239,14 @@ CREATE TABLE cabinet_production_imports(id uuid PRIMARY KEY,actor_id uuid NOT NU
 ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
 ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production'));
 INSERT INTO schema_migrations(version) VALUES(10);
+`;
+
+const timeMigration = `
+CREATE TABLE cabinet_time (id uuid PRIMARY KEY,kind text NOT NULL,content jsonb NOT NULL);
+CREATE TABLE cabinet_time_history (id uuid NOT NULL REFERENCES cabinet_time(id),version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
+CREATE UNIQUE INDEX cabinet_time_active_timer ON cabinet_time((content->'data'->>'userId')) WHERE kind='timer' AND content->'data'->>'stoppedAt' IS NULL;
+CREATE INDEX cabinet_time_kind ON cabinet_time(kind,id);
+ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
+ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production','time'));
+INSERT INTO schema_migrations(version) VALUES(11);
 `;
