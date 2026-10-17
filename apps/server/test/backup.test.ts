@@ -181,6 +181,58 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(fiscalChanged.statusCode, fiscalChanged.body).toBe(200);
       const fiscalBefore = fiscalChanged.json();
+      const workflowModel = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/workflows/models",
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            id: randomUUID(),
+            expectedVersion: 0,
+            model: {
+              kind: "checklist",
+              name: "Checklist restaurée",
+              targetKinds: ["tache", "IS"],
+              items: [{ id: randomUUID(), label: "Vérifier la pièce" }],
+            },
+          },
+        })
+      ).json();
+      const workBefore = [];
+      for (const targetId of [linked.id, fiscal.record.id]) {
+        const applied = await app.inject({
+          method: "POST",
+          url: `/api/v1/workflows/targets/${targetId}/commands`,
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            expectedVersion: 0,
+            command:
+              targetId === linked.id
+                ? { kind: "checklist", items: linked.data.checklist }
+                : { kind: "instantiate", modelId: workflowModel.id },
+          },
+        });
+        expect(applied.statusCode, applied.body).toBe(200);
+        const commented = await app.inject({
+          method: "POST",
+          url: `/api/v1/workflows/targets/${targetId}/commands`,
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            expectedVersion: applied.json().version,
+            command: {
+              kind: "comment",
+              text: "Commentaire interne conservé",
+              mentions: [],
+              audience: "internal",
+            },
+          },
+        });
+        expect(commented.statusCode, commented.body).toBe(200);
+        workBefore.push(commented.json());
+      }
 
       const options = {
         dataDirectory: source.dataDirectory,
@@ -387,6 +439,25 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       expect(restoredFiscal.statusCode, restoredFiscal.body).toBe(200);
       expect(restoredFiscal.json().timeline).toEqual(fiscalBefore.timeline);
       expect(restoredFiscal.json().record).toEqual(fiscalBefore.record);
+      for (const work of workBefore) {
+        const restoredWork = await app.inject({
+          method: "GET",
+          url: "/api/v1/workflows/targets/" + work.id,
+          headers: { cookie },
+        });
+        expect(restoredWork.statusCode, restoredWork.body).toBe(200);
+        expect(restoredWork.json()).toEqual(work);
+      }
+      expect(
+        (
+          await app.inject({
+            method: "GET",
+            url: "/api/v1/workflows/models",
+            headers: { cookie },
+          })
+        ).json().items,
+      ).toContainEqual(workflowModel);
+
       expect(restoredFiscal.json().situation.remaining).toBe("100.00");
 
       expect(

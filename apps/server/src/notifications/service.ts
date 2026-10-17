@@ -117,6 +117,7 @@ export async function listNotifications(
         items.push({
           ...n,
           title: work.target.title,
+          targetKind: work.target.kind,
           text: comment?.text ?? reminderText,
         });
       else if (position >= offset) nextOffset = offset + 100;

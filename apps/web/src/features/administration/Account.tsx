@@ -12,6 +12,7 @@ export function Account() {
   return (
     <section className="administration">
       <h2>Mon compte</h2>
+      <a href="#notifications">Préférences de notifications</a>
       <ErrorSummary message={error || undefined} />
       {account ? (
         <form

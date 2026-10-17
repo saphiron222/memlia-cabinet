@@ -299,16 +299,24 @@ export async function createApplication(options: ApplicationOptions) {
     civilDate,
     options.cabinetTimeZone ?? "Europe/Paris",
   );
+  let reminderTick: Promise<void> | undefined;
   const reminderTimer = setInterval(() => {
-    void reminders.tick().catch(() => undefined);
+    if (!reminderTick)
+      reminderTick = reminders
+        .tick()
+        .catch(() => undefined)
+        .finally(() => {
+          reminderTick = undefined;
+        });
   }, 30000);
   reminderTimer.unref();
   app.addHook("onClose", async () => {
     clearInterval(reminderTimer);
+    await reminderTick;
   });
   registerChecklistImportRoutes(app, { db, now, user }, importParser);
   registerNotificationRoutes(app, { db, now, user }, reminders);
-  registerWorkflowRoutes(app, { db, now, user }, jobs);
+  registerWorkflowRoutes(app, { db, now, user }, jobs, civilDate);
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });
   registerAdministrationRoutes(app, { db, now, user });

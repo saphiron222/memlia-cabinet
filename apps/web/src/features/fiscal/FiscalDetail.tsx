@@ -1,3 +1,5 @@
+import { WorkPanel } from "../workflows/WorkPanel";
+import { CabinetRecordSchema } from "@memlia/contracts";
 import { useEffect, useState } from "react";
 import { Button } from "@memlia/ui";
 import {
@@ -59,6 +61,7 @@ const tabActions: Record<
     button: "Préparer les revenus",
     kinds: ["income", "ifu_prepare"],
   },
+  work: { label: "Travail interne", button: "", kinds: [] },
   history: { label: "Historique", button: "", kinds: [] },
 };
 export function FiscalDetail({
@@ -289,6 +292,31 @@ export function FiscalDetail({
         aria-labelledby={`fiscal-tab-${tab}`}
         className="fiscal-tab-content"
       >
+        {tab === "work" && (
+          <>
+            <WorkPanel targetId={detail.record.id} enabled={enabled} />
+            <Button
+              disabled={!can("update")}
+              onClick={() => {
+                void request(
+                  `/workflows/targets/${detail.record.id}/task`,
+                  CabinetRecordSchema,
+                  signal,
+                  {
+                    method: "POST",
+                    body: JSON.stringify({ operationId: crypto.randomUUID() }),
+                  },
+                )
+                  .then((r) => {
+                    location.hash = "tache?id=" + r.id;
+                  })
+                  .catch((e) => setError(message(e)));
+              }}
+            >
+              Ouvrir ou créer la tâche liée
+            </Button>
+          </>
+        )}
         {tab === "overview" && (
           <dl className="fiscal-properties">
             <div>

@@ -5,6 +5,13 @@ import {
 } from "@memlia/contracts";
 import { moneyLabel, labelValue } from "../fiscal/labels";
 export const columnLabels: Record<string, string> = {
+  typeId: "Type de tâche",
+  stepId: "Étape du type",
+  billing: "Facturation",
+  plannedMinutes: "Temps prévu (min)",
+  prospectId: "Prospect",
+  documentIds: "Pièces liées",
+  recurrence: "Récurrence",
   fiscalGross: "Montant brut",
   fiscalNet: "Net à payer",
   fiscalEstimate: "Estimation",

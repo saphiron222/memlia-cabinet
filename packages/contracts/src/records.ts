@@ -29,7 +29,14 @@ export const AddressSchema = z
   .strict();
 export const FieldOriginSchema = z
   .object({
-    kind: z.enum(["manual", "import", "public", "simulated", "supplier"]),
+    kind: z.enum([
+      "manual",
+      "import",
+      "public",
+      "simulated",
+      "supplier",
+      "generated",
+    ]),
     reference: z.string().max(500),
     version: z.string().max(100),
     at: z.iso.datetime(),
@@ -410,6 +417,9 @@ export const RecordColumnsSchema = z
   }, "Colonnes invalides");
 export const RecordListQuerySchema = z
   .object({
+    includeTasks: z.enum(["true", "false"]).optional(),
+    natures: z.string().max(500).optional(),
+    taskTypeId: z.uuid().optional(),
     fiscalOnly: z.enum(["true", "false"]).optional(),
     nature: z.string().max(100).optional(),
     campaign: z.string().max(50).optional(),

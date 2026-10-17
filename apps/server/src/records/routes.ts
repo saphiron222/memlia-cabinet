@@ -153,6 +153,12 @@ export function registerRecordRoutes(
   );
   app.post("/api/v1/records", async (req, reply) => {
     const input = CreateRecordInputSchema.parse(req.body);
+    if (input.record.kind === "tache" && input.record.data.recurrence)
+      fail(
+        400,
+        "GENERATION_REQUIRED",
+        "Une occurrence se crée depuis son modèle de récurrence.",
+      );
     const record = await db.transaction(async (tx) =>
       saveRecord(tx, await user(tx, req), input, now()),
     );

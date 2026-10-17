@@ -6,7 +6,12 @@ import {
 import type { Connection } from "../storage/database.js";
 import { requireAccess } from "../records/permissions.js";
 import { loadRecord } from "../records/service.js";
-import { loadModel, workTarget, readWork } from "./service.js";
+import {
+  loadModel,
+  workTarget,
+  readWork,
+  requireModelAccess,
+} from "./service.js";
 import { fail } from "../errors.js";
 // Every relation is selected through the already authorized complete-exit record set.
 export async function workflowExportPage(
@@ -46,6 +51,7 @@ export async function assertWorkflowExport(
   if (e.entity === "model" || e.entity === "model_version")
     for (const model of [e.data, await loadModel(tx, e.data.id)]) {
       const m = model.model;
+      await requireModelAccess(tx, actor, m);
       if (m.kind === "recurrence")
         await requireAccess(
           tx,

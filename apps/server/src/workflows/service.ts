@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   WorkflowModelSchema,
+  CabinetRecordSchema,
   WorkflowModelCommandSchema,
   WorkStateSchema,
   type WorkState,
@@ -88,6 +89,30 @@ export async function loadModel(tx: Connection, id: string) {
   if (!rows[0]) fail(404, "NOT_FOUND", "Modèle inaccessible.");
   return WorkflowModelSchema.parse(rows[0].content);
 }
+export async function requireModelAccess(
+  tx: Connection,
+  actor: SessionUser,
+  model: z.infer<typeof WorkflowModelSchema>["model"],
+) {
+  if (model.kind === "reminder")
+    for (const id of model.targetIds) await workTarget(tx, actor, id);
+  if (model.kind === "recurrence")
+    await requireAccess(
+      tx,
+      actor,
+      "read",
+      CabinetRecordSchema.parse({
+        id: randomUUID(),
+        version: 1,
+        createdAt: "2000-01-01T00:00:00.000Z",
+        updatedAt: "2000-01-01T00:00:00.000Z",
+        kind: "tache",
+        title: model.name,
+        dossierId: model.dossierId,
+        data: model.task,
+      }),
+    );
+}
 export async function saveModel(
   tx: Connection,
   actor: SessionUser,
@@ -95,16 +120,17 @@ export async function saveModel(
   now: Date,
 ) {
   requireGlobal(actor, "manage_users");
-  if (i.model.kind === "reminder")
-    for (const id of i.model.targetIds) await workTarget(tx, actor, id);
-  if (i.model.kind === "recurrence") {
-    await requireAccess(
+  await requireModelAccess(tx, actor, i.model);
+  const current = await tx.query(
+    "SELECT content FROM cabinet_workflow_models WHERE id=$1",
+    [i.id],
+  );
+  if (current[0])
+    await requireModelAccess(
       tx,
       actor,
-      "read",
-      await loadRecord(tx, i.model.dossierId),
+      WorkflowModelSchema.parse(current[0].content).model,
     );
-  }
   return idempotent(
     tx,
     actor,
@@ -288,6 +314,12 @@ export async function commandWork(
       work.version++;
       work.updatedAt = now.toISOString();
       WorkStateSchema.parse(work);
+      if (Buffer.byteLength(JSON.stringify(work)) > 400 * 1024)
+        fail(
+          413,
+          "WORK_LIMIT",
+          "Le suivi atteint sa capacité ; conservez cet historique et ouvrez une tâche de suite.",
+        );
       await tx.query(
         "INSERT INTO cabinet_work(id,content) VALUES($1,$2::jsonb) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content",
         [id, JSON.stringify(work)],

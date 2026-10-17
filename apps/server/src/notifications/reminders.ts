@@ -11,12 +11,12 @@ import { loadModel, workTarget } from "../workflows/service.js";
 import { effectiveUser } from "../identity/service.js";
 import { notificationPreferences, visibleWork } from "./service.js";
 import { stableId } from "../workflows/generation.js";
-import { fail } from "../errors.js";
+import { ApiFault, fail } from "../errors.js";
 export class Reminders {
   private enqueue;
   constructor(
     private db: Database,
-    jobs: JobRunner,
+    private jobs: JobRunner,
     private now: () => Date,
     private civilDate: (d: Date) => string,
     private zone: string,
@@ -97,6 +97,32 @@ export class Reminders {
     if (m.model.kind !== "reminder") fail(400, "MODEL_KIND", "Rappel requis.");
     for (const id of m.model.targetIds) await workTarget(tx, actor, id);
   }
+  async list(
+    tx: Connection,
+    actor: SessionUser,
+    modelId: string,
+    offset: number,
+  ) {
+    await this.authorize(tx, actor, await loadModel(tx, modelId));
+    const rows = await tx.query(
+      "SELECT id FROM cabinet_jobs WHERE actor_id=$1 AND kind='workflow-reminder' AND resource_key=$2 ORDER BY created_at DESC,id OFFSET $3 LIMIT 51",
+      [actor.id, "reminder:" + modelId, offset],
+    );
+    const items = [];
+    for (const row of rows.slice(0, 50)) {
+      const run = await this.jobs.get(tx, String(row.id));
+      const input = z
+        .object({ model: WorkflowModelSchema, date: z.iso.date() })
+        .parse(run.input);
+      await this.authorize(tx, actor, input.model);
+      items.push({
+        date: input.date,
+        modelVersion: input.model.version,
+        job: run.job,
+      });
+    }
+    return { items, nextOffset: rows.length > 50 ? offset + 50 : null };
+  }
   async process(tx: Connection, actor: SessionUser) {
     const now = this.now(),
       date = this.civilDate(now),
@@ -109,49 +135,65 @@ export class Reminders {
       hour = ["hour", "minute"]
         .map((k) => parts.find((p) => p.type === k)!.value)
         .join(":");
-    const rows = await tx.query(
-      "SELECT content FROM cabinet_workflow_models WHERE content->'model'->>'kind'='reminder' AND content->>'actorId'=$1 ORDER BY id LIMIT 100",
-      [actor.id],
-    );
     let scheduled = 0;
-    for (const row of rows) {
-      const model = WorkflowModelSchema.parse(row.content),
-        m = model.model;
-      if (
-        m.kind !== "reminder" ||
-        !m.enabled ||
-        hour < m.hour ||
-        !previewOccurrences(m.rule, date, date).length
-      )
-        continue;
-      await this.authorize(tx, actor, model);
-      const operation = stableId(`reminder-job:${model.id}:${date}`);
-      if (
-        (
-          await tx.query(
-            "SELECT operation_id FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
-            [actor.id, operation],
-          )
-        ).length
-      )
-        continue;
-      await this.enqueue(
-        tx,
-        actor,
-        stableId(`reminder-job:${model.id}:${date}`),
-        { model, date },
+    let after: string | null = null;
+    while (true) {
+      const rows: Record<string, unknown>[] = await tx.query(
+        "SELECT id,content FROM cabinet_workflow_models WHERE content->'model'->>'kind'='reminder' AND content->>'actorId'=$1 AND ($2::uuid IS NULL OR id>$2::uuid) ORDER BY id LIMIT 100",
+        [actor.id, after],
       );
-      scheduled++;
+      if (!rows.length) break;
+      for (const row of rows) {
+        const model = WorkflowModelSchema.parse(row.content),
+          m = model.model;
+        if (
+          m.kind !== "reminder" ||
+          !m.enabled ||
+          hour < m.hour ||
+          !previewOccurrences(m.rule, date, date).length
+        )
+          continue;
+        try {
+          await this.authorize(tx, actor, model);
+        } catch (e) {
+          if (e instanceof ApiFault && [403, 404].includes(e.status)) continue;
+          throw e;
+        }
+        const operation = stableId(`reminder-job:${model.id}:${date}`);
+        if (
+          (
+            await tx.query(
+              "SELECT operation_id FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+              [actor.id, operation],
+            )
+          ).length
+        )
+          continue;
+        await this.enqueue(
+          tx,
+          actor,
+          stableId(`reminder-job:${model.id}:${date}`),
+          { model, date },
+        );
+        scheduled++;
+      }
+      after = String(rows.at(-1)!.id);
     }
     return { scheduled, date, timeZone: this.zone };
   }
   async tick() {
     await this.db.transaction(async (tx) => {
-      const rows = await tx.query(
-        "SELECT DISTINCT u.* FROM cabinet_users u JOIN cabinet_workflow_models m ON m.content->>'actorId'=u.id::text WHERE u.active=true AND m.content->'model'->>'kind'='reminder' LIMIT 100",
-      );
-      for (const row of rows)
-        await this.process(tx, await effectiveUser(tx, row));
+      let after: string | null = null;
+      while (true) {
+        const rows: Record<string, unknown>[] = await tx.query(
+          "SELECT DISTINCT u.* FROM cabinet_users u JOIN cabinet_workflow_models m ON m.content->>'actorId'=u.id::text WHERE u.active=true AND m.content->'model'->>'kind'='reminder' AND ($1::uuid IS NULL OR u.id>$1::uuid) ORDER BY u.id LIMIT 100",
+          [after],
+        );
+        if (!rows.length) break;
+        for (const row of rows)
+          await this.process(tx, await effectiveUser(tx, row));
+        after = String(rows.at(-1)!.id);
+      }
     });
   }
 }

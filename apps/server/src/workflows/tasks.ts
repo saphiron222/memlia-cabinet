@@ -1,3 +1,7 @@
+import { idempotent } from "../storage/operations.js";
+import { commandFiscal } from "../fiscal/service.js";
+import { stableId } from "./generation.js";
+import { RecordContentSchema } from "@memlia/contracts";
 import {
   type CabinetRecord,
   type SessionUser,
@@ -23,21 +27,22 @@ export async function validateTask(
       fail(400, "INVALID_TYPE", "Type de tâche requis.");
     const step = model.model.steps.find((s) => s.id === record.data.stepId);
     if (!step) fail(400, "INVALID_STEP", "Étape du type requise.");
-    const state = step.final
-      ? "terminee"
-      : step.id === model.model.steps[0]!.id
-        ? "a_faire"
-        : "en_cours";
-    if (record.data.state !== state)
+    if (
+      (step.final && record.data.state !== "terminee") ||
+      (!step.final && record.data.state === "terminee")
+    )
       fail(400, "INVALID_STATE", "État et étape incohérents.");
   } else if (record.data.stepId)
     fail(400, "INVALID_STEP", "Type requis pour cette étape.");
   if (
     previous?.kind === "tache" &&
+    previous.data.typeId === record.data.typeId &&
     previous.data.stepId !== record.data.stepId &&
     action !== "transitioned"
   )
     fail(400, "TRANSITION_REQUIRED", "Utiliser Déplacer pour changer l’étape.");
+  if (previous?.kind === "tache" && previous.data.typeId !== record.data.typeId)
+    await requireAccess(tx, actor, "transition", previous);
   const rows = await tx.query("SELECT content FROM cabinet_work WHERE id=$1", [
     record.id,
   ]);
@@ -135,4 +140,63 @@ export async function moveTask(
     "transitioned",
     { taskMove: id, input },
   );
+}
+
+export async function ensureFiscalTask(
+  tx: Connection,
+  actor: SessionUser,
+  id: string,
+  operationId: string,
+  now: Date,
+) {
+  const target = await workTarget(tx, actor, id, "update");
+  if (target.kind !== "obligation" || !target.data.fiscal)
+    fail(400, "INVALID_TARGET", "Obligation fiscale requise.");
+  const result = await idempotent(
+    tx,
+    actor,
+    operationId,
+    { ensureFiscalTask: id },
+    async () => {
+      for (const related of target.data.fiscal!.relatedRecordIds) {
+        const record = await loadRecord(tx, related);
+        await requireAccess(tx, actor, "read", record);
+        if (record.kind === "tache") return record;
+      }
+      const task = await saveRecord(
+        tx,
+        actor,
+        {
+          operationId: stableId(operationId + ":task"),
+          record: RecordContentSchema.parse({
+            kind: "tache",
+            title: target.title,
+            dossierId: target.dossierId,
+            confidential: target.confidential,
+            data: { dueDate: target.data.dueDate },
+          }),
+        },
+        now,
+      );
+      await commandFiscal(
+        tx,
+        actor,
+        id,
+        {
+          operationId: stableId(operationId + ":link"),
+          expectedVersion: target.version,
+          event: {
+            kind: "link_task",
+            taskId: task.id,
+            reason: "Création du travail lié à cette obligation.",
+          },
+        },
+        now,
+      );
+      return task;
+    },
+  );
+  await requireAccess(tx, actor, "read", result);
+  await requireAccess(tx, actor, "read", await loadRecord(tx, result.id));
+  return result;
 }

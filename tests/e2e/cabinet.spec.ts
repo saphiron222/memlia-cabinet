@@ -29,43 +29,62 @@ test("installation, dossiers, tâches : persistance, checklist, transitions et e
   await page.getByRole("link", { name: "Tâches", exact: true }).click();
   await page.getByRole("button", { name: "Créer une tâche" }).click();
   await page
-    .getByLabel("Titre", { exact: true })
+    .getByLabel("Titre de la tâche", { exact: true })
     .fill("Préparer le bilan fictif");
   await page
-    .getByLabel("Dossier lié", { exact: true })
+    .getByLabel("Dossier de la tâche", { exact: true })
     .selectOption({ label: "Atelier Fictif" });
-  await page.getByLabel("Échéance", { exact: true }).fill("2026-10-31");
+  await page
+    .getByLabel("Échéance de la tâche", { exact: true })
+    .fill("2026-10-31");
+  await page
+    .getByRole("button", { name: "Enregistrer la tâche", exact: true })
+    .click();
   await page
     .getByLabel("Nouvel élément de checklist")
     .fill("Vérifier les pièces");
-  await page.getByRole("button", { name: "Ajouter à la checklist" }).click();
-  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await page.getByLabel("Échéance", { exact: true }).fill("2026-11-30");
-  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
-  await page.getByRole("button", { name: "Fermer la fiche" }).click();
+  await page
+    .getByRole("button", { name: "Ajouter l’élément", exact: true })
+    .click();
+  await expect(
+    page.getByRole("checkbox", { name: "Vérifier les pièces", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Modifier la tâche", exact: true })
+    .click();
+  await page
+    .getByLabel("Échéance de la tâche", { exact: true })
+    .fill("2026-11-30");
+  await page
+    .getByRole("button", { name: "Enregistrer la tâche", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: "Revenir aux tâches" }).click();
   await page.reload();
   await page
-    .getByRole("button", { name: "Préparer le bilan fictif", exact: true })
+    .getByRole("link", { name: "Préparer le bilan fictif", exact: true })
     .click();
-  await expect(page.getByLabel("Échéance", { exact: true })).toHaveValue(
-    "2026-11-30",
-  );
-  await page.getByRole("button", { name: "Terminer", exact: true }).click();
+  await expect(page.getByText("30/11/2026", { exact: true })).toBeVisible();
+  await page.getByLabel("Déplacer la tâche").selectOption("terminee");
   await expect(page.getByRole("alert")).toContainText("checklist");
   await page
     .getByRole("checkbox", { name: "Vérifier les pièces", exact: true })
-    .check();
-  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await page.getByRole("button", { name: "Terminer", exact: true }).click();
+    .click();
   await expect(
-    page.getByText("État : Terminée", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Réouvrir", exact: true }).click();
-  await page.getByRole("button", { name: "Historique", exact: true }).click();
+    page.getByRole("checkbox", { name: "Vérifier les pièces", exact: true }),
+  ).toBeChecked();
+  await page.getByLabel("Déplacer la tâche").selectOption("terminee");
+  await expect(page.locator(".work-record-header .badge")).toHaveText(
+    "Terminée",
+  );
+  await page.getByLabel("Déplacer la tâche").selectOption("a_faire");
+  await expect(page.locator(".work-record-header .badge")).toHaveText(
+    "À faire",
+  );
+  await page.getByRole("tab", { name: "Historique", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Historique" })).toBeVisible();
-  await expect(page.getByText("Transition", { exact: true })).toHaveCount(2);
-  await page.getByRole("button", { name: "Fermer la fiche" }).click();
+  await expect(page.getByText("Déplacement", { exact: true })).toHaveCount(2);
+  await page.getByRole("link", { name: "Revenir aux tâches" }).click();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Exporter en CSV" }).click();
   const download = await downloadPromise;
@@ -465,20 +484,29 @@ test("étiquettes : saisir plusieurs valeurs au clavier puis recharger", async (
   await login(page);
   await page.getByRole("link", { name: "Tâches", exact: true }).click();
   await page.getByRole("button", { name: "Créer une tâche" }).click();
-  await page.getByLabel("Titre", { exact: true }).fill("Tâche avec étiquettes");
   await page
-    .getByLabel("Étiquettes", { exact: true })
+    .getByLabel("Titre de la tâche", { exact: true })
+    .fill("Tâche avec étiquettes");
+  await page.getByRole("tab", { name: "Détails", exact: true }).click();
+  await page
+    .getByLabel("Étiquettes séparées par des virgules", { exact: true })
     .pressSequentially("bilan, urgent");
-  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
-  await page.getByRole("button", { name: "Fermer la fiche" }).click();
+  await page
+    .getByRole("button", { name: "Enregistrer la tâche", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("link", { name: "Revenir aux tâches" }).click();
   await page.reload();
   await page
-    .getByRole("button", { name: "Tâche avec étiquettes", exact: true })
+    .getByRole("link", { name: "Tâche avec étiquettes", exact: true })
     .click();
-  await expect(page.getByLabel("Étiquettes", { exact: true })).toHaveValue(
-    "bilan, urgent",
-  );
+  await page
+    .getByRole("button", { name: "Modifier la tâche", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "Détails", exact: true }).click();
+  await expect(
+    page.getByLabel("Étiquettes séparées par des virgules", { exact: true }),
+  ).toHaveValue("bilan, urgent");
 });
 
 async function limitedDossierUser(
@@ -535,58 +563,73 @@ test.describe("Droits par dossier", () => {
     page,
   }) => {
     const { a, b, task } = await limitedDossierUser(page, "modification");
-    await page.getByRole("button", { name: task.title, exact: true }).click();
+    await page.getByRole("link", { name: task.title, exact: true }).click();
     await page
-      .getByLabel("Titre", { exact: true })
+      .getByRole("button", { name: "Modifier la tâche", exact: true })
+      .click();
+    await page
+      .getByLabel("Titre de la tâche", { exact: true })
       .fill("Saisie conservée sur A");
+    await page.getByRole("tab", { name: "Détails", exact: true }).click();
     await page
       .getByLabel("Description", { exact: true })
       .fill("Notes à conserver malgré le rattachement refusé.");
+    await page.getByRole("tab", { name: "Essentiel", exact: true }).click();
     for (const destination of ["", b.id]) {
       await page
-        .getByLabel("Dossier lié", { exact: true })
+        .getByLabel("Dossier de la tâche", { exact: true })
         .selectOption(destination);
       await expect(
-        page.getByLabel("Dossier lié", { exact: true }),
+        page.getByLabel("Dossier de la tâche", { exact: true }),
       ).toBeEnabled();
-      await expect(page.getByLabel("Titre", { exact: true })).toBeEnabled();
+      await expect(
+        page.getByLabel("Titre de la tâche", { exact: true }),
+      ).toBeEnabled();
       const refused = page.waitForResponse(
         (response) =>
           response.url().endsWith("/records/" + task.id) &&
           response.request().method() === "PUT",
       );
       await page
-        .getByRole("button", { name: "Enregistrer", exact: true })
+        .getByRole("button", { name: "Enregistrer la tâche", exact: true })
         .click();
       expect((await refused).status()).toBe(404);
       await expect(page.getByRole("alert")).toBeFocused();
       await expect(
-        page.getByLabel("Dossier lié", { exact: true }),
+        page.getByLabel("Dossier de la tâche", { exact: true }),
       ).toHaveAttribute("aria-invalid", "true");
-      await page.getByRole("link", { name: /^Dossier lié :/ }).click();
+      await page.getByRole("link", { name: /^Dossier de la tâche :/ }).click();
       await expect(
-        page.getByLabel("Dossier lié", { exact: true }),
+        page.getByLabel("Dossier de la tâche", { exact: true }),
       ).toBeFocused();
-      await page.getByLabel("Dossier lié", { exact: true }).selectOption(a.id);
-      await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
-        "Saisie conservée sur A",
-      );
+      await page
+        .getByLabel("Dossier de la tâche", { exact: true })
+        .selectOption(a.id);
+      await expect(
+        page.getByLabel("Titre de la tâche", { exact: true }),
+      ).toHaveValue("Saisie conservée sur A");
+      await page.getByRole("tab", { name: "Détails", exact: true }).click();
       await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
         "Notes à conserver malgré le rattachement refusé.",
       );
+      await page.getByRole("tab", { name: "Essentiel", exact: true }).click();
     }
     await page
-      .getByRole("button", { name: "Enregistrer", exact: true })
+      .getByRole("button", { name: "Enregistrer la tâche", exact: true })
       .click();
-    await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
-    await page.getByRole("button", { name: "Fermer la fiche" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("link", { name: "Revenir aux tâches" }).click();
     await page.reload();
     await page
-      .getByRole("button", { name: "Saisie conservée sur A", exact: true })
+      .getByRole("link", { name: "Saisie conservée sur A", exact: true })
       .click();
-    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
-      a.id,
-    );
+    await page
+      .getByRole("button", { name: "Modifier la tâche", exact: true })
+      .click();
+    await expect(
+      page.getByLabel("Dossier de la tâche", { exact: true }),
+    ).toHaveValue(a.id);
+    await page.getByRole("tab", { name: "Détails", exact: true }).click();
     await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
       "Notes à conserver malgré le rattachement refusé.",
     );
@@ -597,16 +640,18 @@ test.describe("Droits par dossier", () => {
   }) => {
     const { a, b } = await limitedDossierUser(page, "creation");
     await page.getByRole("button", { name: "Créer une tâche" }).click();
-    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
-      "",
-    );
-    await expect(page.getByLabel("Dossier lié", { exact: true })).toBeEnabled();
+    await expect(
+      page.getByLabel("Dossier de la tâche", { exact: true }),
+    ).toHaveValue("");
+    await expect(
+      page.getByLabel("Dossier de la tâche", { exact: true }),
+    ).toBeEnabled();
     await page
-      .getByLabel("Titre", { exact: true })
+      .getByLabel("Titre de la tâche", { exact: true })
       .fill("Création autorisée sur A");
     for (const destination of ["", b.id]) {
       await page
-        .getByLabel("Dossier lié", { exact: true })
+        .getByLabel("Dossier de la tâche", { exact: true })
         .selectOption(destination);
       const refused = page.waitForResponse(
         (response) =>
@@ -614,32 +659,37 @@ test.describe("Droits par dossier", () => {
           response.request().method() === "POST",
       );
       await page
-        .getByRole("button", { name: "Enregistrer", exact: true })
+        .getByRole("button", { name: "Enregistrer la tâche", exact: true })
         .click();
       expect((await refused).status()).toBe(403);
       await expect(
-        page.getByLabel("Dossier lié", { exact: true }),
+        page.getByLabel("Dossier de la tâche", { exact: true }),
       ).toBeEnabled();
       await expect(
-        page.getByLabel("Dossier lié", { exact: true }),
+        page.getByLabel("Dossier de la tâche", { exact: true }),
       ).toHaveAttribute("aria-invalid", "true");
-      await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
-        "Création autorisée sur A",
-      );
+      await expect(
+        page.getByLabel("Titre de la tâche", { exact: true }),
+      ).toHaveValue("Création autorisée sur A");
     }
-    await page.getByLabel("Dossier lié", { exact: true }).selectOption(a.id);
     await page
-      .getByRole("button", { name: "Enregistrer", exact: true })
+      .getByLabel("Dossier de la tâche", { exact: true })
+      .selectOption(a.id);
+    await page
+      .getByRole("button", { name: "Enregistrer la tâche", exact: true })
       .click();
-    await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
-    await page.getByRole("button", { name: "Fermer la fiche" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("link", { name: "Revenir aux tâches" }).click();
     await page.reload();
     await page
-      .getByRole("button", { name: "Création autorisée sur A", exact: true })
+      .getByRole("link", { name: "Création autorisée sur A", exact: true })
       .click();
-    await expect(page.getByLabel("Dossier lié", { exact: true })).toHaveValue(
-      a.id,
-    );
+    await page
+      .getByRole("button", { name: "Modifier la tâche", exact: true })
+      .click();
+    await expect(
+      page.getByLabel("Dossier de la tâche", { exact: true }),
+    ).toHaveValue(a.id);
   });
 });
 

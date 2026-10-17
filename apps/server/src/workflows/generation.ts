@@ -9,7 +9,7 @@ import {
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
 import { JobRunner } from "../jobs/runner.js";
-import { loadModel, commandWork } from "./service.js";
+import { loadModel, commandWork, requireModelAccess } from "./service.js";
 import { loadRecord, saveRecord } from "../records/service.js";
 import { requireAccess, scopedPermission } from "../records/permissions.js";
 import { fail } from "../errors.js";
@@ -61,7 +61,7 @@ export class WorkflowGeneration {
                     : m.rule.frequency === "quarterly"
                       ? `${date.slice(0, 4)}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
                       : m.rule.frequency === "weekly"
-                        ? date
+                        ? weekPeriod(date)
                         : date.slice(0, 7);
                 const key = `${i.modelId}:${m.dossierId}:${period}`;
                 const existing = await tx.query(
@@ -99,6 +99,15 @@ export class WorkflowGeneration {
                     }),
                   },
                   this.now(),
+                  undefined,
+                  "created",
+                  undefined,
+                  {
+                    kind: "generated",
+                    reference: i.modelId,
+                    version: String(i.model.version),
+                    at: this.now().toISOString(),
+                  },
                 );
                 if (i.checklist) {
                   await commandWork(
@@ -130,6 +139,7 @@ export class WorkflowGeneration {
     actor: SessionUser,
     model: z.infer<typeof WorkflowModelSchema>,
   ) {
+    await requireModelAccess(tx, actor, model.model);
     if (model.model.kind !== "recurrence")
       fail(400, "MODEL_KIND", "Récurrence requise.");
     await requireAccess(
@@ -149,6 +159,7 @@ export class WorkflowGeneration {
     )
       fail(403, "FORBIDDEN", "Création non autorisée.");
     const current = await loadModel(tx, model.id);
+    await requireModelAccess(tx, actor, current.model);
     if (current.model.kind === "recurrence")
       await requireAccess(
         tx,
@@ -180,6 +191,16 @@ export class WorkflowGeneration {
       }),
     };
   }
+  async latest(tx: Connection, actor: SessionUser, modelId: string) {
+    await this.authorize(tx, actor, await loadModel(tx, modelId));
+    const rows = await tx.query(
+      "SELECT id FROM cabinet_jobs WHERE actor_id=$1 AND kind='workflow-generation' AND resource_key=$2 ORDER BY created_at DESC,id DESC LIMIT 1",
+      [actor.id, "recurrence:" + modelId],
+    );
+    return {
+      job: rows[0] ? await this.get(tx, actor, String(rows[0].id)) : null,
+    };
+  }
   async get(tx: Connection, actor: SessionUser, id: string) {
     const result = await this.jobs.get(tx, id);
     if (
@@ -191,4 +212,10 @@ export class WorkflowGeneration {
     await this.authorize(tx, actor, input.model);
     return result.job;
   }
+}
+
+function weekPeriod(date: string) {
+  const monday = new Date(date + "T00:00:00Z");
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  return "week:" + monday.toISOString().slice(0, 10);
 }

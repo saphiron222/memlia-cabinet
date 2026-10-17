@@ -232,12 +232,13 @@ test("sortie par lots : reprise durable et journal compatible avec le corpus cib
     expect(state.records).toBe(1001);
     // At least 1 000 objects per durable data unit: 110 000 target objects
     // require 110 units, leaving room in the existing 500-event journal.
-    // One additional bounded unit traverses the now-required fiscal event phase.
+    // Two additional bounded units traverse the fiscal and workflow phases.
+    // The shared journal remains capped at 500 events.
     expect(
       state.job.events.filter(
         (e: { code: string }) => e.code === "export.batch",
       ).length,
-    ).toBeLessThanOrEqual(5);
+    ).toBeLessThanOrEqual(6);
     const output = (
       await f.request("GET", `/administration/exports/${run.id}/download`)
     ).json();

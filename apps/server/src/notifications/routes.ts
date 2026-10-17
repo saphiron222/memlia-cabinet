@@ -20,6 +20,17 @@ export function registerNotificationRoutes(
   { db, user }: RouteContext,
   reminders: Reminders,
 ) {
+  app.get("/api/v1/notifications/runs", async (req) =>
+    db.transaction(async (tx) => {
+      const q = z
+        .object({
+          modelId: z.uuid(),
+          offset: z.coerce.number().int().nonnegative().default(0),
+        })
+        .parse(req.query);
+      return reminders.list(tx, await user(tx, req), q.modelId, q.offset);
+    }),
+  );
   app.post("/api/v1/notifications/process", async (req, reply) => {
     z.object({ operationId: z.uuid() }).strict().parse(req.body);
     return reply
@@ -65,8 +76,9 @@ export function registerNotificationRoutes(
           const prior = await notificationPreferences(tx, actor.id);
           if (prior.version !== i.version)
             fail(409, "VERSION_CONFLICT", "Les préférences ont changé.");
+          const { operationId: _, ...preferences } = i;
           const value = NotificationPreferencesSchema.parse({
-            ...i,
+            ...preferences,
             version: i.version + 1,
           });
           await tx.query(

@@ -6,6 +6,7 @@ const origins = {
   public: "Recherche publique",
   simulated: "Fournisseur simulé",
   supplier: "Fournisseur",
+  generated: "Génération locale",
 };
 export function Origins({ record }: { record: CabinetRecord }) {
   return (

@@ -1510,6 +1510,10 @@ test("additive fiscal migration upgrades version six without granting module or 
   const parent = (await f.request("POST", "/records", dossier())).json();
   await f.maintainDatabase(async (db) =>
     db.transaction(async (tx) => {
+      await tx.query(
+        "DROP TABLE cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
+      );
+      await tx.query("DROP INDEX cabinet_task_occurrence");
       await tx.query("DROP TABLE cabinet_fiscal_events");
       await tx.query("DROP INDEX cabinet_fiscal_occurrence");
       await tx.query(
@@ -1518,7 +1522,7 @@ test("additive fiscal migration upgrades version six without granting module or 
       await tx.query(
         "ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field'))",
       );
-      await tx.query("DELETE FROM schema_migrations WHERE version=7");
+      await tx.query("DELETE FROM schema_migrations WHERE version>=7");
       await tx.query(
         "UPDATE cabinet_installation SET content=jsonb_set(content,'{enabledModules}',(content->'enabledModules')-'fiscal')",
       );
@@ -1546,7 +1550,7 @@ test("additive fiscal migration upgrades version six without granting module or 
       (
         await db.query("SELECT max(version) AS version FROM schema_migrations")
       )[0]!.version,
-    ).toBe(7);
+    ).toBe(8);
     expect(await db.query("SELECT * FROM cabinet_fiscal_events")).toEqual([]);
   });
 });

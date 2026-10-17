@@ -73,6 +73,16 @@ export function recordFilter(
     const value = query[key as keyof RecordListQuery];
     if (value) where.push(`${path}=${parameter(value)}`);
   }
+  if (query.taskTypeId)
+    where.push(
+      `r.kind='tache' AND r.content->'data'->>'typeId'=${parameter(query.taskTypeId)}`,
+    );
+  if (query.natures !== undefined || query.includeTasks !== undefined) {
+    const natures = (query.natures ?? "").split(",").filter(Boolean);
+    where.push(
+      `((r.kind='tache' AND ${parameter(query.includeTasks !== "false")}::boolean) OR (r.kind='obligation' AND r.content->'data'->>'nature'=ANY(${parameter(natures)}::text[])))`,
+    );
+  }
   if (query.fiscalOnly === "true")
     where.push(
       "r.kind='obligation' AND r.content->'data'->'fiscal' IS NOT NULL AND r.content->'data'->'fiscal' <> 'null'::jsonb",
@@ -172,7 +182,7 @@ export function fiscalDocumentPredicate(
   parameter: (v: unknown) => string,
   documentId: string,
 ) {
-  return `NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
+  return `NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE ((fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (fiscal_owner.kind='tache' AND (fiscal_owner.content->'data'->'documentIds') ? (${documentId})::text)) AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
 }
 
 // Grid and original archives use the same current notice and coupled year/property semantics.

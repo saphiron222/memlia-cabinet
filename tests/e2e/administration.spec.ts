@@ -216,17 +216,25 @@ test("utilisateur ordinaire : rôle limité au dossier, édition et pièce permi
     .getByRole("button", { name: "Créer une tâche", exact: true })
     .click();
   await page
-    .getByLabel("Titre", { exact: true })
+    .getByLabel("Titre de la tâche", { exact: true })
     .fill("Tâche affectée ordinaire");
   await page
-    .getByLabel("Dossier lié", { exact: true })
+    .getByLabel("Dossier de la tâche", { exact: true })
     .selectOption({ label: "Dossier modifiable ordinaire" });
+  await page.getByRole("tab", { name: "Affectation", exact: true }).click();
   await page
     .getByRole("checkbox", { name: "Ordinaire fictif", exact: true })
     .check();
-  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
-  await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
-  await page.getByRole("button", { name: "Fermer la fiche" }).click();
+  await page
+    .getByRole("button", { name: "Enregistrer la tâche", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Tâche affectée ordinaire",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Revenir aux tâches" }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Exporter en CSV" }).click();
   await download;
@@ -550,10 +558,10 @@ test("tableau de bord : période, détail et export concordants, vue et ordre pe
   expect(text).not.toContain("Échéance juillet");
   await page.getByRole("link", { name: "En cours : 1", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Alpha échéance juin", exact: true }),
+    page.getByRole("link", { name: "Alpha échéance juin", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Bêta échéance juin", exact: true }),
+    page.getByRole("link", { name: "Bêta échéance juin", exact: true }),
   ).toHaveCount(0);
   await page
     .getByText("Filtres, colonnes et vues enregistrées", { exact: true })

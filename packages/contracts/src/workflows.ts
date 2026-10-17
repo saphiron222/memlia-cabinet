@@ -82,6 +82,7 @@ export function previewOccurrences(
   return dates;
 }
 import {
+  RecordListSchema,
   CabinetRecordSchema,
   ChecklistItemSchema,
   TaskDataSchema,
@@ -260,7 +261,13 @@ export const NotificationSchema = z
 export type Notification = z.infer<typeof NotificationSchema>;
 export const NotificationListSchema = z.object({
   items: z
-    .array(NotificationSchema.extend({ title: z.string(), text: z.string() }))
+    .array(
+      NotificationSchema.extend({
+        title: z.string(),
+        text: z.string(),
+        targetKind: z.enum(["tache", "obligation"]),
+      }),
+    )
     .max(100),
   unread: z.number().int().nonnegative(),
   nextOffset: z.number().int().nonnegative().nullable(),
@@ -360,3 +367,19 @@ export const WorkflowExportSchema = z.discriminatedUnion("entity", [
   }),
 ]);
 export type WorkflowExport = z.infer<typeof WorkflowExportSchema>;
+
+export const WorkflowCalendarSchema = RecordListSchema.extend({
+  dossiers: z.record(z.uuid(), z.string()),
+});
+
+import { JobSchema } from "./jobs.js";
+export const ReminderRunListSchema = z.object({
+  items: z.array(
+    z.object({
+      date: CivilDateSchema,
+      modelVersion: z.number().int(),
+      job: JobSchema,
+    }),
+  ),
+  nextOffset: z.number().int().nullable(),
+});

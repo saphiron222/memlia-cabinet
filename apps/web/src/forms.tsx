@@ -52,6 +52,10 @@ export function ErrorSummary({
   );
 }
 const fieldLabels: Record<string, string> = {
+  "task-title": "Titre de la tâche",
+  "task-dossier": "Dossier de la tâche",
+  "task-date": "Échéance de la tâche",
+  "task-tags": "Étiquettes",
   piece: "Fichier original",
   scope: "Dossier de la collecte",
   filename: "Nom de fichier",

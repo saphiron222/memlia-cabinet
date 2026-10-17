@@ -1,3 +1,5 @@
+import { Workflows } from "./features/workflows/Workflows";
+import { Notifications } from "./features/workflows/Notifications";
 import { Fiscal } from "./features/fiscal/Fiscal";
 import { Account } from "./features/administration/Account";
 import {
@@ -230,6 +232,8 @@ function Auth({
   );
 }
 type Page =
+  | "calendrier"
+  | "notifications"
   | "fiscal"
   | "compte"
   | "imports"
@@ -239,6 +243,8 @@ type Page =
   | "collectes"
   | RecordKind;
 const icons = {
+  calendrier: IconCalendar,
+  notifications: IconCheckbox,
   fiscal: IconCalendar,
   compte: IconUsers,
   imports: IconDownload,
@@ -254,6 +260,8 @@ const icons = {
 function route(): Page {
   const hash = location.hash.slice(1).split("?")[0];
   return [
+    "calendrier",
+    "notifications",
     "fiscal",
     "dossier",
     "contact",
@@ -339,6 +347,8 @@ function Cabinet({
               "dossier",
               "contact",
               "tache",
+              "calendrier",
+              "notifications",
               "obligation",
               "fiscal",
               "documents",
@@ -350,21 +360,25 @@ function Cabinet({
           ).map((p) => {
             const Icon = icons[p];
             const title =
-              p === "fiscal"
-                ? "Fiscalité"
-                : p === "compte"
-                  ? "Mon compte"
-                  : p === "imports"
-                    ? "Reprise"
-                    : p === "administration"
-                      ? "Administration"
-                      : p === "accueil"
-                        ? "Accueil"
-                        : p === "documents"
-                          ? "Documents"
-                          : p === "collectes"
-                            ? "Collectes"
-                            : labels[p];
+              p === "calendrier"
+                ? "Calendrier"
+                : p === "notifications"
+                  ? "Notifications"
+                  : p === "fiscal"
+                    ? "Fiscalité"
+                    : p === "compte"
+                      ? "Mon compte"
+                      : p === "imports"
+                        ? "Reprise"
+                        : p === "administration"
+                          ? "Administration"
+                          : p === "accueil"
+                            ? "Accueil"
+                            : p === "documents"
+                              ? "Documents"
+                              : p === "collectes"
+                                ? "Collectes"
+                                : labels[p];
             return (
               <a
                 key={p}
@@ -438,28 +452,36 @@ function Cabinet({
       <main id="main" className="main">
         <header className="app-header">
           <h1 ref={heading} tabIndex={-1}>
-            {page === "fiscal"
-              ? "Fiscalité"
-              : page === "compte"
-                ? "Mon compte"
-                : page === "imports"
-                  ? "Reprise"
-                  : page === "administration"
-                    ? "Administration"
-                    : page === "accueil"
-                      ? "Accueil"
-                      : page === "documents"
-                        ? "Documents"
-                        : page === "collectes"
-                          ? "Collectes"
-                          : labels[page]}
+            {page === "calendrier"
+              ? "Calendrier"
+              : page === "notifications"
+                ? "Notifications"
+                : page === "fiscal"
+                  ? "Fiscalité"
+                  : page === "compte"
+                    ? "Mon compte"
+                    : page === "imports"
+                      ? "Reprise"
+                      : page === "administration"
+                        ? "Administration"
+                        : page === "accueil"
+                          ? "Accueil"
+                          : page === "documents"
+                            ? "Documents"
+                            : page === "collectes"
+                              ? "Collectes"
+                              : labels[page]}
           </h1>
           <span className="muted">
             {installation?.name ?? "Cabinet partagé"}
           </span>
         </header>
         <ErrorSummary message={fault || accountError || undefined} />
-        {page === "fiscal" ? (
+        {page === "tache" || page === "calendrier" ? (
+          <Workflows key={page} user={user} calendar={page === "calendrier"} />
+        ) : page === "notifications" ? (
+          <Notifications />
+        ) : page === "fiscal" ? (
           <div className="fiscal-workspace">
             <Fiscal />
           </div>
