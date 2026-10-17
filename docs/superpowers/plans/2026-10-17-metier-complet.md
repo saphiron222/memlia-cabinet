@@ -186,7 +186,7 @@ Préparation technique : `docs/recherche-connexions-locales.md` (SMTP réel loca
 
 ### Task 10: Connexions, identité fédérée, annuaire et aide
 
-Préparation technique : `docs/recherche-connexions-locales.md` (OIDC, vérification JWS explicite, domaine cabinet et disponibilité des méthodes).
+Préparation technique : `docs/recherche-connexions-locales.md` (OIDC, vérification JWS explicite, domaine cabinet et disponibilité des méthodes). `docs/recherche-protocoles-collecte-publics.md` consigne les chemins, schémas, transports et ambiguïtés acquis pour INPI/Pennylane, ainsi que le contrat jedeclare non acquis ; les fixtures proposées ne prouvent pas un transport SQL ni un accès fournisseur réel.
 
 **Files:** Create `packages/contracts/src/integrations.ts`, `apps/server/src/integrations/*`, `apps/server/src/help/*`, `apps/web/src/features/integrations/*`, `apps/web/src/features/help/*`; extend identity with configured OIDC; tests `apps/server/test/integrations.test.ts`, `apps/server/test/oidc.test.ts`, `tests/e2e/integrations.spec.ts`.
 
