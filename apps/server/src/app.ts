@@ -41,6 +41,8 @@ export interface ApplicationOptions {
   clock?: () => Date;
   bootstrapToken?: string;
   webDirectory?: string;
+  /** Maximum in-memory login accounts, default 5000; lower bounds support small installations/tests. */
+  loginThrottleCapacity?: number;
 }
 export async function createApplication(options: ApplicationOptions) {
   const publicOrigin = new URL(options.publicOrigin).origin;
@@ -55,10 +57,19 @@ export async function createApplication(options: ApplicationOptions) {
     throw new Error(
       "Le jeton d’initialisation doit contenir au moins 32 caractères aléatoires.",
     );
+  const loginCapacity = options.loginThrottleCapacity ?? 5000;
+  if (
+    !Number.isInteger(loginCapacity) ||
+    loginCapacity < 1 ||
+    loginCapacity > 5000
+  )
+    throw new Error(
+      "La capacité des connexions doit être comprise entre 1 et 5000.",
+    );
   const db = await openDatabase(options);
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
   const now = options.clock ?? (() => new Date());
-  const loginThrottle = new LoginThrottle(now);
+  const loginThrottle = new LoginThrottle(now, loginCapacity);
   await app.register(cookie);
   await app.register(multipart, {
     limits: {

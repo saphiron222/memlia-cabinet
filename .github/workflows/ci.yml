@@ -34,7 +34,27 @@ jobs:
       - name: PostgreSQL 17 client
         run: |
           sudo apt-get update
+          sudo apt-get install -y curl ca-certificates
+          # Official PGDG manual configuration for Ubuntu 24.04 (noble).
+          # https://www.postgresql.org/download/linux/ubuntu/
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --show-error --silent --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null <<EOF
+          Types: deb
+          URIs: https://apt.postgresql.org/pub/repos/apt
+          Suites: noble-pgdg
+          Architectures: $(dpkg --print-architecture)
+          Components: main
+          Signed-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          EOF
+          sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+          [[ "$(/usr/lib/postgresql/17/bin/pg_dump --version)" == "pg_dump (PostgreSQL) 17."* ]]
+          [[ "$(/usr/lib/postgresql/17/bin/pg_restore --version)" == "pg_restore (PostgreSQL) 17."* ]]
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_restore --version
           echo '/usr/lib/postgresql/17/bin' >> "$GITHUB_PATH"
       - name: PostgreSQL lifecycle and restoration
         env:

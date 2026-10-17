@@ -13,13 +13,17 @@ export const credentials = {
   password: "UnMotDePasseFictif123!",
 };
 export const operationId = () => randomUUID();
-export async function fixture(clock?: () => Date) {
+export async function fixture(
+  clock?: () => Date,
+  configuration: Pick<ApplicationOptions, "loginThrottleCapacity"> = {},
+) {
   const dataDirectory = await mkdtemp(join(tmpdir(), "memlia-"));
   const options: ApplicationOptions = {
     dataDirectory,
     publicOrigin: origin,
     allowEmbeddedDatabase: true,
     clock,
+    ...configuration,
     ...(process.env.DATABASE_URL
       ? { databaseUrl: process.env.DATABASE_URL }
       : {}),
