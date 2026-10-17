@@ -1,3 +1,4 @@
+import { verifySourceOffer } from "./verify-source-offer.mjs";
 import { fictitiousPdf } from "../apps/server/fixtures/collections.ts";
 import {
   mkdtemp,
@@ -120,16 +121,11 @@ try {
       ?.includes("text/html"),
     "Interface compilée absente.",
   );
-  for (const file of [
-    "twenty-ui.txt",
-    "twenty-provenance.json",
-    "index.json",
-    "server/index.json",
-  ])
-    check(
-      (await fetch("http://127.0.0.1:4311/licenses/" + file)).ok,
-      "Notice absente.",
-    );
+  const sourceOffer = await verifySourceOffer("http://127.0.0.1:4311");
+  console.log(
+    "Offre source/licences anonyme du conteneur : " +
+      JSON.stringify(sourceOffer),
+  );
   check(
     (await request(4311, "/api/v1/setup", credentials)).status === 403,
     "Setup réseau sans jeton accepté.",

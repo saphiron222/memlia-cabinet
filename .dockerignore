@@ -8,6 +8,12 @@
 !packages/**
 !scripts/
 !scripts/**
+!docs/
+docs/**
+!docs/frontend-licensing.md
+!docs/design-interface-provenance.json
+!docs/interface-source-map.md
+!docs/propel-source-rebuild.md
 !deploy/
 !deploy/operations.mjs
 !deploy/operations.d.mts

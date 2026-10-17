@@ -9,6 +9,7 @@ RUN npm ci
 COPY packages ./packages
 COPY apps ./apps
 COPY scripts ./scripts
+COPY docs/frontend-licensing.md docs/design-interface-provenance.json docs/interface-source-map.md docs/propel-source-rebuild.md ./docs/
 COPY deploy/operations.mjs deploy/operations.d.mts ./deploy/
 RUN npm run build
 RUN npm prune --omit=dev
