@@ -73,10 +73,44 @@ test("administration : rôle ordonné, utilisateur, équipe/site, affectation et
   await page
     .getByRole("checkbox", { name: "Utilisateur fictif", exact: true })
     .uncheck();
-  await page.getByRole("button", { name: "Enregistrer le groupe" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Configuration enregistrée",
-  );
+  // Hold the real refresh response so confirmation and loading coexist deterministically.
+  let releaseRefresh!: () => void;
+  const refreshGate = new Promise<void>((resolve) => {
+    releaseRefresh = resolve;
+  });
+  await page.route("**/api/v1/administration/groups", async (route) => {
+    const response = await route.fetch();
+    await refreshGate;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.getByRole("button", { name: "Enregistrer le groupe" }).click();
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: "Chargement de l’administration" }),
+    ).toBeVisible();
+    await expect(page.getByRole("status")).toHaveCount(2);
+    await expect(
+      page.getByRole("status").filter({ hasText: "Configuration enregistrée" }),
+    ).toHaveText(
+      "Configuration enregistrée. Les droits prennent effet à la prochaine commande.",
+    );
+  } finally {
+    releaseRefresh();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+  await expect(
+    page.getByRole("button", { name: "Site · Paris fictif" }),
+  ).toBeVisible();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Équipes et sites", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Site · Paris fictif" }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Utilisateur fictif", exact: true }),
+  ).not.toBeChecked();
   await page.screenshot({
     path: "test-results/task1-administration.png",
     fullPage: true,
