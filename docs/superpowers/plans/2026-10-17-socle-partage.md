@@ -77,8 +77,11 @@
 
 ### Task 3: GED locale avec contrôle du contenu
 
+Préparation technique : `docs/recherche-documents-locaux.md`, partie PDF/texte ; les propositions doivent encore être exercées par les tests de ce lot.
+
 **Files:**
 - Create: `packages/contracts/src/documents.ts`, `apps/server/src/documents/*`.
+- Modify: `apps/server/src/storage/migrations.ts` with an additive migration; never rewrite an already published migration.
 - Modify: `apps/server/src/app.ts`, `apps/web/src/*` for the documents view and dossier attachment section.
 - Test: `apps/server/test/documents.test.ts`, `tests/e2e/documents.spec.ts`.
 
@@ -94,16 +97,19 @@
 - [ ] Resolve deferred M2 from Task 1 review: preserve structured HTTP 413 for body/upload limits instead of reporting500, with a real oversized request test.
 - [ ] Add a failing two-document text search and version-chain test; extract supported local text, search only authorized documents, and return an explicit extraction/content-availability state for unsupported or damaged content. Same filenames never merge unrelated originals.
 - [ ] Connect upload/download/list to the UI; browser test and build green; commit.
+- [ ] Keep the documents page and attachment section in their own module; carry Task2 M3 by extracting screens/form responsibilities when extending them rather than increasing the two large application files.
 
 ### Task 4: Contrat de collecte et 17 simulateurs explicites
 
 **Files:**
 - Create: `packages/contracts/src/collections.ts`, `apps/server/src/collections/*`, `apps/server/fixtures/*`.
+- Create: `packages/contracts/src/jobs.ts`, `apps/server/src/jobs/*` for the shared local durable job runner used by collection and later heavy operations.
 - Modify: server routes and web collections page.
 - Test: `apps/server/test/collections.test.ts`, `tests/e2e/collections.spec.ts`.
 
 **Interfaces:**
 - `runCollection(input: CollectionInput): Promise<CollectionResult>` behind the local job interface; result status, requested/observed coverage, records, artifacts, events, errors and checkpoint follow the spec.
+- Task1 supplies Database and the transactional operation journal, not a scheduler. This task owns the common job queue, lease/checkpoint/event persistence and restart behavior; later document/mail operations reuse it.
 - Connector IDs are exactly the 17 IDs in the archived collector catalogue. Real adapters remain unavailable until final validation; simulated mode is explicit in request, result and UI.
 - Consumes `DocumentStore` from Task 3; no second document writer.
 
@@ -116,7 +122,7 @@
 ### Task 5: Installation, CI et réception du lot
 
 **Files:**
-- Create: `deploy/compose.yaml`, `Dockerfile`, `.env.example`, `deploy/install.sh`, `deploy/backup.sh`, `deploy/restore.sh`.
+- Create: `deploy/compose.yaml`, `Dockerfile`, `.dockerignore`, `.env.example`, `deploy/install.sh`, `deploy/backup.sh`, `deploy/restore.sh`.
 - Create: `.github/workflows/ci.yml`, `scripts/verify-scope.mjs`, `docs/etat-realisation.md`.
 - Modify: `README.md`, `docs/exigences.json` implementation references.
 - Test: PostgreSQL CI service, build/container smoke and restoration tests.
@@ -126,8 +132,10 @@
 - PostgreSQL, GED and application configuration survive container recreation. Database is not exposed publicly. Initialisation uses a user-chosen password.
 
 - [ ] Write/run checks for full 171-ID retention, excluded scope, no secrets/private evidence tracked and all implemented routes mapped to real tests.
+- [ ] Reject tracked `.superpowers/` coordination journals as well as private evidence, volumes and secret files; useful local evidence remains available without force-adding ignored files.
 - [ ] Configure Linux standard-runner CI: install locked dependencies, check, unit/integration tests, actual PostgreSQL lifecycle test, web build and isolated Playwright flow. Archive only diagnostic artifacts with short retention.
 - [ ] Implement container/compose and installer preflight; test fresh start and restart persistence. If the local Docker daemon is unavailable, report that limit and use CI evidence without claiming local container success.
+- [ ] Verify that the Docker build context excludes evidence, private captures, volumes, secrets, Git metadata and local dependency directories; ship the actual third-party notices with the compiled application.
 - [ ] Implement and verify coherent backup/restore and non-destructive preflight rules; protect paths and credentials.
 - [ ] Run the complete checks/build/browser suite; fresh review against cahier and standards, fix important findings with regression tests, then publish the branch and attach its PR.
 - [ ] Update realised/planned/CI/field statuses. The remaining lots in §13 of the cahier remain mandatory; this lot does not declare the full product complete.

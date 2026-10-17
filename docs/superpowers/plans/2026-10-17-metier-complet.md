@@ -118,6 +118,8 @@
 
 ### Task 7: Modèles Word, génération PDF, lettres et signature
 
+Préparation technique : `docs/recherche-documents-locaux.md` (sources, versions et limites ; aucune proposition n'y vaut preuve d'exécution).
+
 **Files:** Create `packages/contracts/src/templates.ts`, `apps/server/src/templates/*`, `apps/web/src/features/templates/*`; extend GED for generated outputs; tests `apps/server/test/templates.test.ts`, `tests/e2e/templates.spec.ts`; conversion runtime in `Dockerfile` when needed.
 
 **Interfaces:** `/api/v1/templates` accepts DOCX with bounded archive size/entries, known/unknown variables and required input; rendering consumes a frozen canonical data snapshot, produces a local PDF in GED plus model/version/data hashes. Signature requests are distinct provider jobs with explicit simulation/configured mode, statuses sent/opened/signed/refused/expired and proof documents.
@@ -144,6 +146,8 @@
 
 ### Task 9: Email, campagnes Brevo et accès client
 
+Préparation technique : `docs/recherche-connexions-locales.md` (SMTP réel local, bornes IMAP, API Brevo, retours et limites des reprises).
+
 **Files:** Create `packages/contracts/src/messaging.ts`, `apps/server/src/messaging/*`, `apps/server/src/client-access/*`, `apps/web/src/features/messaging/*`, `apps/web/src/features/client-access/*`; tests `apps/server/test/messaging.test.ts`, `apps/server/test/client-access.test.ts`, `tests/e2e/messaging.spec.ts`.
 
 **Interfaces:** `/api/v1/messaging` mailbox/message/label/template/outbox and campaigns/segments/consent/feedback; `/api/v1/client-access` authenticated limited client accounts, shares, requests and uploads. Shared documents are always reauthorized; no direct local filesystem URL. Mailbox ownership differs from cabinet permissions. Test transport captures a durable outbox and never sends externally.
@@ -159,6 +163,8 @@
 
 ### Task 10: Connexions, identité fédérée, annuaire et aide
 
+Préparation technique : `docs/recherche-connexions-locales.md` (OIDC, vérification JWS explicite, domaine cabinet et disponibilité des méthodes).
+
 **Files:** Create `packages/contracts/src/integrations.ts`, `apps/server/src/integrations/*`, `apps/server/src/help/*`, `apps/web/src/features/integrations/*`, `apps/web/src/features/help/*`; extend identity with configured OIDC; tests `apps/server/test/integrations.test.ts`, `apps/server/test/oidc.test.ts`, `tests/e2e/integrations.spec.ts`.
 
 **Interfaces:** Local encrypted secret references, capability manifests, health/expiry and profile locks consumed by the 17 collectors. Pennylane company API versus fiscal share and public INPI versus private formalities have distinct configurations/permissions. OIDC uses discovered configured issuer endpoints, authorization code+PKCE, state/nonce, verified claims and explicit invitation/account linkage; disabled configuration cannot grant a session. FE stores directory/provider observations without claiming accredited platform status. Help is searchable local usage documentation with exportable redacted support bundle.
@@ -168,6 +174,7 @@
 - [ ] RED then GREEN: missing/expired/revoked source config cannot be marked connected; replacing a secret never reveals it through API/log/export. Lock prevents two sessions driving the same browser account and releases after bounded failed worker recovery.
 - [ ] Implement source account/capability/scopes/period/preflight screens, local credential entry and expiry/revocation, distinct pending-field-validation state. Keep unacquired private contracts and unauthorized portal writes unavailable with a specific reason.
 - [ ] Verify all 17 source adapters, each with a nominal fixture and its own interruption/checkpoint/replay case, through the common collection contract and GED. Correct missing source-specific behavior; a family-wide generic success test cannot stand in for all 17.
+- [ ] Build the first real-driver implementations from the documented procedures: browser acquisition stages and bounded downloads, documented API requests/parsers, identity checks and checkpoints. Exercise them against local fixture portals/HTTP servers. Mark unconfirmed selectors, private formats or missing supplier contracts explicitly; a simulator alone does not satisfy a real-driver premise. Live activation and confirmation remain the final cabinet phase.
 - [ ] RED then GREEN: wrong issuer/audience/nonce/state or missing PKCE fails OIDC; disabled user cannot regain access from an existing IdP login, email collision never auto-links. Show provider availability as configured, not a fabricated Apple availability promise.
 - [ ] Implement individual invitation, expiry/refusal, first password, own password change, session revocation and administrator-assisted recovery with hashed one-use tokens and an audit event; no token in list/export/log. RED then GREEN: replay/expired recovery fails, password reset revokes old sessions, last active administrator retains an explicit recovery method.
 - [ ] Implement facturation électronique directory/provider status and evidence with dated source, help by module/workflow/import/export, support bundle preview/redaction; dossier AI remains proposed and off. Browser checks, check/test/build, commit and report.
