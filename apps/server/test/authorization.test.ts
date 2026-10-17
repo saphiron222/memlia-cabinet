@@ -269,3 +269,69 @@ it("requires approval and assignment permissions separately from general editing
     await f.close();
   }
 });
+
+it("requires audit permission on each historical dossier after a contact moves from B to A", async () => {
+  const f = await fixture();
+  try {
+    await f.setup();
+    const a = (await f.request("POST", "/records", dossier("A fictif"))).json();
+    const b = (await f.request("POST", "/records", dossier("B fictif"))).json();
+    const contact = (
+      await f.request("POST", "/records", {
+        operationId: operationId(),
+        record: {
+          kind: "contact",
+          title: "Contact déplacé fictif",
+          dossierId: b.id,
+          data: {},
+        },
+      })
+    ).json();
+    const { id, version, createdAt, updatedAt, ...content } = contact;
+    expect(
+      (
+        await f.request("PUT", `/records/${id}`, {
+          operationId: operationId(),
+          expectedVersion: version,
+          record: { ...content, dossierId: a.id },
+        })
+      ).statusCode,
+    ).toBe(200);
+    const auditor = (
+      await f.request("POST", "/users", {
+        operationId: operationId(),
+        name: "Auditeur fictif",
+        email: "audit-a@example.test",
+        password: credentials.password,
+        permissions: [
+          { action: "read", kind: "*" },
+          { action: "audit", kind: "*", dossierId: a.id },
+        ],
+      })
+    ).json();
+    const login = await f.request(
+      "POST",
+      "/login",
+      { email: auditor.email, password: credentials.password },
+      "",
+    );
+    const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+    expect(
+      (await f.request("GET", `/records/${id}/history`))
+        .json()
+        .items.map((event: { version: number }) => event.version),
+    ).toEqual([1, 2]);
+    const history = await f.request(
+      "GET",
+      `/records/${id}/history`,
+      undefined,
+      cookie,
+    );
+    expect(history.statusCode).toBe(200);
+    expect(
+      history.json().items.map((event: { version: number }) => event.version),
+    ).toEqual([2]);
+  } finally {
+    await f.close();
+  }
+});

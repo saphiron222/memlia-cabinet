@@ -53,6 +53,11 @@ async function canRead(
     throw error;
   }
 }
+type ObligationRecord = Extract<CabinetRecord, { kind: "obligation" }>;
+function obligationApprovalContent(record: ObligationRecord) {
+  const { validation, archived, ...data } = record.data;
+  return { title: record.title, dossierId: record.dossierId, data };
+}
 export async function saveRecord(
   tx: Connection,
   user: SessionUser,
@@ -126,8 +131,20 @@ export async function saveRecord(
           : "create",
         record,
       );
+      // Approval belongs to the reviewed content. A substantive edit always
+      // invalidates it, including edits submitted by an approver; reapproval
+      // requires a separate command on the resulting version.
+      const approvalInvalidated =
+        previous?.kind === "obligation" &&
+        record.kind === "obligation" &&
+        previous.data.validation === "validee_localement" &&
+        JSON.stringify(obligationApprovalContent(previous)) !==
+          JSON.stringify(obligationApprovalContent(record));
+      if (approvalInvalidated && record.kind === "obligation")
+        record.data.validation = "non_validee";
       if (
         record.kind === "obligation" &&
+        !approvalInvalidated &&
         (previous?.kind === "obligation"
           ? record.data.validation !== previous.data.validation
           : record.data.validation === "validee_localement")

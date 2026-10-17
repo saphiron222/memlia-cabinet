@@ -17,7 +17,7 @@ import {
 import type { Connection } from "../storage/database.js";
 import type { RouteContext } from "../context.js";
 import { fail } from "../errors.js";
-import { requireAccess } from "./permissions.js";
+import { canAccess, requireAccess } from "./permissions.js";
 import { loadRecord, listRecords, saveRecord } from "./service.js";
 export function registerRecordRoutes(
   app: FastifyInstance,
@@ -235,14 +235,8 @@ export function registerRecordRoutes(
       for (const row of rows) {
         const event = HistorySchema.shape.items.element.parse(row.event);
         if (
-          await (async () => {
-            try {
-              await requireAccess(tx, actor, "read", event.snapshot);
-              return true;
-            } catch {
-              return false;
-            }
-          })()
+          (await canAccess(tx, actor, "read", event.snapshot)) &&
+          (await canAccess(tx, actor, "audit", event.snapshot))
         )
           items.push(event);
       }

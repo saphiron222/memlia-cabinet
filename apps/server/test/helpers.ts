@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { expect } from "vitest";
 import { createApplication, type ApplicationOptions } from "../src/app.js";
+import { openDatabase, type Database } from "../src/storage/database.js";
 export const origin = "http://localhost:3000";
 export const credentials = {
   email: "admin@example.test",
@@ -60,6 +61,16 @@ export async function fixture(clock?: () => Date) {
     async restart() {
       await app.close();
       app = await createApplication(options);
+    },
+    async maintainDatabase(run: (database: Database) => Promise<void>) {
+      await app.close();
+      const database = await openDatabase(options);
+      try {
+        await run(database);
+      } finally {
+        await database.close();
+        app = await createApplication(options);
+      }
     },
     async request(
       method: "GET" | "POST" | "PUT",

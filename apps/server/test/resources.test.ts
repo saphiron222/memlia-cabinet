@@ -213,3 +213,138 @@ it("requires an explicit embedded database opt-in", async () => {
     }),
   ).rejects.toThrow("DATABASE_URL requis");
 });
+
+it("invalidates an approved obligation when its substantive content changes and requires a conscious new approval", async () => {
+  const f = await fixture();
+  try {
+    await f.setup();
+    const a = (await f.request("POST", "/records", dossier("A fictif"))).json();
+    const b = (await f.request("POST", "/records", dossier("B fictif"))).json();
+    const editor = (
+      await f.request("POST", "/users", {
+        operationId: operationId(),
+        name: "Éditeur fictif",
+        email: "revision@example.test",
+        password: credentials.password,
+        permissions: ["read", "update"].map((action) => ({
+          action,
+          kind: "*",
+        })),
+      })
+    ).json();
+    const login = await f.request(
+      "POST",
+      "/login",
+      { email: editor.email, password: credentials.password },
+      "",
+    );
+    const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+    for (const changedField of [
+      "amount",
+      "period",
+      "nature",
+      "dossier",
+    ] as const) {
+      const approved = CabinetRecordSchema.parse(
+        (
+          await f.request("POST", "/records", {
+            operationId: operationId(),
+            record: {
+              kind: "obligation",
+              title: `Obligation fictive ${changedField}`,
+              dossierId: a.id,
+              data: {
+                nature: "Personnalisée",
+                period: "2026-10",
+                amount: "123.45",
+                validation: "validee_localement",
+              },
+            },
+          })
+        ).json(),
+      );
+      if (approved.kind !== "obligation") throw Error("Obligation attendue");
+      const { id, version, createdAt, updatedAt, ...content } = approved;
+      const command = {
+        operationId: operationId(),
+        expectedVersion: version,
+        record: {
+          ...content,
+          dossierId: changedField === "dossier" ? b.id : a.id,
+          data: {
+            ...content.data,
+            ...(changedField === "amount"
+              ? { amount: "234.56" }
+              : changedField === "period"
+                ? { period: "2026-11" }
+                : changedField === "nature"
+                  ? { nature: "Autre obligation fictive" }
+                  : {}),
+          },
+        },
+      };
+      const revised = await f.request("PUT", `/records/${id}`, command, cookie);
+      expect(revised.statusCode).toBe(200);
+      expect(revised.json().data.validation).toBe("non_validee");
+      expect(
+        (await f.request("PUT", `/records/${id}`, command, cookie)).json(),
+      ).toEqual(revised.json());
+      const current = CabinetRecordSchema.parse(revised.json());
+      if (current.kind !== "obligation") throw Error("Obligation attendue");
+      const {
+        id: currentId,
+        version: currentVersion,
+        createdAt: creation,
+        updatedAt: update,
+        ...currentContent
+      } = current;
+      const approval = {
+        operationId: operationId(),
+        expectedVersion: currentVersion,
+        record: {
+          ...currentContent,
+          data: { ...currentContent.data, validation: "validee_localement" },
+        },
+      };
+      expect(
+        (await f.request("PUT", `/records/${id}`, approval, cookie)).statusCode,
+      ).toBe(404);
+      const reapproved = await f.request("PUT", `/records/${id}`, approval);
+      expect(reapproved.statusCode).toBe(200);
+      expect(reapproved.json().data.validation).toBe("validee_localement");
+      const changedByApprover = await f.request("PUT", `/records/${id}`, {
+        operationId: operationId(),
+        expectedVersion: reapproved.json().version,
+        record: {
+          ...currentContent,
+          data: {
+            ...currentContent.data,
+            amount: "345.67",
+            validation: "validee_localement",
+          },
+        },
+      });
+      expect(changedByApprover.statusCode).toBe(200);
+      expect(changedByApprover.json().data.validation).toBe("non_validee");
+      await f.restart();
+      expect(
+        (await f.request("GET", `/records/${id}`)).json().data.validation,
+      ).toBe("non_validee");
+      expect(
+        (await f.request("GET", `/records/${id}/history`))
+          .json()
+          .items.map(
+            (event: { snapshot: { data: { validation: string } } }) =>
+              event.snapshot.data.validation,
+          ),
+      ).toEqual([
+        "validee_localement",
+        "non_validee",
+        "validee_localement",
+        "non_validee",
+      ]);
+    }
+  } finally {
+    await f.close();
+  }
+});

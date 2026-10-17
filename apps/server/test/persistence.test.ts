@@ -78,3 +78,54 @@ it("persists dossier/task date, checklist, transitions and CSV through a fresh a
     await f.close();
   }
 });
+
+it("fails the whole history request when reading an older dossier encounters a storage error", async () => {
+  const f = await fixture();
+  try {
+    await f.setup();
+    const a = (await f.request("POST", "/records", dossier("A fictif"))).json();
+    const b = (await f.request("POST", "/records", dossier("B fictif"))).json();
+    const contact = (
+      await f.request("POST", "/records", {
+        operationId: operationId(),
+        record: {
+          kind: "contact",
+          title: "Historique fictif",
+          dossierId: b.id,
+          data: {},
+        },
+      })
+    ).json();
+    const { id, version, createdAt, updatedAt, ...content } = contact;
+    expect(
+      (
+        await f.request("PUT", `/records/${id}`, {
+          operationId: operationId(),
+          expectedVersion: version,
+          record: { ...content, dossierId: a.id },
+        })
+      ).statusCode,
+    ).toBe(200);
+    await f.maintainDatabase(async (database) => {
+      await database.transaction(async (tx) => {
+        await tx.query(
+          "ALTER TABLE cabinet_records RENAME TO cabinet_records_storage",
+        );
+        await tx.query(
+          "CREATE FUNCTION test_old_parent_failure() RETURNS jsonb LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Fictitious historical parent storage failure'; END $$",
+        );
+        await tx.query(
+          `CREATE VIEW cabinet_records AS SELECT id,kind,CASE WHEN id='${b.id}'::uuid THEN test_old_parent_failure() ELSE content END AS content FROM cabinet_records_storage`,
+        );
+      });
+    });
+    expect((await f.request("GET", `/records/${id}`)).statusCode).toBe(200);
+    const history = await f.request("GET", `/records/${id}/history`);
+    expect(history.statusCode).toBe(500);
+    expect(history.json()).toEqual({
+      error: { code: "INTERNAL_ERROR", message: "Erreur interne." },
+    });
+  } finally {
+    await f.close();
+  }
+});
