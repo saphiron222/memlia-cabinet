@@ -421,6 +421,11 @@ export const RecordListQuerySchema = z
     natures: z.string().max(500).optional(),
     taskTypeId: z.uuid().optional(),
     fiscalOnly: z.enum(["true", "false"]).optional(),
+    fiscalDateReference: z.enum(["due", "period_end", "closing"]).optional(),
+    own: z.enum(["true", "false"]).optional(),
+    dossierQuery: z.string().max(300).optional(),
+    regime: z.string().max(100).optional(),
+    lateBefore: CivilDateSchema.optional(),
     nature: z.string().max(100).optional(),
     campaign: z.string().max(50).optional(),
     year: z

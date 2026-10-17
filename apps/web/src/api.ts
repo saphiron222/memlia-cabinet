@@ -64,7 +64,9 @@ export async function request<T>(
 export function queryString(input: Partial<RecordListQuery>) {
   const query = RecordListQuerySchema.parse(input);
   return new URLSearchParams(
-    Object.entries(query).map(([key, value]) => [key, String(value)]),
+    Object.entries(query)
+      .filter(([, value]) => value !== undefined)
+      .map(([key, value]) => [key, String(value)]),
   ).toString();
 }
 export function message(error: unknown) {

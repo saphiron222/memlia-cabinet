@@ -10,6 +10,7 @@ import {
   deriveSourceFreshness,
   type FiscalDetail,
   FiscalCreateSchema,
+  FiscalMatrixSchema,
   FiscalCommandSchema,
   FiscalGenerationSchema,
   FiscalBulkSchema,
@@ -47,6 +48,54 @@ export function registerFiscalRoutes(
         ),
       ),
     ),
+  );
+  // Dossier pagination and occurrence coverage are separate: empty visible cells never
+  // claim the absence of unauthorized or unobserved supplier data.
+  app.get("/api/v1/fiscal/matrix", async (req) =>
+    db.transaction(async (tx) => {
+      const actor = await user(tx, req);
+      const query = RecordListQuerySchema.parse(req.query);
+      const dossiers = await queryRecords(
+        tx,
+        actor,
+        RecordListQuerySchema.parse({
+          kind: "dossier",
+          q: query.dossierQuery,
+          dossierId: query.dossierId,
+          own: query.own,
+          archived: query.archived,
+          offset: query.offset,
+          limit: Math.min(query.limit, 50),
+        }),
+      );
+      const rows = [];
+      for (const dossier of dossiers.items) {
+        const occurrences = await queryRecords(
+          tx,
+          actor,
+          RecordListQuerySchema.parse({
+            ...query,
+            kind: "obligation",
+            fiscalOnly: "true",
+            dossierId: dossier.id,
+            offset: 0,
+            limit: 200,
+          }),
+        );
+        rows.push({
+          dossier,
+          occurrences: occurrences.items,
+          total: occurrences.total,
+          complete: occurrences.total <= occurrences.items.length,
+        });
+      }
+      return FiscalMatrixSchema.parse({
+        rows,
+        total: dossiers.total,
+        offset: dossiers.offset,
+        limit: dossiers.limit,
+      });
+    }),
   );
   app.get("/api/v1/fiscal/responsibles", async (req) =>
     db.transaction(async (tx) => {

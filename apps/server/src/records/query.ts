@@ -64,6 +64,29 @@ export function recordFilter(
     authorizedPredicate(actor, action, parameter),
     `COALESCE((r.content->'data'->>'archived')::boolean,false)=${parameter(query.archived === "true")}::boolean`,
   ];
+  if (query.own === "true") {
+    const userId = parameter(actor.id);
+    where.push(
+      `EXISTS(SELECT 1 FROM cabinet_assignments own_assignment WHERE own_assignment.dossier_id=CASE WHEN r.kind='dossier' THEN r.id ELSE (r.content->>'dossierId')::uuid END AND ((own_assignment.subject_kind='user' AND own_assignment.subject_id=${userId}::uuid) OR (own_assignment.subject_kind IN ('team','site') AND EXISTS(SELECT 1 FROM cabinet_memberships membership WHERE membership.group_id=own_assignment.subject_id AND membership.user_id=${userId}::uuid))))`,
+    );
+  }
+  if (query.dossierQuery) {
+    const pattern =
+      "%" +
+      query.dossierQuery.toLocaleLowerCase("fr").replace(/[\\%_]/g, "\\$&") +
+      "%";
+    where.push(
+      `EXISTS(SELECT 1 FROM cabinet_records d WHERE d.id=(r.content->>'dossierId')::uuid AND d.search_title LIKE ${parameter(pattern)})`,
+    );
+  }
+  if (query.regime)
+    where.push(
+      `r.content->'data'->'fiscal'->>'regime'=${parameter(query.regime)}`,
+    );
+  if (query.lateBefore)
+    where.push(
+      `r.content->'data'->>'dueDate'<${parameter(query.lateBefore)} AND r.content->'data'->>'validation'<>'validee_localement'`,
+    );
   if (query.from && query.to && query.from > query.to)
     fail(400, "INVALID_PERIOD", "La fin précède le début.");
   for (const [key, path] of Object.entries({
@@ -89,7 +112,7 @@ export function recordFilter(
     where.push(
       "r.kind='obligation' AND r.content->'data'->'fiscal' IS NOT NULL AND r.content->'data'->'fiscal' <> 'null'::jsonb",
     );
-  if (query.year || query.property) {
+  if ((!query.fiscalDateReference && query.year) || query.property) {
     const notice = currentNoticePredicate(query, parameter);
     const period = query.year
       ? `substring(r.content->'data'->'fiscal'->'period'->>'start',1,4)=${parameter(query.year)}`
@@ -98,7 +121,7 @@ export function recordFilter(
       `CASE WHEN r.content->'data'->>'nature' IN ('CFE_IFER','TF') THEN EXISTS(SELECT 1 FROM cabinet_fiscal_events e WHERE e.obligation_id=r.id AND e.version<=(r.content->>'version')::integer AND ${notice} AND ${latestNoticePredicate("(r.content->>'version')::integer")}) ELSE (${period} AND ${query.property ? "FALSE" : "TRUE"}) END`,
     );
   }
-  if (query.month)
+  if (query.month && !query.fiscalDateReference)
     where.push(
       `substring(r.content->'data'->'fiscal'->'period'->>'start',6,2)=${parameter(query.month)}`,
     );
@@ -134,7 +157,17 @@ export function recordFilter(
       `r.kind='obligation' AND r.content->'data'->>'preparation'=${parameter(query.preparation)}`,
     );
   const date =
-    "COALESCE(r.content->'data'->>'dueDate',r.content->'data'->>'startedOn',r.content->'data'->>'createdOn',r.content->'data'->>'birthDate')";
+    query.fiscalDateReference === "period_end"
+      ? "r.content->'data'->'fiscal'->'period'->>'end'"
+      : query.fiscalDateReference === "closing"
+        ? "r.content->'data'->'fiscal'->>'financialYearEnd'"
+        : query.fiscalDateReference === "due"
+          ? "r.content->'data'->>'dueDate'"
+          : "COALESCE(r.content->'data'->>'dueDate',r.content->'data'->>'startedOn',r.content->'data'->>'createdOn',r.content->'data'->>'birthDate')";
+  if (query.fiscalDateReference && query.year)
+    where.push(`substring(${date},1,4)=${parameter(query.year)}`);
+  if (query.fiscalDateReference && query.month)
+    where.push(`substring(${date},6,2)=${parameter(query.month)}`);
   if (query.from) where.push(`${date}>=${parameter(query.from)}`);
   if (query.to) where.push(`${date}<=${parameter(query.to)}`);
   const sort = {

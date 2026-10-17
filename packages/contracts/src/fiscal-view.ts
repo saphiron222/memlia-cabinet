@@ -38,4 +38,22 @@ export const FiscalPreparationDocumentSchema = z.object({
   document: DocumentSchema,
 });
 
-export const FiscalResponsiblesSchema=z.object({items:z.array(z.object({id:z.uuid(),name:z.string()})),total:z.number().int().nonnegative()});
+export const FiscalResponsiblesSchema = z.object({
+  items: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  total: z.number().int().nonnegative(),
+});
+
+export const FiscalMatrixSchema = z.object({
+  rows: z.array(
+    z.object({
+      dossier: CabinetRecordSchema.options[0],
+      occurrences: z.array(CabinetRecordSchema.options[3]),
+      total: z.number().int().nonnegative(),
+      complete: z.boolean(),
+    }),
+  ),
+  total: z.number().int().nonnegative(),
+  offset: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+});
+export type FiscalMatrix = z.infer<typeof FiscalMatrixSchema>;
