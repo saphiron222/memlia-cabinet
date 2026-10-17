@@ -50,6 +50,8 @@
 
 ### Task 2: Fiscalité, tentatives, retours, dettes et règlements
 
+Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IFU/RCM, apurement et limites des échéances déduites).
+
 **Files:** Create `packages/contracts/src/fiscal.ts`, `apps/server/src/fiscal/*`, `apps/web/src/features/fiscal/*`; tests `apps/server/test/fiscal.test.ts`, `tests/e2e/fiscal.spec.ts`; extend canonical obligation schema and catalogue.
 
 **Interfaces:** `/api/v1/fiscal` commands for occurrence generation, preparation, local approval, manual observation/cancellation, transmission attempts, platform/recipient returns, debts, apurements, payments and reconciliations. All commands carry operation identity and version when amending an existing object. Pure `deriveFiscalSituation` returns separate axes, provenance, applicable accepted version, exact paid/remaining totals and ambiguities. Twelve natures are explicit: TVA, IS, CVAE, CFE_IFER, TF, DAS2, DSN, IRPP, RCM_2777, IFU_2561, DES, CUSTOM. Imported amounts are not claimed to be official tax calculations.
@@ -60,6 +62,7 @@
 - [ ] RED then GREEN: unknown amount differs from `0.00`; `100.00` due with `30.01` and `69.99` distinct payments gives `0.00`; recollecting the first payment does not duplicate it. Apurement reduces a debt with amount/reason/provenance; an instalment schedule is a separate object, and neither proves a bank debit.
 - [ ] Implement grids/filters per nature/campaign, detail timelines, manual state reasons, bulk preparation/approval, archive/néant/masquage reasons, obligation-to-task and GED links. Permission to approve does not imply permission to transmit.
 - [ ] RED then GREEN: CFE candidates distinguish absent bank account, unparsed PDF, ambiguous masked IBAN and order older than twelve months; preserve candidates, dated rule and confidence, never infer confirmed payment. IFU aggregation links RCM versions and marks a previously approved aggregate stale when a source changes.
+- [ ] RED then GREEN: identical RCM monthly totals with missing beneficiary identities/category allocation cannot produce a complete IFU; missing months differ from confirmed zero. Show preparation coverage and dated campaign status; a draft supplier specification cannot enable transmission or certify an export. Individual observed due date, sourced campaign rule and internal target date stay distinct.
 - [ ] Test DSN per establishment/month/recipient, IRPP per contact/year, source conflicts and DES manual evidence without inventing private adapter paths; browser checks, check/test/build, commit and report.
 
 ### Task 3: Tâches avancées, récurrence, calendrier et notifications
@@ -180,6 +183,8 @@ Préparation technique : `docs/recherche-connexions-locales.md` (OIDC, vérifica
 - [ ] Implement facturation électronique directory/provider status and evidence with dated source, help by module/workflow/import/export, support bundle preview/redaction; dossier AI remains proposed and off. Browser checks, check/test/build, commit and report.
 
 ### Task 11: Exploitation complète, reprise après panne et performance
+
+Préparation technique : `docs/recherche-installation-locale.md` (maintenance, sauvegarde cohérente, bascule et limites du rollback).
 
 **Files:** Extend `deploy/*`, `.github/workflows/ci.yml`, `apps/server/src/storage/*`; create `scripts/benchmark.mjs`, `apps/server/test/operations.test.ts`, `docs/exploitation.md`; tests deployment backup/restore/update scripts and PostgreSQL CI.
 

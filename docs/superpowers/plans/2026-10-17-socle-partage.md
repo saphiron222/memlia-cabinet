@@ -112,14 +112,19 @@ Préparation technique : `docs/recherche-documents-locaux.md`, partie PDF/texte 
 - Task1 supplies Database and the transactional operation journal, not a scheduler. This task owns the common job queue, lease/checkpoint/event persistence and restart behavior; later document/mail operations reuse it.
 - Connector IDs are exactly the 17 IDs in the archived collector catalogue. Real adapters remain unavailable until final validation; simulated mode is explicit in request, result and UI.
 - Consumes `DocumentStore` from Task 3; no second document writer.
+- `DocumentStore.prepare` runs outside the transaction; `commit(tx, actor, prepared, now)` joins the collector transaction, followed by `discard` in `finally`. Persist the document UUID, not an installation path; a document operation ID differs from the enclosing job command ID. The prepared handle is instance-local and must be recreated after restart or rollback.
 
 - [ ] Write a failing contract test for a nominal fictitious CFE acquisition with the right dossier/period/reference and stored PDF.
 - [ ] Implement common execution/journal/checkpoint and adapter registration from fictitious scenarios, not live portal guesses.
+- [ ] Preserve simulated provenance on normalized observations and GED artifacts as well as request/result/UI; simulated output cannot silently become a real source observation in downstream fiscal workflows.
 - [ ] Add one meaningful variation per source family: debt apurement without payment, new message plus missing PJ, Urssaf multi-portfolio duplicate identity, distinct TI/PAM calendar axes, partial jedeclare recipient returns, Pennylane company versus tax source and INPI scope.
 - [ ] Add failing interruption/retry, wrong identity, absent page boundary, HTML login and real-mode-disabled tests; implement conservative complete/partial/needs-human outcomes.
 - [ ] Connect run/progress/result and proof links to the UI; test green, commit. No live portal traffic.
+- [ ] Resolve Task3 minor M1 while connecting the GED consumer: multipart metadata filename and file-part filename must use the same validated value. Cover a local filename with leading/trailing spaces through the browser upload flow.
 
 ### Task 5: Installation, CI et réception du lot
+
+Préparation technique : `docs/recherche-installation-locale.md` (images interrogées, cohérence base/GED, restauration et scénarios CI ; aucune preuve de conteneur acquise par cette recherche).
 
 **Files:**
 - Create: `deploy/compose.yaml`, `Dockerfile`, `.dockerignore`, `.env.example`, `deploy/install.sh`, `deploy/backup.sh`, `deploy/restore.sh`.
@@ -134,6 +139,7 @@ Préparation technique : `docs/recherche-documents-locaux.md`, partie PDF/texte 
 - [ ] Write/run checks for full 171-ID retention, excluded scope, no secrets/private evidence tracked and all implemented routes mapped to real tests.
 - [ ] Reject tracked `.superpowers/` coordination journals as well as private evidence, volumes and secret files; useful local evidence remains available without force-adding ignored files.
 - [ ] Configure Linux standard-runner CI: install locked dependencies, check, unit/integration tests, actual PostgreSQL lifecycle test, web build and isolated Playwright flow. Archive only diagnostic artifacts with short retention.
+- [ ] Resolve Task2/Task3 minor build warnings: use a loader/import configuration compatible with Vite without blanket suppression, document any vendor import adaptation and refresh its hash; normalize NO_COLOR/FORCE_COLOR for parent and child test processes.
 - [ ] Implement container/compose and installer preflight; test fresh start and restart persistence. If the local Docker daemon is unavailable, report that limit and use CI evidence without claiming local container success.
 - [ ] Verify that the Docker build context excludes evidence, private captures, volumes, secrets, Git metadata and local dependency directories; ship the actual third-party notices with the compiled application.
 - [ ] Implement and verify coherent backup/restore and non-destructive preflight rules; protect paths and credentials.
