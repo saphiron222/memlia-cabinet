@@ -199,6 +199,141 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         },
       );
 
+      // G1: durable generation outcomes travel through the actual offline PostgreSQL backup.
+      const generatedDossier = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/records",
+          headers: { origin, cookie },
+          payload: dossier("Périmètre restauré"),
+        })
+      ).json();
+      const generationPermissions = [
+        "read",
+        "create",
+        "update",
+        "approve",
+        "export",
+        "manage_users",
+        "confidential",
+      ].map((action) => ({ action, kind: "*", dossierId: null }));
+      const generationUserResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/users",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          name: "Gestionnaire restauration",
+          email: "restored-generation@example.test",
+          password: "MotDePasseFictif123!",
+          permissions: generationPermissions,
+        },
+      });
+      expect(
+        generationUserResponse.statusCode,
+        generationUserResponse.body,
+      ).toBe(201);
+      const generationUser = generationUserResponse.json();
+      const loginGeneration = async () => {
+        const r = await app!.inject({
+          method: "POST",
+          url: "/api/v1/login",
+          headers: { origin },
+          payload: {
+            email: generationUser.email,
+            password: "MotDePasseFictif123!",
+          },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        return String(r.headers["set-cookie"]).split(";")[0]!;
+      };
+      let generationCookie = await loginGeneration();
+      const generatedModel = await productionPost("/production/models", {
+        operationId: randomUUID(),
+        id: randomUUID(),
+        expectedVersion: 0,
+        model: {
+          kind: "balance",
+          name: "Résultats restaurés",
+          target: "dossier",
+          family: "BNC",
+          year: 2026,
+          population: [record.id, generatedDossier.id],
+          columns: [{ id: stageId, name: "Trace historique", type: "boolean" }],
+        },
+      });
+      const generated = await app.inject({
+        method: "POST",
+        url: "/api/v1/production/generate",
+        headers: { origin, cookie: generationCookie },
+        payload: {
+          operationId: randomUUID(),
+          modelId: generatedModel.id,
+          from: "2026-01-01",
+          to: "2026-12-31",
+        },
+      });
+      expect(generated.statusCode, generated.body).toBe(202);
+      const generationId = generated.json().jobId;
+      let generationJob;
+      for (let n = 0; n < 200; n++) {
+        generationJob = await app.inject({
+          url: `/api/v1/production/jobs/${generationId}`,
+          headers: { cookie: generationCookie },
+        });
+        if (["completed", "failed"].includes(generationJob.json().state)) break;
+        await new Promise((r) => setTimeout(r, 30));
+      }
+      expect(generationJob!.json().state, generationJob!.body).toBe(
+        "completed",
+      );
+      const generationBefore = (
+        await app.inject({
+          url: `/api/v1/production/jobs/${generationId}/results`,
+          headers: { cookie: generationCookie },
+        })
+      ).json();
+      expect(generationBefore.items).toHaveLength(2);
+      expect(
+        generationBefore.items.every((r: any) => r.state === "created"),
+      ).toBe(true);
+      const historyRow = generationBefore.items.find(
+        (r: any) => r.targetId === record.id,
+      ).rowId;
+      const secretMetadata = {
+        ...metadata,
+        operationId: randomUUID(),
+        confidential: true,
+      };
+      const secretUpload = await app.inject({
+        method: "POST",
+        url: "/api/v1/documents",
+        headers: {
+          origin,
+          cookie,
+          "content-type": "multipart/form-data; boundary=secret",
+        },
+        payload: Buffer.from(
+          `--secret\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n${JSON.stringify(secretMetadata)}\r\n--secret\r\nContent-Disposition: form-data; name="file"; filename="preuve.txt"\r\nContent-Type: text/plain\r\n\r\nOriginal confidentiel fictif\r\n--secret--\r\n`,
+        ),
+      });
+      expect(secretUpload.statusCode, secretUpload.body).toBe(201);
+      for (const [version, documentIds] of [
+        [1, [secretUpload.json().id]],
+        [2, []],
+      ] as const)
+        await productionPost(`/production/rows/${historyRow}/commands`, {
+          operationId: randomUUID(),
+          expectedVersion: version,
+          command: {
+            kind: "cell",
+            columnId: stageId,
+            period: "once",
+            value: true,
+            documentIds,
+          },
+        });
+
       const fiscalCreated = await app.inject({
         method: "POST",
         url: "/api/v1/fiscal",
@@ -549,6 +684,111 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
           })
         ).json(),
       ).toEqual(productionModel);
+
+      generationCookie = await loginGeneration();
+      const restoredResults = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}/results`,
+        headers: { cookie: generationCookie },
+      });
+      expect(restoredResults.statusCode, restoredResults.body).toBe(200);
+      expect(restoredResults.json()).toEqual(generationBefore);
+      const changedTarget = await app.inject({
+        method: "PUT",
+        url: `/api/v1/records/${generatedDossier.id}`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: generatedDossier.version,
+          record: {
+            kind: "dossier",
+            title: generatedDossier.title,
+            confidential: true,
+            data: generatedDossier.data,
+          },
+        },
+      });
+      expect(changedTarget.statusCode, changedTarget.body).toBe(200);
+      const withdrawn = await app.inject({
+        method: "PUT",
+        url: `/api/v1/administration/users/${generationUser.id}`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: generationUser.version,
+          name: generationUser.name,
+          active: true,
+          roleIds: [],
+          permissions: generationPermissions.filter(
+            (p) => p.action !== "confidential",
+          ),
+        },
+      });
+      expect(withdrawn.statusCode, withdrawn.body).toBe(200);
+      const protectedResults = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}/results`,
+        headers: { cookie: generationCookie },
+      });
+      expect(protectedResults.statusCode, protectedResults.body).toBe(200);
+      expect(
+        protectedResults
+          .json()
+          .items.map((r: any) => ({ state: r.state, code: r.code })),
+      ).toEqual([
+        { state: "refused", code: "INACCESSIBLE" },
+        { state: "refused", code: "INACCESSIBLE" },
+      ]);
+      for (const outcome of generationBefore.items) {
+        expect(protectedResults.body).not.toContain(outcome.rowId);
+        expect(protectedResults.body).not.toContain(outcome.targetId);
+      }
+      const restoredStatus = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}`,
+        headers: { cookie: generationCookie },
+      });
+      expect(restoredStatus.statusCode, restoredStatus.body).toBe(200);
+      expect(restoredStatus.json().state).toBe("completed");
+      for (const outcome of generationBefore.items) {
+        expect(restoredStatus.body).not.toContain(outcome.rowId);
+        expect(restoredStatus.body).not.toContain(outcome.targetId);
+      }
+
+      const scopedExit = await app.inject({
+        method: "POST",
+        url: "/api/v1/administration/exports",
+        headers: { origin, cookie: generationCookie },
+        payload: { operationId: randomUUID() },
+      });
+      expect(scopedExit.statusCode, scopedExit.body).toBe(202);
+      let scopedExitStatus;
+      for (let n = 0; n < 200; n++) {
+        scopedExitStatus = await app.inject({
+          url: `/api/v1/administration/exports/${scopedExit.json().id}`,
+          headers: { cookie: generationCookie },
+        });
+        if (
+          ["completed", "failed"].includes(scopedExitStatus.json().job?.state)
+        )
+          break;
+        await new Promise((r) => setTimeout(r, 30));
+      }
+      expect(scopedExitStatus!.json().job.state, scopedExitStatus!.body).toBe(
+        "completed",
+      );
+      const scopedDownload = await app.inject({
+        url: `/api/v1/administration/exports/${scopedExit.json().id}/download`,
+        headers: { cookie: generationCookie },
+      });
+      expect(scopedDownload.statusCode, scopedDownload.body).toBe(200);
+      for (const part of scopedDownload.json().parts) {
+        const data = await app.inject({
+          url: `/api/v1/administration/exports/${scopedExit.json().id}/parts/${part.number}`,
+          headers: { cookie: generationCookie },
+        });
+        expect(data.statusCode, data.body).toBe(200);
+        for (const outcome of generationBefore.items)
+          expect(data.body).not.toContain(outcome.rowId);
+        expect(data.body).not.toContain(generatedDossier.id);
+      }
 
       const restoredFiscal = await app.inject({
         url: `/api/v1/fiscal/${fiscal.record.id}`,

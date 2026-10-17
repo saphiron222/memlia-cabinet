@@ -3,6 +3,7 @@ import {
   ProductionGenerationSchema,
   ProductionModelSchema,
   previewOccurrences,
+  productionOccurrencePeriod,
   type SessionUser,
 } from "@memlia/contracts";
 import { JobRunner } from "../jobs/runner.js";
@@ -16,7 +17,7 @@ import {
 } from "./service.js";
 import { loadRecord } from "../records/service.js";
 import { requireGlobal } from "../records/permissions.js";
-import { stableId, weekPeriod } from "../workflows/generation.js";
+import { stableId } from "../workflows/generation.js";
 import { ApiFault, fail } from "../errors.js";
 const input = ProductionGenerationSchema.omit({ operationId: true }).extend({
   model: ProductionModelSchema,
@@ -73,14 +74,9 @@ export class ProductionGeneration {
                     model.population[Math.floor(n / dates.length)]!,
                   date = dates[n % dates.length]!,
                   period =
-                    model.kind === "balance" ||
-                    model.rule?.frequency === "yearly"
+                    model.kind === "balance"
                       ? date.slice(0, 4)
-                      : model.rule?.frequency === "quarterly"
-                        ? `${date.slice(0, 4)}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
-                        : model.rule?.frequency === "weekly"
-                          ? weekPeriod(date)
-                          : date.slice(0, 7);
+                      : productionOccurrencePeriod(model.rule!, date);
                 let rowId: string | null = null,
                   state = "created",
                   code: string | null = null;

@@ -66,7 +66,7 @@ export function registerProductionRoutes(
     db.transaction(async (tx) => {
       const actor = await user(tx, req),
         row = await loadProductionRow(tx, actor, id(req.params)),
-        m = await loadProductionModel(tx, row.modelId);
+        m = await loadProductionModel(tx, row.modelId, row.modelVersion);
       const can = async (action: "update" | "approve" | "assign") => {
         try {
           await authorizeRow(tx, actor, row, action);
@@ -183,7 +183,14 @@ export function registerProductionRoutes(
   app.get("/api/v1/production/models/:id", async (req) =>
     db.transaction(async (tx) => {
       const actor = await user(tx, req),
-        m = await loadProductionModel(tx, id(req.params));
+        m = await loadProductionModel(
+          tx,
+          id(req.params),
+          z
+            .object({ version: z.coerce.number().int().positive().optional() })
+            .parse(req.query).version,
+        );
+      await modelAccess(tx, actor, await loadProductionModel(tx, m.id));
       await modelAccess(tx, actor, m);
       return m;
     }),

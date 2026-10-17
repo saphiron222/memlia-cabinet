@@ -1,4 +1,8 @@
-import { productionValueFinal, productionPeriod } from "@memlia/contracts";
+import {
+  productionValueFinal,
+  productionPeriod,
+  productionOccurrenceDate,
+} from "@memlia/contracts";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
@@ -26,13 +30,19 @@ import {
 } from "../records/permissions.js";
 import { loadRecord, saveRecord } from "../records/service.js";
 import { idempotent } from "../storage/operations.js";
-import { fail } from "../errors.js";
+import { ApiFault, fail } from "../errors.js";
 import { stableId } from "../workflows/generation.js";
 import { commandWork } from "../workflows/service.js";
-export async function loadProductionModel(tx: Connection, id: string) {
+export async function loadProductionModel(
+  tx: Connection,
+  id: string,
+  version?: number,
+) {
   const r = await tx.query(
-    "SELECT content FROM cabinet_production_models WHERE id=$1",
-    [id],
+    version
+      ? "SELECT content FROM cabinet_production_model_versions WHERE id=$1 AND version=$2"
+      : "SELECT content FROM cabinet_production_models WHERE id=$1",
+    version ? [id, version] : [id],
   );
   if (!r[0]) fail(404, "NOT_FOUND", "Modèle inaccessible.");
   return ProductionModelSchema.parse(r[0].content);
@@ -48,7 +58,7 @@ export async function modelAccess(
         await requireAccess(tx, actor, "read", await loadRecord(tx, id));
       else {
         requireGlobal(actor, "read");
-        await activeAssignee(tx, id);
+        await existingUser(tx, id);
       }
     for (const id of m.model.documentIds) {
       const docs = await tx.query(
@@ -192,6 +202,18 @@ export async function saveProductionModel(
             fail(400, "UNKNOWN_ROLE", "Rôle inconnu.");
           await activeAssignee(tx, c.assigneeId);
         }
+      if (
+        candidate.model.kind !== "stage_type" &&
+        candidate.model.target === "utilisateur"
+      )
+        for (const id of candidate.model.population)
+          if (
+            !old ||
+            old.model.kind === "stage_type" ||
+            old.model.target !== "utilisateur" ||
+            !old.model.population.includes(id)
+          )
+            await activeAssignee(tx, id);
       await persistModel(tx, candidate);
       return candidate;
     },
@@ -221,25 +243,18 @@ export async function duplicateProductionModel(
   await modelAccess(tx, actor, old);
   if (old.model.kind !== "balance")
     fail(400, "BALANCE_REQUIRED", "Configuration de bilan requise.");
-  const m = old.model;
-  const duplicateOperation = await tx.query(
-    "SELECT operation_id FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
-    [actor.id, i.operationId],
-  );
-  if (!duplicateOperation.length && old.version !== i.expectedVersion)
-    fail(409, "VERSION_CONFLICT", "La configuration source a changé.");
-  return saveProductionModel(
-    tx,
-    actor,
-    {
-      operationId: i.operationId,
+  const duplicateCommand = (source: ProductionModel, operationId: string) => {
+    if (source.model.kind !== "balance")
+      fail(400, "BALANCE_REQUIRED", "Configuration de bilan requise.");
+    return ProductionModelCommandSchema.parse({
+      operationId,
       id: stableId(i.operationId + ":year"),
       expectedVersion: 0,
       model: {
-        ...m,
+        ...source.model,
         year: i.year,
         closed: false,
-        columns: m.columns.map((c) => ({
+        columns: source.model.columns.map((c) => ({
           ...c,
           plannedDate: c.plannedDate
             ? c.plannedDate.endsWith("-02-29") &&
@@ -249,10 +264,61 @@ export async function duplicateProductionModel(
             : null,
         })),
       },
-    },
-    now,
-  );
+    });
+  };
+  let result: ProductionModel;
+  try {
+    result = await idempotent(
+      tx,
+      actor,
+      i.operationId,
+      { productionDuplicate: { id, i } },
+      async () => {
+        if (old.version !== i.expectedVersion)
+          fail(409, "VERSION_CONFLICT", "La configuration source a changé.");
+        return saveProductionModel(
+          tx,
+          actor,
+          duplicateCommand(old, stableId(i.operationId + ":duplicate-save")),
+          now,
+        );
+      },
+    );
+  } catch (error) {
+    if (!(error instanceof ApiFault) || error.code !== "OPERATION_CONFLICT")
+      throw error;
+    // Earlier installations journaled the derived save. Verify its original fingerprint
+    // against the retained source version; never rewrite or bypass the old journal.
+    const prior = await tx.query(
+      "SELECT result FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+      [actor.id, i.operationId],
+    );
+    if (
+      (prior[0]?.result as { id?: string } | undefined)?.id !==
+      stableId(i.operationId + ":year")
+    )
+      throw error;
+    const source = await loadProductionModel(tx, id, i.expectedVersion);
+    await modelAccess(tx, actor, source);
+    result = await saveProductionModel(
+      tx,
+      actor,
+      duplicateCommand(source, i.operationId),
+      now,
+    );
+  }
+  await modelAccess(tx, actor, result);
+  await modelAccess(tx, actor, await loadProductionModel(tx, result.id));
+  return result;
 }
+export async function existingUser(tx: Connection, id: string | null) {
+  const rows = await tx.query("SELECT active FROM cabinet_users WHERE id=$1", [
+    id,
+  ]);
+  if (!rows[0]) fail(404, "NOT_FOUND", "Utilisateur inaccessible.");
+  return Boolean(rows[0].active);
+}
+
 export async function activeAssignee(tx: Connection, id: string | null) {
   if (
     id &&
@@ -273,7 +339,7 @@ export async function targetScope(
 ) {
   if (target.kind === "libre" || target.kind === "utilisateur") {
     requireGlobal(actor, action);
-    if (target.kind === "utilisateur") await activeAssignee(tx, target.id);
+    if (target.kind === "utilisateur") await existingUser(tx, target.id);
     return null;
   }
   const r = await loadRecord(tx, target.id!);
@@ -289,6 +355,8 @@ export async function authorizeRow(
   action: Action = "read",
 ) {
   await targetScope(tx, actor, row.target, action);
+  if (row.target.kind === "utilisateur")
+    row.target.active = await existingUser(tx, row.target.id);
   if (row.scope) await requireAccess(tx, actor, action, row.scope);
   if (row.recordId)
     await requireAccess(tx, actor, action, await loadRecord(tx, row.recordId));
@@ -382,7 +450,7 @@ export async function persistRow(tx: Connection, row: ProductionRow) {
       "Archivez cette période et ouvrez une nouvelle ligne.",
     );
   await tx.query(
-    "INSERT INTO cabinet_production_rows(id,model_id,occurrence_key,record_id,content) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content",
+    "INSERT INTO cabinet_production_rows(id,model_id,occurrence_key,record_id,content) VALUES($1,$2,$3,$4,$5::jsonb) ON CONFLICT(id) DO UPDATE SET occurrence_key=EXCLUDED.occurrence_key,content=EXCLUDED.content",
     [row.id, row.modelId, row.occurrenceKey, row.recordId, JSON.stringify(row)],
   );
   await tx.query(
@@ -412,6 +480,23 @@ export async function createProductionRow(
       "INVALID_ANNUAL_PERIOD",
       "La ligne doit appartenir à l’exercice configuré.",
     );
+  if (i.target.kind === "utilisateur") await activeAssignee(tx, i.target.id);
+  if (template.kind === "followup" && !/^\d{4}$/.test(i.period))
+    fail(
+      400,
+      "INVALID_ANNUAL_PERIOD",
+      "Le suivi appartient à une année à quatre chiffres.",
+    );
+  if (template.kind === "custom") {
+    const date = productionOccurrenceDate(template.rule!, i.period);
+    if (!date)
+      fail(
+        400,
+        "INVALID_OCCURRENCE",
+        "Choisissez une occurrence de la règle configurée.",
+      );
+    dueDate = date;
+  }
   const scope = await targetScope(tx, actor, i.target, "read");
   if (template.target !== i.target.kind)
     fail(400, "INVALID_TARGET", "La cible ne correspond pas au modèle.");
@@ -562,7 +647,10 @@ export async function commandProductionRow(
   regeneration = false,
 ) {
   const old = await loadProductionRow(tx, actor, id, "update");
-  const model = await loadProductionModel(tx, old.modelId);
+  const currentModel = await loadProductionModel(tx, old.modelId);
+  const model = regeneration
+    ? currentModel
+    : await loadProductionModel(tx, old.modelId, old.modelVersion);
   if (model.model.kind === "stage_type")
     fail(400, "TEMPLATE_REQUIRED", "Modèle requis.");
   const template = model.model,
@@ -581,6 +669,29 @@ export async function commandProductionRow(
     if (column.approval || c.approve)
       await authorizeRow(tx, actor, old, "approve");
   }
+  if (c.kind === "properties" || c.kind === "deposit") {
+    const originals = await tx.query(
+      "SELECT content FROM cabinet_production_row_versions WHERE id=$1 AND version=$2",
+      [id, i.expectedVersion],
+    );
+    const original = originals[0]
+      ? ProductionRowSchema.parse(originals[0].content)
+      : old;
+    if (c.kind === "properties" && c.assigneeId !== original.assigneeId)
+      await authorizeRow(tx, actor, old, "assign");
+    if (
+      c.kind === "deposit" &&
+      c.deposit.attempts.some(
+        (a) =>
+          a.state === "accepted" &&
+          !original.deposit.attempts.some(
+            (prior) =>
+              prior.id === a.id && JSON.stringify(prior) === JSON.stringify(a),
+          ),
+      )
+    )
+      await authorizeRow(tx, actor, old, "approve");
+  }
   const result = await idempotent(
     tx,
     actor,
@@ -593,7 +704,8 @@ export async function commandProductionRow(
           "VERSION_CONFLICT",
           "Cette ligne a changé. Rechargez avant de modifier.",
         );
-      if (template.closed) fail(409, "MODEL_CLOSED", "Configuration fermée.");
+      if (currentModel.model.kind !== "stage_type" && currentModel.model.closed)
+        fail(409, "MODEL_CLOSED", "Configuration fermée.");
       const row = structuredClone(old);
       if (c.kind === "cell") {
         const column = template.columns.find((x) => x.id === c.columnId)!;
@@ -605,7 +717,12 @@ export async function commandProductionRow(
               : column.frequency === "monthly"
                 ? /^\d{4}-(0[1-9]|1[0-2])$/
                 : /^\d{4}-Q[1-4]$/;
-        if (!periodPattern.test(c.period))
+        if (
+          !periodPattern.test(c.period) ||
+          (template.kind === "followup" &&
+            c.period !== "once" &&
+            c.period.slice(0, 4) !== row.period)
+        )
           fail(
             400,
             "INVALID_CELL_PERIOD",
@@ -745,7 +862,7 @@ export async function commandProductionRow(
         const prior = new Map(row.deposit.attempts.map((a) => [a.id, a]));
         for (const a of c.deposit.attempts) {
           if (a.state === "accepted") {
-            await authorizeRow(tx, actor, row, "approve");
+            if (!prior.has(a.id)) await authorizeRow(tx, actor, row, "approve");
             if (a.receiptDocumentId) {
               const proof = await tx.query(
                 "SELECT content->'source'->>'kind' AS kind FROM cabinet_documents WHERE id=$1",
@@ -863,6 +980,8 @@ export async function migrateProductionTargets(
   for (const mapping of i.mappings) {
     await loadProductionRow(tx, actor, mapping.rowId, "update");
     await targetScope(tx, actor, mapping.target, "update");
+    if (mapping.target.kind === "utilisateur")
+      await activeAssignee(tx, mapping.target.id);
     if (mapping.target.kind !== i.target)
       fail(400, "INVALID_TARGET", "Toutes les cibles doivent correspondre.");
   }
@@ -897,6 +1016,12 @@ export async function migrateProductionTargets(
         model: { ...model.model, target: i.target, population: [] },
       });
       await persistModel(tx, next);
+      // Release current keys inside this transaction so valid A/B swaps cannot conflict.
+      // Historical versions retain their original occurrence identity.
+      await tx.query(
+        "UPDATE cabinet_production_rows SET occurrence_key='migration:'||id::text WHERE model_id=$1",
+        [id],
+      );
       const targets = new Set<string>();
       for (const mapping of i.mappings) {
         const row = await loadProductionRow(tx, actor, mapping.rowId, "update");
@@ -912,6 +1037,7 @@ export async function migrateProductionTargets(
             "La configuration interdit ces cibles dupliquées.",
           );
         targets.add(key);
+        row.occurrenceKey = `${id}:${mapping.target.kind}:${mapping.target.id ?? mapping.target.label}:${row.period}${model.model.allowDuplicates ? ":" + row.id : ""}`;
         row.target = mapping.target;
         row.scope = await targetScope(tx, actor, row.target);
         await validateDocuments(tx, actor, row, [

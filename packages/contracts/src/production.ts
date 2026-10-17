@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { CivilDateSchema, CabinetRecordSchema } from "./records.js";
-import { RecurrenceRuleSchema } from "./workflows.js";
+import {
+  previewOccurrences,
+  type RecurrenceRule,
+  RecurrenceRuleSchema,
+} from "./workflows.js";
 const name = z.string().trim().min(1).max(200);
 const unique = (xs: { id: string }[]) =>
   new Set(xs.map((x) => x.id)).size === xs.length;
@@ -113,6 +117,7 @@ export const ProductionTargetSchema = z
     kind: z.enum(["dossier", "contact", "utilisateur", "libre"]),
     id: z.uuid().nullable(),
     label: name,
+    active: z.boolean().optional(),
   })
   .strict()
   .refine(
@@ -258,6 +263,7 @@ export const ProductionGenerationSchema = z
   })
   .strict();
 export const ProductionQuerySchema = z.object({
+  referenceDate: CivilDateSchema.nullable().default(null),
   after: z.uuid().optional(),
   q: z.string().max(200).default(""),
   year: z
@@ -401,4 +407,40 @@ export function productionValueFinal(
   if (column.type === "completion")
     return value === "done" || value === "not_applicable";
   return true;
+}
+
+/** Shared identity for manual selection and generation; civil dates only. */
+export function productionOccurrencePeriod(rule: RecurrenceRule, date: string) {
+  if (rule.frequency === "yearly") return date.slice(0, 4);
+  if (rule.frequency === "quarterly")
+    return `${date.slice(0, 4)}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`;
+  if (rule.frequency === "weekly") {
+    const monday = new Date(date + "T00:00:00Z");
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    return "week:" + monday.toISOString().slice(0, 10);
+  }
+  return date.slice(0, 7);
+}
+export function productionOccurrenceDate(
+  rule: RecurrenceRule,
+  period: string,
+): string | null {
+  const year = period.startsWith("week:")
+    ? period.slice(5, 9)
+    : period.slice(0, 4);
+  if (!/^\d{4}$/.test(year)) return null;
+  let from = `${year}-01-01`,
+    to = `${year}-12-31`;
+  if (rule.frequency === "weekly") {
+    from = period.slice(5);
+    if (!CivilDateSchema.safeParse(from).success) return null;
+    const end = new Date(from + "T00:00:00Z");
+    end.setUTCDate(end.getUTCDate() + 6);
+    to = end.toISOString().slice(0, 10);
+  }
+  return (
+    previewOccurrences(rule, from, to).find(
+      (date) => productionOccurrencePeriod(rule, date) === period,
+    ) ?? null
+  );
 }

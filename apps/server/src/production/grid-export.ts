@@ -2,6 +2,7 @@ import { csvCell } from "../records/csv.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
+  productionPeriod,
   ProductionQuerySchema,
   ProductionModelSchema,
   ProductionRowSchema,
@@ -83,7 +84,17 @@ export class ProductionGridExport {
               for (const row of page.items) {
                 const size = Math.max(
                   Buffer.byteLength(JSON.stringify(row)),
-                  Buffer.byteLength(csv(i.model, [row])),
+                  Buffer.byteLength(
+                    csv(
+                      await loadProductionModel(
+                        tx,
+                        row.modelId,
+                        row.modelVersion,
+                      ),
+                      [row],
+                      i.query.referenceDate,
+                    ),
+                  ),
                 );
                 if (size > 8 * 1024 * 1024)
                   fail(
@@ -190,10 +201,27 @@ export class ProductionGridExport {
       await authorizeRow(tx, actor, row, "export");
       await loadProductionRow(tx, actor, row.id, "export");
     }
-    return csv(i.model, items);
+    const fragments = await Promise.all(
+      items.map(async (row) =>
+        csv(
+          await loadProductionModel(tx, row.modelId, row.modelVersion),
+          [row],
+          i.query.referenceDate,
+        ),
+      ),
+    );
+    return fragments
+      .map((fragment, index) =>
+        index === 0 ? fragment : fragment.slice(fragment.indexOf("\r\n") + 2),
+      )
+      .join("");
   }
 }
-function csv(model: ProductionModel, rows: ProductionRow[]) {
+function csv(
+  model: ProductionModel,
+  rows: ProductionRow[],
+  referenceDate: string | null,
+) {
   const quote = csvCell;
   const lines = [
     [
@@ -226,7 +254,18 @@ function csv(model: ProductionModel, rows: ProductionRow[]) {
       .join(";"),
   ];
   for (const row of rows) {
-    const cells = row.cells.length ? row.cells : [null];
+    const selected = referenceDate
+      ? row.cells.filter(
+          (cell) =>
+            model.model.kind !== "stage_type" &&
+            model.model.columns.some(
+              (column) =>
+                column.id === cell.columnId &&
+                cell.period === productionPeriod(column, referenceDate),
+            ),
+        )
+      : row.cells;
+    const cells = selected.length ? selected : [null];
     for (const cell of cells) {
       const column =
         model.model.kind === "stage_type"

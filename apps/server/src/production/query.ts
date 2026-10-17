@@ -8,6 +8,25 @@ import type { Connection } from "../storage/database.js";
 import { authorizedPredicate } from "../records/query.js";
 import { hasPermission } from "../records/permissions.js";
 import { authorizeRow, loadProductionModel, modelAccess } from "./service.js";
+export function productionDocumentPredicate(
+  actor: SessionUser,
+  p: (value: unknown) => string,
+  value: string,
+) {
+  const docAuth = authorizedPredicate(actor, "read", p);
+  return `NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(COALESCE(${value}->'documentIds','[]'::jsonb) || jsonb_path_query_array(${value},'$.cells[*].documentIds[*]') || jsonb_path_query_array(${value},'$.observations[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].receiptDocumentId ? (@ != null)')) piece(id) LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid WHERE d.id IS NULL OR NOT EXISTS(SELECT 1 FROM cabinet_records dossier CROSS JOIN LATERAL (SELECT dossier.id,'dossier'::text kind,jsonb_set(dossier.content,'{confidential}',to_jsonb(COALESCE((dossier.content->>'confidential')::boolean,false) OR COALESCE((d.content->>'confidential')::boolean,false))) content) r WHERE dossier.id=d.dossier_id AND ${docAuth}))`;
+}
+export function productionScopePredicate(
+  actor: SessionUser,
+  action: "read" | "export",
+  p: (value: unknown) => string,
+  value: string,
+) {
+  const auth = authorizedPredicate(actor, action, p);
+  const scope = (value: string) =>
+    `((${value}->>'recordId' IS NULL OR EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(${value}->>'recordId')::uuid AND ${auth})) AND ${productionDocumentPredicate(actor, p, value)} AND CASE WHEN ${value}->'target'->>'kind' IN ('libre','utilisateur') THEN ${hasPermission(actor, action, "*") ? "TRUE" : "FALSE"} ELSE EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(${value}->'target'->>'id')::uuid AND ${auth}) END AND (${value}->>'scope' IS NULL OR EXISTS(SELECT 1 FROM (SELECT (${value}->'scope'->>'id')::uuid id,${value}->'scope'->>'kind' kind,${value}->'scope' content) r WHERE ${auth})))`;
+  return `(${scope(value)} AND NOT EXISTS(SELECT 1 FROM cabinet_production_row_versions history WHERE history.id=(${value}->>'id')::uuid AND NOT ${scope("history.content")}))`;
+}
 export async function productionRows(
   tx: Connection,
   actor: SessionUser,
@@ -21,14 +40,9 @@ export async function productionRows(
       params.push(v);
       return "$" + params.length;
     };
-  const auth = authorizedPredicate(actor, action, p);
-  const docAuth = authorizedPredicate(actor, "read", p);
-  const scope = (value: string) =>
-    `((${value}->>'recordId' IS NULL OR EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(${value}->>'recordId')::uuid AND ${auth})) AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(COALESCE(${value}->'documentIds','[]'::jsonb) || jsonb_path_query_array(${value},'$.cells[*].documentIds[*]') || jsonb_path_query_array(${value},'$.observations[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].receiptDocumentId ? (@ != null)')) piece(id) LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid WHERE d.id IS NULL OR NOT EXISTS(SELECT 1 FROM cabinet_records dossier CROSS JOIN LATERAL (SELECT dossier.id,'dossier'::text kind,jsonb_set(dossier.content,'{confidential}',to_jsonb(COALESCE((dossier.content->>'confidential')::boolean,false) OR COALESCE((d.content->>'confidential')::boolean,false))) content) r WHERE dossier.id=d.dossier_id AND ${docAuth})) AND CASE WHEN ${value}->'target'->>'kind' IN ('libre','utilisateur') THEN ${hasPermission(actor, action, "*") ? "TRUE" : "FALSE"} ELSE EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(${value}->'target'->>'id')::uuid AND ${auth}) END AND (${value}->>'scope' IS NULL OR EXISTS(SELECT 1 FROM (SELECT (${value}->'scope'->>'id')::uuid id,${value}->'scope'->>'kind' kind,${value}->'scope' content) r WHERE ${auth})))`;
   const filters = [
     `p.model_id=$1`,
-    scope("p.content"),
-    `NOT EXISTS(SELECT 1 FROM cabinet_production_row_versions h WHERE h.id=p.id AND NOT ${scope("h.content")})`,
+    productionScopePredicate(actor, action, p, "p.content"),
   ];
   if (q.q)
     filters.push(

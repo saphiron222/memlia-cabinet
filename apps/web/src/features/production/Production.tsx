@@ -1,6 +1,6 @@
 import { Overlay } from "./Overlay";
 import { tabKeys } from "../workflows/tabs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { z } from "zod";
 import { Button, Loader } from "@memlia/ui";
 import {
@@ -12,6 +12,8 @@ import {
   ProductionImportPreviewSchema,
   JobSchema,
   productionPeriod,
+  previewOccurrences,
+  productionOccurrencePeriod,
   type ProductionModel,
   type ProductionRow,
   type SessionUser,
@@ -22,7 +24,7 @@ import { Field, Select, ErrorSummary } from "../../forms";
 import { ModelEditor, freshModel, irppModel } from "./ModelEditor";
 import { TargetPicker } from "./TargetPicker";
 import { RowDetail } from "./RowDetail";
-import { StageValue, completed, frequencyLabel } from "./value";
+import { StageValue, completed, frequencyLabel, periodLabel } from "./value";
 import { formatCivilDate } from "../workflows/civil";
 import "./production.css";
 const tabs = {
@@ -37,6 +39,8 @@ export function Production({ user }: { user: SessionUser }) {
     [kind, setKind] = useState<ProductionModel["model"]["kind"]>("balance"),
     [models, setModels] = useState<ProductionModel[]>([]),
     [selected, setSelected] = useState(""),
+    [rowModels, setRowModels] = useState<ProductionModel[]>([]),
+    [occurrence, setOccurrence] = useState(""),
     [rows, setRows] = useState<ProductionRow[]>([]),
     [more, setMore] = useState(false),
     [loading, setLoading] = useState(true),
@@ -67,16 +71,47 @@ export function Production({ user }: { user: SessionUser }) {
     ),
     model = models.find((m) => m.id === selected),
     date = `${year}-${month}-01`;
-  const query = ProductionQuerySchema.parse({
+  const rowRequest = useRef(0);
+  const parsedQuery = ProductionQuerySchema.safeParse({
+    referenceDate: kind === "followup" ? date : null,
     q,
     state,
     tag,
     deposit,
     offset,
     sort,
-    period: kind === "balance" ? year : "",
+    period: kind === "balance" || kind === "followup" ? year : "",
     year: kind === "custom" ? year : "",
   });
+  const validFilters = parsedQuery.success && /^\d{4}$/.test(year);
+  const query = parsedQuery.success ? parsedQuery.data : null;
+  const filterError =
+    year && !validFilters
+      ? "Vérifiez les filtres : année à quatre chiffres, recherche de 200 caractères et étiquette de 80 caractères maximum."
+      : "";
+  const versions = rows.length
+    ? rowModels.filter((m) =>
+        rows.some((r) => r.modelId === m.id && r.modelVersion === m.version),
+      )
+    : model
+      ? [model]
+      : [];
+  const gridColumns = versions.flatMap((m) =>
+    m.model.kind === "stage_type"
+      ? []
+      : m.model.columns.map((column) => ({ column, version: m.version })),
+  );
+  const rowModel = (r: ProductionRow) =>
+    rowModels.find((m) => m.id === r.modelId && m.version === r.modelVersion);
+  const selectedRule =
+    model?.model.kind !== "stage_type" ? model?.model.rule : null;
+  const occurrences =
+    model?.model.kind === "custom" && model.model.rule && validFilters
+      ? previewOccurrences(model.model.rule, `${year}-01-01`, `${year}-12-31`)
+      : [];
+  const selectedOccurrence = occurrences.includes(occurrence)
+    ? occurrence
+    : occurrences[0];
   async function loadModels(select?: string) {
     try {
       let after: string | null = null;
@@ -92,8 +127,12 @@ export function Production({ user }: { user: SessionUser }) {
       } while (after);
       setModels(items);
       if (select) setSelected(select);
-      else if (!items.some((x) => x.id === selected && x.model.kind === kind))
-        setSelected(items.find((x) => x.model.kind === kind)?.id ?? "");
+      else
+        setSelected((current) =>
+          items.some((x) => x.id === current && x.model.kind === kind)
+            ? current
+            : (items.find((x) => x.model.kind === kind)?.id ?? ""),
+        );
       setError("");
     } catch (e) {
       if (!signal.aborted) setError(message(e));
@@ -102,27 +141,49 @@ export function Production({ user }: { user: SessionUser }) {
     }
   }
   async function loadRows() {
-    if (!selected || !year || !month) return;
+    const requestId = ++rowRequest.current;
+    if (!selected || !year || !month || !validFilters || !query) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const result = await request(
         `/production/models/${selected}/rows?` +
           new URLSearchParams(
-            Object.entries(query).map(([k, v]) => [k, String(v)]),
+            Object.entries(query)
+              .filter(([, v]) => v !== null && v !== undefined)
+              .map(([k, v]) => [k, String(v)]),
           ),
         ProductionRowListSchema,
         signal,
       );
+      const needed = [
+        ...new Map(
+          result.items.map((r) => [`${r.modelId}:${r.modelVersion}`, r]),
+        ).values(),
+      ];
+      const snapshots = await Promise.all(
+        needed.map((r) =>
+          request(
+            `/production/models/${r.modelId}?version=${r.modelVersion}`,
+            ProductionModelSchema,
+            signal,
+          ),
+        ),
+      );
+      if (requestId !== rowRequest.current) return;
+      setRowModels(snapshots);
       setRows(result.items);
       setMore(result.hasMore);
     } catch (e) {
-      if (!signal.aborted) {
+      if (!signal.aborted && requestId === rowRequest.current) {
         setRows([]);
         setError(message(e));
       }
     } finally {
-      setLoading(false);
+      if (requestId === rowRequest.current) setLoading(false);
     }
   }
   useEffect(() => {
@@ -145,7 +206,7 @@ export function Production({ user }: { user: SessionUser }) {
   useEffect(() => {
     setRow(null);
     void loadRows();
-  }, [selected, q, state, tag, deposit, offset, sort, year]);
+  }, [selected, q, state, tag, deposit, offset, sort, year, month, models]);
   useEffect(() => {
     const id = new URLSearchParams(location.hash.split("?")[1]).get("id");
     if (!id || loading || !models.length) return;
@@ -244,7 +305,7 @@ export function Production({ user }: { user: SessionUser }) {
     }
   }
   async function exportGrid() {
-    if (!model) return;
+    if (!model || !validFilters || !query) return;
     try {
       const r = await request(
         "/production/exports",
@@ -306,6 +367,11 @@ export function Production({ user }: { user: SessionUser }) {
           )}
         </div>
       </div>
+      {filterError && (
+        <div className="error-summary" role="alert">
+          <strong>{filterError}</strong>
+        </div>
+      )}
       <ErrorSummary message={error || undefined} />
       {error && <Button onClick={() => void loadRows()}>Réessayer</Button>}
       {notice && (
@@ -337,6 +403,11 @@ export function Production({ user }: { user: SessionUser }) {
             ))}
         </Select>
         <Field
+          errors={
+            year && !/^\d{4}$/.test(year)
+              ? { "production-year": "Saisissez quatre chiffres." }
+              : {}
+          }
           name="production-year"
           label="Année"
           type="number"
@@ -431,6 +502,11 @@ export function Production({ user }: { user: SessionUser }) {
       {model && kind !== "stage_type" && (
         <div className="production-filters">
           <Field
+            errors={
+              q.length > 200
+                ? { "production-search": "200 caractères maximum." }
+                : {}
+            }
             name="production-search"
             label="Rechercher dans la grille"
             value={q}
@@ -454,6 +530,11 @@ export function Production({ user }: { user: SessionUser }) {
             <option value="not_applicable">Non applicable</option>
           </Select>
           <Field
+            errors={
+              tag.length > 80
+                ? { "production-tag": "80 caractères maximum." }
+                : {}
+            }
             name="production-tag"
             label="Étiquette"
             value={tag}
@@ -554,10 +635,11 @@ export function Production({ user }: { user: SessionUser }) {
                     <th>Période</th>
                     <th>Échéance</th>
                     <th>Avancement</th>
-                    {model.model.columns.map((c) => (
-                      <th key={c.id}>
+                    {gridColumns.map(({ column: c, version }) => (
+                      <th key={`${version}:${c.id}`}>
                         {c.name}
                         <small>
+                          v{version} ·{" "}
                           {kind === "followup"
                             ? productionPeriod(c, date)
                             : frequencyLabel[c.frequency]}
@@ -578,8 +660,12 @@ export function Production({ user }: { user: SessionUser }) {
                     const referenceDate =
                       kind === "followup" ? date : (r.dueDate ?? date);
                     const columns =
-                        model.model.kind !== "stage_type"
-                          ? model.model.columns
+                        rowModel(r)?.model.kind !== "stage_type"
+                          ? ((
+                              rowModel(r)?.model as
+                                | import("@memlia/contracts").ProductionTemplate
+                                | undefined
+                            )?.columns ?? [])
                           : [],
                       done = columns.filter((c) =>
                         completed(
@@ -615,9 +701,11 @@ export function Production({ user }: { user: SessionUser }) {
                             onClick={() => setRow(r)}
                           >
                             {r.target.label}
+                            {r.target.active === false ? " · Inactif" : ""}
                           </button>
+                          <small>Configuration v{r.modelVersion}</small>
                         </td>
-                        <td>{r.period}</td>
+                        <td>{periodLabel(r.period)}</td>
                         <td>{r.dueDate ? formatCivilDate(r.dueDate) : "—"}</td>
                         <td>
                           <span>
@@ -625,28 +713,32 @@ export function Production({ user }: { user: SessionUser }) {
                           </span>
                           <small>{remaining} min restantes</small>
                         </td>
-                        {columns.map((c) => (
-                          <td key={c.id}>
-                            <button
-                              className="production-cell"
-                              aria-label={`${c.name} — ${r.target.label}`}
-                              onClick={() => setRow(r)}
-                            >
-                              <StageValue
-                                column={c}
-                                value={
-                                  r.cells.find(
-                                    (x) =>
-                                      x.columnId === c.id &&
-                                      x.period ===
-                                        productionPeriod(c, referenceDate),
-                                  )?.value ?? null
-                                }
-                                models={models}
-                              />
-                            </button>
-                          </td>
-                        ))}
+                        {gridColumns.map(({ column: c, version }) =>
+                          version !== r.modelVersion ? (
+                            <td key={`${version}:${c.id}`}>—</td>
+                          ) : (
+                            <td key={`${version}:${c.id}`}>
+                              <button
+                                className="production-cell"
+                                aria-label={`${c.name} — ${r.target.label}`}
+                                onClick={() => setRow(r)}
+                              >
+                                <StageValue
+                                  column={c}
+                                  value={
+                                    r.cells.find(
+                                      (x) =>
+                                        x.columnId === c.id &&
+                                        x.period ===
+                                          productionPeriod(c, referenceDate),
+                                    )?.value ?? null
+                                  }
+                                  models={models}
+                                />
+                              </button>
+                            </td>
+                          ),
+                        )}
                         {kind === "balance" && (
                           <>
                             <td>
@@ -704,11 +796,11 @@ export function Production({ user }: { user: SessionUser }) {
               </Button>
             </div>
           </div>
-          {row && (
+          {row && rowModel(row) && (
             <RowDetail
               key={row.id}
               row={row}
-              model={model}
+              model={rowModel(row)!}
               models={models}
               date={date}
               onClose={() => setRow(null)}
@@ -742,36 +834,61 @@ export function Production({ user }: { user: SessionUser }) {
               <h2>Ajouter une ligne</h2>
               <Button onClick={() => setAdding(false)}>Fermer</Button>
             </header>
-            <TargetPicker
-              kind={model.model.target}
-              onSelect={(target) => {
-                void request(
-                  `/production/models/${model.id}/rows`,
-                  ProductionRowSchema,
-                  signal,
-                  {
-                    method: "POST",
-                    body: JSON.stringify({
-                      operationId: crypto.randomUUID(),
-                      expectedVersion: model.version,
-                      target,
-                      period:
-                        kind === "balance" || kind === "followup"
-                          ? year
-                          : kind === "custom"
-                            ? `${year}-${month}`
-                            : "once",
-                    }),
-                  },
-                )
-                  .then((r) => {
-                    setAdding(false);
-                    void loadRows();
-                    setRow(r);
-                  })
-                  .catch((e) => setError(message(e)));
-              }}
-            />
+            {kind === "custom" && (
+              <Select
+                name="manual-occurrence"
+                label="Occurrence prévue"
+                value={selectedOccurrence ?? ""}
+                onChange={setOccurrence}
+              >
+                {!occurrences.length && (
+                  <option value="">Aucune occurrence cette année</option>
+                )}
+                {occurrences.map((date) => (
+                  <option key={date} value={date}>
+                    {periodLabel(
+                      productionOccurrencePeriod(selectedRule!, date),
+                    )}{" "}
+                    · {formatCivilDate(date)}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {(kind !== "custom" || selectedOccurrence) && (
+              <TargetPicker
+                kind={model.model.target}
+                onSelect={(target) => {
+                  void request(
+                    `/production/models/${model.id}/rows`,
+                    ProductionRowSchema,
+                    signal,
+                    {
+                      method: "POST",
+                      body: JSON.stringify({
+                        operationId: crypto.randomUUID(),
+                        expectedVersion: model.version,
+                        target,
+                        period:
+                          kind === "balance" || kind === "followup"
+                            ? year
+                            : kind === "custom"
+                              ? productionOccurrencePeriod(
+                                  selectedRule!,
+                                  selectedOccurrence!,
+                                )
+                              : "once",
+                      }),
+                    },
+                  )
+                    .then((r) => {
+                      setAdding(false);
+                      void loadRows();
+                      setRow(r);
+                    })
+                    .catch((e) => setError(message(e)));
+                }}
+              />
+            )}
           </section>
         </Overlay>
       )}

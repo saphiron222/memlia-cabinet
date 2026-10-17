@@ -74,3 +74,12 @@ export const frequencyLabel = {
   quarterly: "Trimestrielle",
   yearly: "Annuelle",
 };
+
+export function periodLabel(period: string) {
+  if (period === "once") return "Ponctuelle";
+  if (period.startsWith("week:"))
+    return "Semaine du " + formatCivilDate(period.slice(5));
+  const quarter = /^(\d{4})-Q([1-4])$/.exec(period);
+  if (quarter) return `Trimestre ${quarter[2]} · ${quarter[1]}`;
+  return period;
+}

@@ -18,7 +18,7 @@ import { request, message, useScope } from "../../api";
 import { Field, Select, ErrorSummary } from "../../forms";
 import { WorkPanel } from "../workflows/WorkPanel";
 import { formatCivilDate } from "../workflows/civil";
-import { StageValue } from "./value";
+import { StageValue, periodLabel } from "./value";
 import { PeopleSelect } from "./PeopleSelect";
 export function RowDetail({
   row: initial,
@@ -194,7 +194,8 @@ export function RowDetail({
       <header className="production-panel-header">
         <div>
           <span className="muted">
-            {template.name} · {row.period}
+            {template.name} · {periodLabel(row.period)} · configuration v
+            {row.modelVersion}
           </span>
           <h2>{row.target.label}</h2>
         </div>
@@ -213,7 +214,7 @@ export function RowDetail({
         <span>
           Échéance {row.dueDate ? formatCivilDate(row.dueDate) : "non prévue"}
         </span>
-        <span className="muted">v{row.version}</span>
+        <span className="muted">Ligne v{row.version}</span>
       </div>
       <div
         className="work-tabs"

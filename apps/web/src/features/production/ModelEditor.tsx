@@ -16,7 +16,7 @@ import {
   type ProductionTemplate,
   type ProductionColumn,
 } from "@memlia/contracts";
-import { request, message, useScope } from "../../api";
+import { request, message, useScope, RequestError } from "../../api";
 import { Field, Select, ErrorSummary } from "../../forms";
 import { StageValue } from "./value";
 import { TargetPicker } from "./TargetPicker";
@@ -121,24 +121,49 @@ export function ModelEditor({
     [checklists, setChecklists] = useState<
       z.infer<typeof WorkflowModelSchema>[]
     >([]);
+  const [dependencies, setDependencies] = useState({
+    roles: "loading",
+    checklists: "loading",
+  });
+  async function loadDependencies() {
+    setDependencies({ roles: "loading", checklists: "loading" });
+    const results = await Promise.allSettled([
+      request(
+        "/administration/roles",
+        z.object({ items: z.array(RoleSchema) }),
+        signal,
+      ),
+      request(
+        "/workflows/models",
+        z.object({ items: z.array(WorkflowModelSchema) }),
+        signal,
+      ),
+    ]);
+    if (signal.aborted) return;
+    const status = (r: PromiseSettledResult<unknown>) =>
+      r.status === "fulfilled"
+        ? "ready"
+        : r.reason instanceof RequestError &&
+            [403, 404].includes(r.reason.status)
+          ? "denied"
+          : "error";
+    const [roleResult, checklistResult] = results;
+    if (roleResult.status === "fulfilled") setRoles(roleResult.value.items);
+    if (checklistResult.status === "fulfilled")
+      setChecklists(
+        checklistResult.value.items.filter((x) => x.model.kind === "checklist"),
+      );
+    setDependencies({
+      roles: status(roleResult),
+      checklists: status(checklistResult),
+    });
+  }
   useEffect(() => {
-    void request(
-      "/administration/roles",
-      z.object({ items: z.array(RoleSchema) }),
-      signal,
-    )
-      .then((r) => setRoles(r.items))
-      .catch(() => {});
-    void request(
-      "/workflows/models",
-      z.object({ items: z.array(WorkflowModelSchema) }),
-      signal,
-    )
-      .then((r) =>
-        setChecklists(r.items.filter((x) => x.model.kind === "checklist")),
-      )
-      .catch(() => {});
+    if (model.kind !== "stage_type") void loadDependencies();
   }, []);
+  const dependenciesReady =
+    model.kind === "stage_type" ||
+    Object.values(dependencies).every((state) => state === "ready");
   const update = (change: Partial<ProductionTemplate>) =>
     setModel((m) => (m.kind === "stage_type" ? m : { ...m, ...change }));
   const column = (id: string, change: Partial<ProductionColumn>) => {
@@ -167,6 +192,7 @@ export function ModelEditor({
     }
   };
   async function save() {
+    if (!dependenciesReady) return;
     setBusy(true);
     setError("");
     try {
@@ -198,7 +224,44 @@ export function ModelEditor({
         </div>
         <Button onClick={onClose}>Fermer</Button>
       </header>
+      {initial.version > 0 && model.kind !== "stage_type" && (
+        <p className="muted">
+          Les lignes existantes conservent leurs étapes et dates prévues. Ces
+          modifications s’appliquent aux nouvelles lignes.
+        </p>
+      )}
       <ErrorSummary message={error || undefined} />
+      {model.kind !== "stage_type" && (
+        <div className="production-dependencies" aria-live="polite">
+          {(["roles", "checklists"] as const).map((key) => (
+            <p
+              key={key}
+              role={
+                dependencies[key] === "error" || dependencies[key] === "denied"
+                  ? "alert"
+                  : "status"
+              }
+            >
+              {key === "roles" ? "Rôles" : "Checklists"} :{" "}
+              {dependencies[key] === "loading"
+                ? "chargement…"
+                : dependencies[key] === "denied"
+                  ? "accès refusé. Les références configurées sont conservées."
+                  : dependencies[key] === "error"
+                    ? "service indisponible. Les références configurées sont conservées."
+                    : (key === "roles" ? roles.length : checklists.length)
+                      ? "disponibles"
+                      : "aucun élément configuré"}
+            </p>
+          ))}
+          {!dependenciesReady &&
+            !Object.values(dependencies).includes("loading") && (
+              <Button onClick={() => void loadDependencies()}>
+                Réessayer les dépendances
+              </Button>
+            )}
+        </div>
+      )}
       <div
         className="work-tabs"
         onKeyDown={tabKeys}
@@ -423,12 +486,21 @@ export function ModelEditor({
                   onChange={(assigneeId) => update({ assigneeId })}
                 />
                 <Select
+                  disabled={dependencies.checklists !== "ready"}
                   name="model-checklist"
                   label="Checklist commune"
                   value={model.checklistModelId ?? ""}
                   onChange={(v) => update({ checklistModelId: v || null })}
                 >
                   <option value="">Aucune</option>
+                  {model.checklistModelId &&
+                    !checklists.some(
+                      (c) => c.id === model.checklistModelId,
+                    ) && (
+                      <option value={model.checklistModelId}>
+                        Checklist configurée (indisponible)
+                      </option>
+                    )}
                   {checklists.map((c) => (
                     <option value={c.id} key={c.id}>
                       {c.model.name}
@@ -694,6 +766,7 @@ export function ModelEditor({
                       ))}
                     </Select>
                     <Select
+                      disabled={dependencies.roles !== "ready"}
                       name={"column-role-" + c.id}
                       label="Rôle supplémentaire"
                       value={c.requiredRoleId ?? ""}
@@ -702,6 +775,12 @@ export function ModelEditor({
                       }
                     >
                       <option value="">Aucun</option>
+                      {c.requiredRoleId &&
+                        !roles.some((r) => r.id === c.requiredRoleId) && (
+                          <option value={c.requiredRoleId}>
+                            Rôle configuré (indisponible)
+                          </option>
+                        )}
                       {roles.map((r) => (
                         <option value={r.id} key={r.id}>
                           {r.name}
@@ -793,7 +872,10 @@ export function ModelEditor({
       </div>
       <footer className="production-panel-footer">
         <Button onClick={onClose}>Annuler</Button>
-        <Button disabled={busy} onClick={() => void save()}>
+        <Button
+          disabled={busy || !dependenciesReady}
+          onClick={() => void save()}
+        >
           Enregistrer le modèle
         </Button>
       </footer>
