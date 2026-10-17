@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 7)
+  if (version > 8)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -71,6 +71,12 @@ export async function migrate(connection: Connection): Promise<void> {
   }
   if (version < 7)
     for (const statement of fiscalMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(statement);
+  if (version < 8)
+    for (const statement of workflowMigration
       .split(";")
       .map((s) => s.trim())
       .filter(Boolean))
@@ -185,4 +191,19 @@ ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CH
 CREATE TABLE cabinet_fiscal_events (id uuid PRIMARY KEY, obligation_id uuid NOT NULL REFERENCES cabinet_records(id), version integer NOT NULL, content jsonb NOT NULL, UNIQUE(obligation_id,version));
 CREATE INDEX cabinet_fiscal_events_obligation ON cabinet_fiscal_events(obligation_id,version);
 INSERT INTO schema_migrations(version) VALUES (7);
+`;
+
+const workflowMigration = `
+CREATE TABLE cabinet_workflow_models(id uuid PRIMARY KEY,content jsonb NOT NULL);
+CREATE TABLE cabinet_workflow_model_versions(id uuid NOT NULL,version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
+CREATE TABLE cabinet_work(id uuid PRIMARY KEY REFERENCES cabinet_records(id),content jsonb NOT NULL);
+CREATE TABLE cabinet_work_events(id uuid PRIMARY KEY,target_id uuid NOT NULL REFERENCES cabinet_records(id),version integer NOT NULL,actor_id uuid NOT NULL,operation_id uuid NOT NULL,content jsonb NOT NULL,UNIQUE(target_id,version));
+CREATE TABLE cabinet_notifications(id uuid PRIMARY KEY,recipient_id uuid NOT NULL REFERENCES cabinet_users(id),target_id uuid NOT NULL REFERENCES cabinet_records(id),dedupe_key text NOT NULL,content jsonb NOT NULL,UNIQUE(recipient_id,dedupe_key));
+CREATE INDEX cabinet_notifications_recipient ON cabinet_notifications(recipient_id,id);
+CREATE TABLE cabinet_notification_preferences(user_id uuid PRIMARY KEY REFERENCES cabinet_users(id),content jsonb NOT NULL);
+CREATE UNIQUE INDEX cabinet_task_occurrence ON cabinet_records((content->'data'->'recurrence'->>'key')) WHERE content->'data'->'recurrence'->>'key' IS NOT NULL;
+CREATE TABLE cabinet_workflow_imports(id uuid PRIMARY KEY,actor_id uuid NOT NULL REFERENCES cabinet_users(id),content jsonb NOT NULL);
+ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
+ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow'));
+INSERT INTO schema_migrations(version) VALUES(8);
 `;

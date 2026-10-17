@@ -1,3 +1,6 @@
+import { registerChecklistImportRoutes } from "./workflows/imports.js";
+import { Reminders } from "./notifications/reminders.js";
+import { registerNotificationRoutes } from "./notifications/routes.js";
 import { registerWorkflowRoutes } from "./workflows/routes.js";
 import { registerFiscalRoutes } from "./fiscal/routes.js";
 import { registerExportRoutes, Exports } from "./administration/export.js";
@@ -289,7 +292,23 @@ export async function createApplication(options: ApplicationOptions) {
     reply.clearCookie("memlia_session", { path: "/" });
     return SessionSchema.parse({ user: null });
   });
-  registerWorkflowRoutes(app, { db, now, user });
+  const reminders = new Reminders(
+    db,
+    jobs,
+    now,
+    civilDate,
+    options.cabinetTimeZone ?? "Europe/Paris",
+  );
+  const reminderTimer = setInterval(() => {
+    void reminders.tick().catch(() => undefined);
+  }, 30000);
+  reminderTimer.unref();
+  app.addHook("onClose", async () => {
+    clearInterval(reminderTimer);
+  });
+  registerChecklistImportRoutes(app, { db, now, user }, importParser);
+  registerNotificationRoutes(app, { db, now, user }, reminders);
+  registerWorkflowRoutes(app, { db, now, user }, jobs);
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });
   registerAdministrationRoutes(app, { db, now, user });

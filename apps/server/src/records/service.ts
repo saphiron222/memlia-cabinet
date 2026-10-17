@@ -1,3 +1,4 @@
+import { validateTask } from "../workflows/tasks.js";
 import { queryRecords } from "./query.js";
 import { RecordListQuerySchema } from "@memlia/contracts";
 import { validateReferentialContent } from "./validation.js";
@@ -119,6 +120,8 @@ export async function saveRecord(
             at: now.toISOString(),
           };
       await validateReferentialContent(tx, user, record);
+      if (record.kind === "tache")
+        await validateTask(tx, user, record, previous, action);
       if (previous && previous.kind !== record.kind)
         fail(
           400,
@@ -200,7 +203,8 @@ export async function saveRecord(
         previous?.kind === "tache" &&
         record.kind === "tache" &&
         action === "transitioned" &&
-        previous.data.state === record.data.state
+        previous.data.state === record.data.state &&
+        previous.data.stepId === record.data.stepId
       )
         fail(409, "STATE_UNCHANGED", "La tâche est déjà dans cette étape.");
       if (

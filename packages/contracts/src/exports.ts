@@ -1,3 +1,4 @@
+import { WorkflowExportSchema } from "./workflows.js";
 import { FiscalTimelineEntrySchema } from "./fiscal.js";
 import { z } from "zod";
 import { CabinetRecordSchema, RecordListQuerySchema } from "./records.js";
@@ -11,6 +12,7 @@ export const CabinetExportSchema = z.object({
     "objets autorisés actifs et archivés, avec leurs références documentaires",
   ),
   records: z.array(CabinetRecordSchema),
+  workflows: z.array(WorkflowExportSchema).default([]),
   fiscalEvents: z.array(FiscalTimelineEntrySchema).default([]),
   customFields: z.array(CustomFieldSchema),
   documents: z.array(DocumentSchema.extend({ downloadUrl: z.string() })),
@@ -45,6 +47,7 @@ export const ExportCommandSchema = z
   .strict();
 
 export const ExportManifestSchema = CabinetExportSchema.omit({
+  workflows: true,
   fiscalEvents: true,
   records: true,
   documents: true,

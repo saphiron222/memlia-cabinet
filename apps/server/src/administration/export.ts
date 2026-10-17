@@ -1,4 +1,9 @@
 import {
+  workflowExportPage,
+  assertWorkflowExport,
+} from "../workflows/export.js";
+import { WorkflowExportSchema } from "@memlia/contracts";
+import {
   currentNoticePredicate,
   latestNoticePredicate,
 } from "../records/query.js";
@@ -32,16 +37,25 @@ import { availablePermissions } from "./access.js";
 import { installation, requireModule } from "./settings.js";
 import { ApiFault, fail } from "../errors.js";
 const checkpointSchema = z.object({
-  phase: z.enum(["planning", "records", "fiscal", "documents", "complete"]),
+  phase: z.enum([
+    "planning",
+    "records",
+    "fiscal",
+    "workflows",
+    "documents",
+    "complete",
+  ]),
   after: z.uuid().nullable(),
   bytes: z.number().int().nonnegative(),
   records: z.number().int().nonnegative(),
   documents: z.number().int().nonnegative(),
+  workflows: z.number().int().nonnegative().default(0),
   fiscal: z.number().int().nonnegative().default(0),
   part: z.number().int().positive(),
   partBytes: z.number().int().nonnegative(),
 });
 const headerSchema = CabinetExportSchema.omit({
+  workflows: true,
   fiscalEvents: true,
   records: true,
   documents: true,
@@ -87,6 +101,7 @@ export class Exports {
         records: 0,
         documents: 0,
         fiscal: 0,
+        workflows: 0,
         part: 1,
         partBytes: 2048,
       },
@@ -180,6 +195,13 @@ export class Exports {
                   )
                 ).map((r) => CabinetRecordSchema.parse(r.content));
               }
+              if (prior.phase === "workflows")
+                return workflowExportPage(
+                  tx,
+                  input.exportId,
+                  actor,
+                  prior.after,
+                );
               if (prior.phase === "fiscal" && !input.originals)
                 return (
                   await this.fiscalPage(
@@ -237,7 +259,9 @@ export class Exports {
               const ids = [
                 ...new Set(
                   page.flatMap((r) =>
-                    "data" in r ? Object.keys(r.data.customFields) : [],
+                    "data" in r && "customFields" in r.data
+                      ? Object.keys(r.data.customFields)
+                      : [],
                   ),
                 ),
               ];
@@ -253,7 +277,9 @@ export class Exports {
                   ? prior.records
                   : prior.phase === "fiscal"
                     ? prior.fiscal
-                    : prior.documents) +
+                    : prior.phase === "workflows"
+                      ? prior.workflows
+                      : prior.documents) +
                 index +
                 1,
               id: value.id,
@@ -262,7 +288,9 @@ export class Exports {
                   ? "record"
                   : prior.phase === "fiscal"
                     ? "fiscal"
-                    : "document",
+                    : prior.phase === "workflows"
+                      ? "workflow"
+                      : "document",
               content: value,
             }));
             for (const field of fields) {
@@ -320,7 +348,11 @@ export class Exports {
               return { ...entry, part, size };
             });
             if (
-              prior.records + prior.documents + prior.fiscal + page.length >
+              prior.records +
+                prior.documents +
+                prior.fiscal +
+                prior.workflows +
+                page.length >
               400_000
             )
               fail(
@@ -341,8 +373,15 @@ export class Exports {
                     ? "complete"
                     : "fiscal"
                   : prior.phase === "fiscal"
-                    ? "documents"
-                    : "complete",
+                    ? input.originals
+                      ? "documents"
+                      : "workflows"
+                    : prior.phase === "workflows"
+                      ? "documents"
+                      : "complete",
+              workflows:
+                prior.workflows +
+                (prior.phase === "workflows" ? page.length : 0),
               fiscal:
                 prior.fiscal + (prior.phase === "fiscal" ? page.length : 0),
               records:
@@ -440,6 +479,21 @@ export class Exports {
         "EXPORT_SCOPE_CHANGED",
         "Les droits de cette sortie ont changé. Régénérer le fichier.",
       );
+    let afterWorkflow: string | null = null;
+    while (true) {
+      const page: Record<string, unknown>[] = await tx.query(
+        "SELECT id,content FROM cabinet_export_rows WHERE export_id=$1 AND kind='workflow' AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",
+        [id, afterWorkflow],
+      );
+      if (!page.length) break;
+      for (const row of page)
+        await assertWorkflowExport(
+          tx,
+          actor,
+          WorkflowExportSchema.parse(row.content),
+        );
+      afterWorkflow = String(page.at(-1)!.id);
+    }
     let afterDocument: string | null = null;
     while (true) {
       const page: Record<string, unknown>[] = await tx.query(
@@ -858,6 +912,9 @@ export class Exports {
       ...headerSchema.parse(stored.content),
       records,
       customFields,
+      workflows: rows
+        .filter((r) => r.kind === "workflow")
+        .map((r) => r.content),
       fiscalEvents: rows
         .filter((r) => r.kind === "fiscal")
         .map((r) => r.content),

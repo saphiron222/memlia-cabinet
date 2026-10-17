@@ -114,6 +114,44 @@ export async function canAccess(
       )
         return false;
     }
+  if (record.kind === "tache") {
+    if (record.data.prospectId) {
+      const rows = await tx.query(
+        "SELECT content FROM cabinet_records WHERE id=$1",
+        [record.data.prospectId],
+      );
+      if (
+        !rows[0] ||
+        !(await canAccess(
+          tx,
+          user,
+          "read",
+          rows[0].content as CabinetRecord,
+          visited,
+        ))
+      )
+        return false;
+    }
+    for (const id of record.data.documentIds) {
+      const rows = await tx.query(
+        "SELECT dossier_id,content->>'confidential' AS confidential FROM cabinet_documents WHERE id=$1",
+        [id],
+      );
+      if (
+        !rows[0] ||
+        rows[0].dossier_id !== record.dossierId ||
+        (rows[0].confidential === "true" &&
+          !(await scopedPermission(
+            tx,
+            user,
+            "confidential",
+            "dossier",
+            record.dossierId,
+          )))
+      )
+        return false;
+    }
+  }
   return true;
 }
 export async function requireAccess(

@@ -192,6 +192,29 @@ export const ContactDataSchema = z
 export const TaskDataSchema = z
   .object({
     ...extensible,
+    typeId: z.uuid().nullable().default(null),
+    stepId: z.uuid().nullable().default(null),
+    billing: z
+      .enum(["unknown", "billable", "included", "non_billable"])
+      .default("unknown"),
+    plannedMinutes: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(1000000)
+      .nullable()
+      .default(null),
+    prospectId: z.uuid().nullable().default(null),
+    documentIds: z.array(z.uuid()).max(100).default([]),
+    recurrence: z
+      .object({
+        modelId: z.uuid(),
+        modelVersion: z.number().int().positive(),
+        period: z.string().max(40),
+        key: z.string().max(200),
+      })
+      .nullable()
+      .default(null),
     description: z.string().max(10000).default(""),
     dueDate: CivilDateSchema.nullable().default(null),
     state: TaskStateSchema.default("a_faire"),
