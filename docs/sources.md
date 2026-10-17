@@ -2,6 +2,8 @@
 
 Références primaires consultées le 17 octobre 2026. Les procédures privées restent à confronter en dernière phase.
 
+Références de l’interface : [direction courante](design-interface.md), [relevé des sources figées et licences](recherche-design-plane-cal.md), [correspondance des 66 familles Teradion](matrice-interface-teradion.md). Sources complètes : [Plane](https://github.com/makeplane/plane/tree/879ce8b5c6b4fe21efff4789a7062747f46d6383), [Twenty](https://github.com/twentyhq/twenty/tree/e7743ba77003f3eab957cfcca8e760d383cde550), [cal.diy](https://github.com/calcom/cal.diy/tree/54343aa685ae8f33159d2f485ec4a57bad5c574a). Leur acquisition ne prouve pas l’intégration des écrans.
+
 - [fiscal_years](https://data-sharing.pennylane.com/docs/en/pennylane/models/fiscal_years.html)
 - [tax_declarations](https://data-sharing.pennylane.com/docs/en/pennylane/models/tax_declarations.html)
 - [vat_declarations](https://data-sharing.pennylane.com/docs/en/pennylane/models/vat_declarations.html)

@@ -1,12 +1,12 @@
 # Memlia Cabinet
 
-Pilotage du cabinet comptable, installé dans son environnement : dossiers, obligations, production, documents et robots locaux. Le design part des sources Twenty.
+Application web de pilotage du cabinet comptable, auto-hébergée dans son environnement : dossiers, obligations, production, documents et robots locaux. Une installation centrale, accessible aux collaborateurs par navigateur. Le design prend Plane pour référence principale, complétée par Twenty et cal.diy.
 
 ## Commencer
 
 - [Cahier des charges complet](docs/cahier-des-charges.md) et [exigences identifiées](docs/exigences.json).
 - [Accès nécessaires aux connecteurs et recette finale](docs/validation-connecteurs.md).
-- [Design Twenty et provenance](docs/design-twenty.md).
+- [Design de l’interface](docs/design-interface.md) et [provenance des composants Twenty](docs/design-twenty.md).
 - [Captures et sources conservées](evidence/README.md).
 
 Le périmètre complet reste actif. Le développement se fait par lots vérifiables ; les essais sur les vrais portails restent la dernière phase en cabinet. Aucun compte ou secret réel n’est nécessaire aux simulations.

@@ -1,5 +1,7 @@
 # État de réalisation
 
+Nouvelle direction du 17 octobre 2026 : application web auto-hébergée au cabinet ; interface Plane prioritaire, complétée par Twenty et cal.diy. Les sources complètes et la matrice des espaces sont acquises ; la refonte des écrans est à réaliser et à recevoir. Les preuves historiques Twenty ci-dessous ne constituent pas une acceptation de cette nouvelle interface. Voir [le contrat courant](design-interface.md).
+
 Le registre conserve **171 exigences : 160 requises, 10 exclusions et 1 proposition**. Les identités/périmètres sont vérifiés par `scripts/verify-scope.mjs` contre `docs/scope-baseline.json` ; les exclusions ne deviennent pas des fonctionnalités à développer. Le cahier complet et les douze lots du plan métier restent obligatoires. Cette livraison est le socle partagé.
 
 | Ensemble                                                             | Construit                                                                                               | Vérification locale                                                                                                                        | CI                                                                     | Cabinet                                                                                            |

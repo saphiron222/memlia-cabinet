@@ -1,4 +1,6 @@
-# Design Memlia Cabinet — source Twenty figée
+# Sources Twenty — provenance conservée
+
+La nouvelle instruction de Kevin du 17 octobre 2026 remplace la direction Twenty seule par Plane en référence principale, complétée par Twenty et cal.diy. Le contrat courant est [Design de l’interface](design-interface.md). Ce document conserve la provenance, les licences et les mesures du sous-ensemble Twenty ; ses décisions graphiques initiales ci-dessous ne prévalent plus sur la nouvelle direction. Les sources, captures et notices acquises restent conservées.
 
 ## Référence et décision
 

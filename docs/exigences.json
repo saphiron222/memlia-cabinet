@@ -64,7 +64,7 @@
     {
       "id": "TR-DESIGN",
       "name": "Interface et accessibilité",
-      "expected": "Appliquer la référence Twenty et des comportements réels ; vérifier clavier, focus, noms accessibles, contraste, zoom et réduction du mouvement, y compris erreurs et lecture seule."
+      "expected": "Appliquer la direction Plane, Twenty et cal.diy définie dans design-interface.md et des comportements réels ; vérifier clavier, focus, noms accessibles, contraste, zoom et réduction du mouvement, y compris erreurs et lecture seule."
     },
     {
       "id": "TR-LOCAL",
@@ -3250,7 +3250,7 @@
     },
     {
       "id": "F-TWENTY",
-      "name": "Fidélité Twenty",
+      "name": "Fidélité de l’interface : Plane, Twenty et cal.diy",
       "domain": "Interface",
       "scopeCounts": {
         "required": 1
@@ -3261,15 +3261,15 @@
       "acceptanceCriteria": [
         {
           "id": "F-TWENTY-AC-01",
-          "expected": "Les écrans reprennent les sources Twenty figées, Inter et DM Mono, thèmes, échelle, densité, formes et composants retenus."
+          "expected": "Les écrans reprennent les références figées Plane, Twenty et cal.diy selon leurs rôles dans design-interface.md : navigation et composition Plane prioritaires, grilles/fiches Twenty, calendriers/formulaires cal.diy, palette cohérente avec accent et statuts colorés, ressources locales et réutilisations tracées."
         },
         {
           "id": "F-TWENTY-AC-02",
-          "expected": "La comparaison à dimensions, thème, zoom et fontes identiques couvre navigation, grille, panneau, formulaire et menu dans leurs états utiles."
+          "expected": "La comparaison aux références retenues à dimensions, thème, zoom et fontes identiques couvre navigation, grille, panneau, formulaire, calendrier et menu dans leurs états utiles, avec correspondance aux pages et workflows Teradion."
         },
         {
           "id": "F-TWENTY-AC-03",
-          "expected": "Navigation clavier, focus, noms accessibles, contraste, zoom et réduction du mouvement sont vérifiés sans remplacer la direction Twenty."
+          "expected": "Navigation clavier, focus, noms accessibles, contraste, zoom et réduction du mouvement sont vérifiés en conservant la direction Plane prioritaire complétée par Twenty et cal.diy."
         }
       ]
     },
@@ -9416,12 +9416,12 @@
     {
       "id": "AUD-008",
       "family": "F-TWENTY",
-      "feature": "Fidélité Twenty",
+      "feature": "Fidélité de l’interface : Plane, Twenty et cal.diy",
       "domain": "Interface",
-      "title": "Vérifier la fidélité Twenty",
+      "title": "Vérifier la fidélité aux références de l’interface",
       "scope": "required",
       "priority": "P1",
-      "acceptance": "Navigation, grille, panneau, formulaire et menu sont comparés à la révision figée à dimensions, thème, zoom et polices identiques.",
+      "acceptance": "Navigation, grille, panneau, formulaire, calendrier et menu sont comparés aux références figées retenues à dimensions, thème, zoom et polices identiques, avec Plane prioritaire pour l’enveloppe et correspondance explicite aux workflows Teradion.",
       "familyCriteria": [
         "F-TWENTY-AC-01",
         "F-TWENTY-AC-02",
@@ -9430,7 +9430,8 @@
       "sourceIds": [
         "DECISIONS-MEMLIA.md",
         "design/twenty-source-manifest.json",
-        "research/design-twenty-source.md"
+        "research/design-twenty-source.md",
+        "design-interface.md"
       ],
       "implementation": {
         "status": "planned",
