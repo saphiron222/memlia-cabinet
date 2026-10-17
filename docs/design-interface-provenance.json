@@ -316,7 +316,7 @@
     },
     {
       "local": "apps/web/src/features/time/Time.tsx",
-      "sha256": "28247c298e10c2b885d3080ecbebe4b205272bc6dbd467642ca6e0ca906c0001",
+      "sha256": "bb14caae9b3f434cb3ebad8ebf686412aae78183cc5a47adea1eba0fb741a40c",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {

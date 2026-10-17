@@ -151,6 +151,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/task-time-1440-light.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("link", { name: "Mes temps", exact: true }).click();
   await expect(
@@ -184,6 +185,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/time-week-1440-light.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.setViewportSize({ width: 900, height: 1000 });
   const region = page.getByRole("region", {
@@ -211,15 +213,20 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await region.evaluate((el) => (el.scrollLeft = 0));
+  await expect(
+    page.getByRole("button", { name: "Colonnes précédentes", exact: true }),
+  ).toBeDisabled();
   await page.screenshot({
     path: "evidence/private/task5/time-week-900-light.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({
     path: "evidence/private/task5/time-week-900-dark.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("tab", { name: "Plan de charge", exact: true }).click();
   await expect(
@@ -233,11 +240,13 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/workload-900-dark.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
     path: "evidence/private/task5/workload-1440-dark.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page
     .getByRole("table", { name: "Contributions de charge" })
@@ -257,6 +266,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/reassignment-1440-dark.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page
     .getByRole("button", { name: "Confirmer la réaffectation" })
@@ -271,6 +281,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/capacity-editor-1440-dark.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -285,6 +296,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/workload-1440-light.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("tab", { name: "Temps saisis", exact: true }).click();
   await page
@@ -300,6 +312,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/time-timer-active.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.reload();
   await expect(
@@ -310,6 +323,15 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await expect(
     page.getByText("Chronomètre actif depuis", { exact: false }),
   ).toHaveCount(0);
+  await page.getByLabel("Du", { exact: true }).fill("");
+  await expect(
+    page.getByRole("button", { name: "Semaine précédente" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Choisir une semaine" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Choisir une semaine" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.route("**/api/v1/time/report?**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 800));
     await route.continue();
@@ -322,6 +344,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/time-loading.png",
     fullPage: true,
+    animations: "disabled",
   });
   await expect(
     page.getByText("Aucun temps saisi sur cette période et ce périmètre."),
@@ -329,6 +352,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/time-empty.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.unroute("**/api/v1/time/report?**");
   await page.route("**/api/v1/time/report?**", (route) =>
@@ -350,6 +374,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.screenshot({
     path: "evidence/private/task5/time-error.png",
     fullPage: true,
+    animations: "disabled",
   });
   await page.unroute("**/api/v1/time/report?**");
   const context = await browser.newContext({
@@ -392,6 +417,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await readonly.screenshot({
     path: "evidence/private/task5/workload-readonly-900-light.png",
     fullPage: true,
+    animations: "disabled",
   });
   await readonly
     .getByRole("button", { name: "Voir la charge", exact: true })
@@ -404,6 +430,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await readonly.screenshot({
     path: "evidence/private/task5/workload-readonly-detail.png",
     fullPage: true,
+    animations: "disabled",
   });
   await context.close();
 });

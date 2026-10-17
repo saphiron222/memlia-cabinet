@@ -130,6 +130,7 @@ export function Time({
       <div className="time-toolbar">
         <Button
           size="sm"
+          disabled={!from || !to}
           onClick={() => {
             setFrom(shift(from, -7));
             setTo(shift(to, -7));
@@ -139,6 +140,7 @@ export function Time({
         </Button>
         <Button
           size="sm"
+          disabled={!from || !to}
           onClick={() => {
             setFrom(shift(from, 7));
             setTo(shift(to, 7));
@@ -265,7 +267,7 @@ export function Time({
               mode="single"
               timeZone="UTC"
               weekStartsOn={1}
-              selected={new Date(from + "T00:00:00Z")}
+              selected={new Date((from || monday) + "T00:00:00Z")}
               onSelect={(date) => {
                 if (!date) return;
                 const value = date.toISOString().slice(0, 10),
