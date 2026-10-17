@@ -9449,13 +9449,18 @@
           "tests/e2e/cabinet.spec.ts",
           "tests/e2e/production.spec.ts",
           "apps/server/test/fiscal-matrix.test.ts",
-          "apps/web/test/source-distribution.test.ts"
+          "apps/web/test/source-distribution.test.ts",
+          "tests/e2e/fiscal-matrix-races.spec.ts",
+          "tests/e2e/workflows.spec.ts",
+          "scripts/container-context.test.mjs",
+          "scripts/context-smoke.mjs",
+          "scripts/container-smoke.mjs"
         ],
         "fieldValidation": "last-phase",
-        "scope": "Task13 : toutes les routes actuellement montées, composants sources repris et adaptations déclarées. Comparaisons exactes limitées aux références réellement rendues ; revue indépendante/CI de ce candidat et réception consolidée Task12 en attente. Aucun produit complet ni validation cabinet revendiqués.",
+        "scope": "Task13 : surfaces actuellement montées et composants sources repris, adaptations déclarées, revue indépendante et trois contre-relectures reçues sur d1dc0d2. Comparaisons limitées aux références réellement rendues ; qualification globale de toutes les futures pages/accessibilité/zoom au lot 12. Aucune réception des 160 exigences ni validation cabinet revendiquée.",
         "verification": {
-          "local": "Fournisseur matrice27/27 PGlite et PostgreSQL17 ; 38 parcours du passage couvrant, scénario interface corrigé puis revérifié1/1 ; contrôles/build/distribution/reconstruction distincts consignés dans le reçu Task13.",
-          "ci": "not-run",
+          "local": "Fournisseur fiscal 27/27 sur PGlite et PostgreSQL 17 ; régressions ciblées, frontière source : 7 tests, reconstructions/actifs/archives et captures compilées documentés dans le reçu Task13. Docker local indisponible ; la preuve de son cycle est acquise séparément en CI.",
+          "ci": "d1dc0d2 : branche 39077004305 et pull request 39077007429 réussies ; chacune 183 PGlite + 3 SKIP, 186 PG17, 40 Chromium, check/build/smoke/contexte privé/cycle réel conteneur-restauration et 13 ressources anonymes source/licences. https://github.com/saphiron222/memlia-cabinet/actions/runs/39077004305 ; https://github.com/saphiron222/memlia-cabinet/actions/runs/39077007429",
           "cabinet": "not-run"
         }
       }
