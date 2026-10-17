@@ -121,6 +121,8 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 
 ### Task 6: CRM, onboarding et LAB
 
+Préparation technique : `docs/recherche-lab-onboarding.md` (sources françaises propres aux experts-comptables, vérifications humaines, accès BE, confidentialité et limites documentaires à qualifier ; aucune décision réglementaire automatique).
+
 **Files:** Create `packages/contracts/src/relationship.ts`, `apps/server/src/relationship/*`, `apps/web/src/features/relationship/*`; tests `apps/server/test/relationship.test.ts`, `tests/e2e/relationship.spec.ts`.
 
 **Interfaces:** `/api/v1/relationship` prospect/pipeline/model/mission, onboarding requirements and LAB reviews. Prospect conversion returns one dossier and one triggering event per operation. Pipeline temperature/manual risk remain distinct from a calculated score. Onboarding checks have provenance and cannot masquerade as verified portal rights.
