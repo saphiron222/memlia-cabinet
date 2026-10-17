@@ -5851,10 +5851,31 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5877,10 +5898,31 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5902,10 +5944,31 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5928,10 +5991,31 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5955,10 +6039,31 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8045,7 +8150,7 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "partial-local",
+        "status": "implemented-local",
         "files": [
           "packages/contracts/src/workflows.ts",
           "apps/server/src/workflows/service.ts",
@@ -8053,17 +8158,33 @@
           "apps/server/src/notifications/reminders.ts",
           "apps/web/src/features/workflows/Workflows.tsx",
           "apps/web/src/features/workflows/WorkPanel.tsx",
-          "docs/workflows.md"
+          "docs/workflows.md",
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md",
+          "apps/web/src/features/workflows/TaskDetail.tsx"
         ],
         "tests": [
           "apps/server/test/workflows.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/workflows.spec.ts"
+          "tests/e2e/workflows.spec.ts",
+          "apps/server/test/time.test.ts",
+          "tests/e2e/time.spec.ts"
         ],
-        "ci": "not-run-for-task3",
+        "ci": "not-run-for-task5",
         "fieldValidation": "last-phase",
-        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
-        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Mentions Task3 conservées ; prévu/réalisé Task5 raccordé à la fiche canonique. Réception indépendante, CI exacte et qualification globale Task12 encore distinctes ; validation cabinet en dernière phase."
       }
     },
     {
@@ -8136,10 +8257,31 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8160,10 +8302,31 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8937,10 +9100,31 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8962,10 +9146,31 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/time.ts",
+          "apps/server/src/time/service.ts",
+          "apps/server/src/time/routes.ts",
+          "apps/server/src/time/timers.ts",
+          "apps/server/src/time/workload.ts",
+          "apps/server/src/time/reassignment.ts",
+          "apps/server/src/time/csv.ts",
+          "apps/server/src/time/export.ts",
+          "apps/web/src/features/time/Time.tsx",
+          "apps/web/src/features/time/TimeReport.tsx",
+          "apps/web/src/features/time/Configuration.tsx",
+          "apps/web/src/features/time/Workload.tsx",
+          "docs/time.md"
+        ],
+        "tests": [
+          "apps/server/test/time.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/time.spec.ts"
+        ],
+        "ci": "not-run-for-task5",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/time.md#critères-et-réception",
+        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
       }
     },
     {

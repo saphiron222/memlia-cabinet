@@ -43,7 +43,7 @@ La migration additive 8 introduit modèles/historiques, travail/événements, no
 | F-CALENDRIER-AC-01–03, PAR-028               | Même tâche/obligation/date dans Paris et Auckland, natures sélectionnées, sélection commune                          | Occurrences personnalisées Task4                            |
 | F-ALERTS-AC-01–03, PAR-054                   | Date manquée/version, rattrapage borné et transfert de gestionnaire, retrait de droits avant engagement, choix au-delà200                  | Canaux mail réels Task9                                     |
 | PUB-016-S1                                   | Relation fiscale/tâche idempotente                                                                           | Aucune suppression de périmètre                             |
-| PUB-016-S2                                   | Mention autorisée, temps prévu et lien permanent de tâche                                                    | Saisies de temps réalisé et rapports Task5                  |
+| PUB-016-S2 | Mention autorisée Task3 ; Task5 : prévu/réalisé effectif, provenance et saisies par ID canonique dans la fiche, lien section=time conservé au reload ([temps](time.md)) | Réception indépendante/CI exacte Task5 puis qualification globale Tasks11/12 |
 | PAR-006, PAR-020 / F-TVA-AC-03, F-DAS2-AC-03 | Checklist/commentaires/pièces au même ID, rechargement/changement d'onglet, retrait de droits navigateur     | Email contextualisé Task9 ; fournisseurs Task10             |
 | F-STATES-AC-01–03, AUD-012                   | Chargement/vide/refus/erreur et reprise, valeurs inconnues explicites, aucun succès avant écriture confirmée | Toutes pages hors Task3 et qualification globale Tasks11/12 |
 

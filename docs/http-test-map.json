@@ -502,5 +502,61 @@
   "GET /api/v1/fiscal/matrix": {
     "file": "apps/server/test/fiscal-matrix.test.ts",
     "test": "matrix separates dossier pagination and date reference, preserving exact amounts and export filters"
+  },
+  "POST /api/v1/time/exports": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/exports/:id": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/exports/:id/parts/:part": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/targets": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/:id/history": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "POST /api/v1/time/reassignment/preview": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "reassignment preview changes both totals once, commit checks versions, and exit contains all time history"
+  },
+  "POST /api/v1/time/reassignment/commit": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "reassignment preview changes both totals once, commit checks versions, and exit contains all time history"
+  },
+  "POST /api/v1/time/timers/start": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/timers/:id/stop": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/entities": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/workload": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "dated forfait late activity, midmonth change, weighted role collaborators and extra task contribute once with capacity provenance"
+  },
+  "GET /api/v1/time/report": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/options": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/entities": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
   }
 }
