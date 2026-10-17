@@ -2,7 +2,7 @@ import { mkdir, readdir, writeFile, readFile, statfs } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:net";
 import { resolve, dirname } from "node:path";
-import { safePath } from "./operations.mjs";
+import { safePath, validateCabinetTimeZone } from "./operations.mjs";
 try {
   const version = process.versions.node.split(".").map(Number);
   if (version[0] < 22 || (version[0] === 22 && version[1] < 22)) throw Error();
@@ -38,6 +38,9 @@ try {
         ))
     )
       throw Error("Origine HTTPS requise.");
+    const cabinetTimeZone = validateCabinetTimeZone(
+      process.env.CABINET_TIME_ZONE,
+    );
     const host = process.env.BIND_ADDRESS ?? "127.0.0.1",
       port = Number(process.env.HTTP_PORT ?? 3000);
     if (
@@ -74,7 +77,11 @@ try {
       });
     await writeFile(
       root + "/config/installation.json",
-      JSON.stringify({ publicOrigin, allowHttpLoopback }, null, 2) + "\n",
+      JSON.stringify(
+        { publicOrigin, allowHttpLoopback, cabinetTimeZone },
+        null,
+        2,
+      ) + "\n",
       { mode: 0o600, flag: "wx" },
     );
     await writeFile(

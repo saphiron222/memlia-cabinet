@@ -6060,8 +6060,8 @@
           "scripts/container-smoke.mjs",
           "scripts/context-smoke.mjs"
         ],
-        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; Docker local indisponible.",
-        "ciValidation": "pending — workflow candidat, ne vaut pas exécution",
+        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; recette Task5 du 17 octobre 2026 sous Colima/Linux ARM64 : contexte/build, notices, PDF, recréation/crash et restauration neuve. La recette conteneur locale précède les derniers correctifs login, couverts ensuite par tests ciblés sur les deux moteurs.",
+        "ciValidation": "Acquise sur e2460dccdb84ccad46315cbf05c9b32a1ce22d6a : https://github.com/saphiron222/memlia-cabinet/actions/runs/39018367306 ; Linux AMD64, Node 22.22.3, check, 47 tests PGlite réussis + 1 PostgreSQL seul ignoré, 48 tests PostgreSQL 17 réussis, build/smoke compilé, 16 E2E et cycle Docker avec restauration. Les corrections finales suivantes restent à vérifier par leur propre CI.",
         "fieldValidation": "last-phase",
         "limitations": "Socle installé ; qualification HTTPS/Windows, charge, chiffrement/récupération des secrets, copie/rotation et mises à jour complètes restent obligatoires au lot exploitation et en cabinet."
       }
@@ -6127,8 +6127,8 @@
           "scripts/container-smoke.mjs",
           "scripts/context-smoke.mjs"
         ],
-        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; Docker local indisponible.",
-        "ciValidation": "pending — workflow candidat, ne vaut pas exécution",
+        "localValidation": "PostgreSQL 17 : sauvegarde/restauration de fixtures, rôle limité, refus non destructifs ; recette Task5 du 17 octobre 2026 sous Colima/Linux ARM64 : contexte/build, notices, PDF, recréation/crash et restauration neuve. La recette conteneur locale précède les derniers correctifs login, couverts ensuite par tests ciblés sur les deux moteurs.",
+        "ciValidation": "Acquise sur e2460dccdb84ccad46315cbf05c9b32a1ce22d6a : https://github.com/saphiron222/memlia-cabinet/actions/runs/39018367306 ; Linux AMD64, Node 22.22.3, check, 47 tests PGlite réussis + 1 PostgreSQL seul ignoré, 48 tests PostgreSQL 17 réussis, build/smoke compilé, 16 E2E et cycle Docker avec restauration. Les corrections finales suivantes restent à vérifier par leur propre CI.",
         "fieldValidation": "last-phase",
         "limitations": "Socle installé ; qualification HTTPS/Windows, charge, chiffrement/récupération des secrets, copie/rotation et mises à jour complètes restent obligatoires au lot exploitation et en cabinet."
       }

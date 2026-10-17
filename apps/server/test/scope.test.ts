@@ -16,6 +16,11 @@ it("public scope guard rejects private evidence, volumes, secrets and coordinati
       "var/probe.txt",
       ".env",
       ".superpowers/probe.md",
+      "database-url",
+      "bootstrap-token",
+      "secrets/application-password",
+      "secrets/database-password",
+      "installation/secrets/unknown-private-file",
     ]) {
       execFileSync("git", ["read-tree", "HEAD"], { env });
       execFileSync(

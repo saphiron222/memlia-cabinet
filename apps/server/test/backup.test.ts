@@ -1,5 +1,6 @@
 import { it, expect } from "vitest";
 import { Client } from "pg";
+import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   mkdtemp,
@@ -21,9 +22,9 @@ import {
 } from "../../../deploy/operations.mjs";
 import { createApplication } from "../src/app.js";
 import { credentials, origin, dossier, task } from "./helpers.js";
-it.skipIf(!process.env.DATABASE_URL)(
-  "PostgreSQL 17: offline backup restores linked records, exact bytes and configuration; unsafe targets never change",
-  async () => {
+it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
+  "PostgreSQL 17: offline backup restores linked records, exact bytes and configuration; unsafe targets never change (%s)",
+  async (schema) => {
     const base = new URL(process.env.DATABASE_URL!);
     const admin = new Client({ connectionString: base.toString() });
     await admin.connect();
@@ -51,6 +52,19 @@ it.skipIf(!process.env.DATABASE_URL)(
         url.password = runtimePassword;
         urls.push(url.toString());
       }
+      for (const [index, url] of urls.entries()) {
+        const connection = new Client({ connectionString: url });
+        await connection.connect();
+        try {
+          if (index === 0 && schema !== "public")
+            await connection.query(`CREATE SCHEMA ${schema}`);
+          await connection.query(
+            `ALTER ROLE ${runtimeRole} IN DATABASE ${new URL(url).pathname.slice(1)} SET search_path TO ${schema}, public`,
+          );
+        } finally {
+          await connection.end();
+        }
+      }
       for (const dir of [
         "data",
         "restored",
@@ -61,7 +75,11 @@ it.skipIf(!process.env.DATABASE_URL)(
         await mkdir(join(root, dir), { mode: 0o700 });
       for (let n = 0; n < 3; n++)
         await writeFile(join(root, `url-${n}`), urls[n]!, { mode: 0o600 });
-      const configuration = { publicOrigin: origin, allowHttpLoopback: true };
+      const configuration = {
+        publicOrigin: origin,
+        allowHttpLoopback: true,
+        ...(schema === "public" ? {} : { cabinetTimeZone: "America/New_York" }),
+      };
       await writeFile(
         join(root, "config.json"),
         JSON.stringify(configuration),
@@ -132,6 +150,15 @@ it.skipIf(!process.env.DATABASE_URL)(
         urlFile: join(root, "url-0"),
         backupDirectory: join(root, "backup"),
       };
+      const invalidConfig = join(root, "invalid-config.json");
+      await writeFile(
+        invalidConfig,
+        JSON.stringify({ ...configuration, cabinetTimeZone: "Invalid/Zone" }),
+        { mode: 0o600 },
+      );
+      await expect(
+        backup({ ...options, configFile: invalidConfig }),
+      ).rejects.toThrow("Fuseau du cabinet invalide");
       await expect(backup(options)).rejects.toThrow("Arrêter et drainer");
       expect(await readdir(root)).not.toContain("backup");
       await app.close();
@@ -158,6 +185,7 @@ it.skipIf(!process.env.DATABASE_URL)(
       await rm(join(target.dataDirectory, "sentinel"));
       const occupied = new Client({ connectionString: urls[2] });
       await occupied.connect();
+      await occupied.query("SET search_path TO public");
       await occupied.query("CREATE TABLE sentinel(value text)");
       await occupied.query("INSERT INTO sentinel VALUES('untouched')");
       try {
@@ -221,7 +249,55 @@ it.skipIf(!process.env.DATABASE_URL)(
         ).rejects.toThrow();
         expect(await readdir(target.dataDirectory)).toEqual([]);
       }
-      await restore(target);
+      const catalogQuery =
+        "SELECT schemaname,relname,last_analyze FROM pg_stat_all_tables WHERE schemaname IN ('pg_catalog','information_schema') ORDER BY schemaname,relname";
+      const before = new Client({ connectionString: urls[1] });
+      await before.connect();
+      const catalogBefore = (await before.query(catalogQuery)).rows;
+      await before.end();
+      const restored = spawnSync(
+        process.execPath,
+        ["deploy/operations.mjs", "restore", target.backupDirectory],
+        {
+          env: {
+            ...process.env,
+            DATABASE_URL_FILE: target.urlFile,
+            DATA_DIRECTORY: target.dataDirectory,
+            CONFIG_FILE: target.configFile,
+          },
+          encoding: "utf8",
+        },
+      );
+      expect(restored.status, restored.stderr).toBe(0);
+      expect(restored.stdout + restored.stderr).not.toMatch(
+        /warning|permission denied|pg_catalog/i,
+      );
+      const verification = new Client({ connectionString: urls[1] });
+      await verification.connect();
+      try {
+        expect(
+          (
+            await verification.query(
+              "SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=current_user",
+            )
+          ).rows,
+        ).toEqual([
+          { rolsuper: false, rolcreatedb: false, rolcreaterole: false },
+        ]);
+        const analyzed = (
+          await verification.query(
+            "SELECT schemaname,relname,last_analyze IS NOT NULL AS analyzed FROM pg_stat_all_tables WHERE schemaname=$1",
+            [schema],
+          )
+        ).rows;
+        expect(analyzed.length).toBeGreaterThan(0);
+        expect(analyzed.every((row) => row.analyzed)).toBe(true);
+        expect((await verification.query(catalogQuery)).rows).toEqual(
+          catalogBefore,
+        );
+      } finally {
+        await verification.end();
+      }
       expect(JSON.parse(await readFile(target.configFile, "utf8"))).toEqual(
         configuration,
       );

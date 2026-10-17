@@ -6,6 +6,7 @@ async function start() {
     ? (JSON.parse(await readFile(process.env.CONFIG_FILE, "utf8")) as {
         publicOrigin: string;
         allowHttpLoopback: boolean;
+        cabinetTimeZone?: string;
       })
     : undefined;
   const origin =
@@ -30,6 +31,9 @@ async function start() {
   const app = await createApplication({
     dataDirectory: resolve(process.env.DATA_DIRECTORY ?? "var"),
     publicOrigin: origin,
+    cabinetTimeZone: configuration
+      ? configuration.cabinetTimeZone
+      : process.env.CABINET_TIME_ZONE,
     databaseUrl: process.env.DATABASE_URL_FILE
       ? (await readFile(process.env.DATABASE_URL_FILE, "utf8")).trim()
       : process.env.DATABASE_URL,

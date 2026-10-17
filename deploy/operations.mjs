@@ -41,14 +41,27 @@ export async function safePath(
   await access(path, constants.R_OK | (directory ? constants.W_OK : 0));
 }
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
+export function validateCabinetTimeZone(value = "Europe/Paris") {
+  try {
+    if (typeof value !== "string" || !value) throw new Error();
+    new Intl.DateTimeFormat("en", { timeZone: value });
+    return value;
+  } catch {
+    fail("Fuseau du cabinet invalide.");
+  }
+}
 async function config(path) {
   await safePath(path, { directory: false });
   const value = JSON.parse(await readFile(path, "utf8"));
   if (
-    Object.keys(value).sort().join(",") !== "allowHttpLoopback,publicOrigin" ||
+    ![
+      "allowHttpLoopback,publicOrigin",
+      "allowHttpLoopback,cabinetTimeZone,publicOrigin",
+    ].includes(Object.keys(value).sort().join(",")) ||
     typeof value.allowHttpLoopback !== "boolean"
   )
     fail("Configuration non reconnue.");
+  validateCabinetTimeZone(value.cabinetTimeZone);
   const url = new URL(value.publicOrigin);
   if (
     url.origin !== value.publicOrigin ||
@@ -426,7 +439,30 @@ export async function restore(options) {
         flag: "wx",
       });
     }
-    await db.query("ANALYZE");
+    let analysisWarning = false;
+    const observeAnalysis = (notice) => {
+      if (notice.severity === "WARNING") analysisWarning = true;
+    };
+    db.on("notice", observeAnalysis);
+    try {
+      const tables = (
+        await db.query(`
+        SELECT format('%I.%I', n.nspname, c.relname) AS qualified_name
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE c.relnamespace=(SELECT relnamespace FROM pg_class WHERE oid='cabinet_documents'::regclass)
+          AND c.relowner=current_user::regrole AND c.relkind IN ('r','p')
+          AND n.nspname NOT IN ('pg_catalog','information_schema')
+          AND n.nspname NOT LIKE 'pg_%'
+        ORDER BY c.relname
+      `)
+      ).rows;
+      if (!tables.length) fail("Tables applicatives restaurées absentes.");
+      for (const table of tables)
+        await db.query("ANALYZE " + table.qualified_name);
+      if (analysisWarning) fail("Analyse des tables restaurées incomplète.");
+    } finally {
+      db.off("notice", observeAnalysis);
+    }
     await rename(
       join(staging, "documents"),
       join(options.dataDirectory, "documents"),

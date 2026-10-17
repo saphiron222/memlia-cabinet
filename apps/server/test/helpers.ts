@@ -15,7 +15,10 @@ export const credentials = {
 export const operationId = () => randomUUID();
 export async function fixture(
   clock?: () => Date,
-  configuration: Pick<ApplicationOptions, "loginThrottleCapacity"> = {},
+  configuration: Pick<
+    ApplicationOptions,
+    "loginThrottleCapacity" | "cabinetTimeZone"
+  > = {},
 ) {
   const dataDirectory = await mkdtemp(join(tmpdir(), "memlia-"));
   const options: ApplicationOptions = {

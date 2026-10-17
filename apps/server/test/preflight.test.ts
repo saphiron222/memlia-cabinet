@@ -60,8 +60,13 @@ it("installer preflight refuses occupied, linked, public paths and ports without
     } finally {
       await new Promise<void>((accept) => server.close(() => accept()));
     }
+    expect(run(root, { CABINET_TIME_ZONE: "Invalid/Zone" }).status).toBe(1);
     expect(await readdir(root)).toEqual([]);
-    const initialized = run();
+    const initialized = run(root, { CABINET_TIME_ZONE: "America/New_York" });
+    expect(
+      JSON.parse(await readFile(join(root, "config/installation.json"), "utf8"))
+        .cabinetTimeZone,
+    ).toBe("America/New_York");
     expect(initialized.status).toBe(0);
     const appSecret = (
       await readFile(join(root, "secrets/application-password"), "utf8")

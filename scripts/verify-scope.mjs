@@ -24,7 +24,7 @@ const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
   .filter(Boolean);
 for (const path of tracked) {
   if (
-    /(^|\/)(\.superpowers|var|node_modules|\.data|test-results|playwright-report)(\/|$)|^evidence\/private\/|(^|\/)\.env($|\.(?!example$))|\.(pem|key|p12|pfx|log)$|(^|\/)(cookies|storageState|credentials|database-url|bootstrap-token)(\.|$)/i.test(
+    /(^|\/)(\.superpowers|var|node_modules|\.data|test-results|playwright-report|secrets)(\/|$)|^evidence\/private\/|(^|\/)\.env($|\.(?!example$))|\.(pem|key|p12|pfx|log)$|(^|\/)(cookies|storageState|credentials|database-url|bootstrap-token)(\.|$)/i.test(
       path,
     )
   )

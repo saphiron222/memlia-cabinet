@@ -13,3 +13,5 @@ export function safePath(
   path: string,
   options?: { directory?: boolean; privateMode?: boolean },
 ): Promise<void>;
+
+export function validateCabinetTimeZone(value?: string): string;

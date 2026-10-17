@@ -1,3 +1,4 @@
+import { createCabinetCalendar } from "./civil-date.js";
 import { LoginThrottle } from "./identity/login-throttle.js";
 import { registerWeb } from "./web.js";
 import { mkdir, access } from "node:fs/promises";
@@ -39,6 +40,8 @@ export interface ApplicationOptions {
   databaseUrl?: string;
   allowEmbeddedDatabase?: boolean;
   clock?: () => Date;
+  /** Cabinet civil time, independent of host TZ; defaults to Europe/Paris. */
+  cabinetTimeZone?: string;
   bootstrapToken?: string;
   webDirectory?: string;
   /** Maximum in-memory login accounts, default 5000; lower bounds support small installations/tests. */
@@ -66,6 +69,7 @@ export async function createApplication(options: ApplicationOptions) {
     throw new Error(
       "La capacité des connexions doit être comprise entre 1 et 5000.",
     );
+  const civilDate = createCabinetCalendar(options.cabinetTimeZone);
   const db = await openDatabase(options);
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
   const now = options.clock ?? (() => new Date());
@@ -264,7 +268,7 @@ export async function createApplication(options: ApplicationOptions) {
     reply.clearCookie("memlia_session", { path: "/" });
     return SessionSchema.parse({ user: null });
   });
-  registerRecordRoutes(app, { db, now, user });
+  registerRecordRoutes(app, { db, now, user }, civilDate);
   registerUserRoutes(app, { db, now, user });
   const documents = new DocumentStore(options.dataDirectory);
   registerDocumentRoutes(app, { db, now, user }, documents);

@@ -60,8 +60,8 @@
     "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
   },
   "GET /api/v1/dashboard": {
-    "file": "apps/server/test/persistence.test.ts",
-    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+    "file": "apps/server/test/dashboard-calendar.test.ts",
+    "test": "dashboard uses the Paris civil day across midnight and DST: $today"
   },
   "GET /api/v1/users": {
     "file": "apps/server/test/resources.test.ts",

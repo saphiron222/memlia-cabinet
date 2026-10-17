@@ -23,6 +23,7 @@ import { loadRecord, listRecords, saveRecord } from "./service.js";
 export function registerRecordRoutes(
   app: FastifyInstance,
   { db, now, user }: RouteContext,
+  civilDate: (instant: Date) => string,
 ) {
   const labels = {
     dossier: "Dossiers",
@@ -242,6 +243,8 @@ export function registerRecordRoutes(
       const records = (await listRecords(tx, actor)).filter(
         (r) => !r.data.archived,
       );
+      const asOf = now();
+      const today = civilDate(asOf);
       const counts = { dossier: 0, contact: 0, tache: 0, obligation: 0 };
       let openTasks = 0,
         overdueTasks = 0;
@@ -249,15 +252,12 @@ export function registerRecordRoutes(
         counts[record.kind]++;
         if (record.kind === "tache" && record.data.state !== "terminee") {
           openTasks++;
-          if (
-            record.data.dueDate &&
-            record.data.dueDate < now().toISOString().slice(0, 10)
-          )
+          if (record.data.dueDate && record.data.dueDate < today)
             overdueTasks++;
         }
       }
       return DashboardSchema.parse({
-        asOf: now().toISOString(),
+        asOf: asOf.toISOString(),
         counts,
         openTasks,
         overdueTasks,
