@@ -153,7 +153,9 @@ export function registerTimeRoutes(
       calculateWorkload(
         tx,
         await user(tx, req),
-        TimeQuerySchema.parse(req.query),
+        TimeQuerySchema.extend({ roleId: z.uuid().optional() }).parse(
+          req.query,
+        ),
       ),
     ),
   );
@@ -193,11 +195,14 @@ export function registerTimeRoutes(
         q = z
           .object({
             kind: z.string().max(30).optional(),
+            active: z.enum(["true", "false"]).optional(),
+            userId: z.uuid().optional(),
+            referenceId: z.uuid().optional(),
             offset: z.coerce.number().int().min(0).default(0),
           })
           .strict()
           .parse(req.query);
-      const all = await entities(tx, a, q.kind);
+      const all = await entities(tx, a, q.kind, "read", undefined, q);
       return {
         items: all.slice(q.offset, q.offset + 100),
         total: all.length,

@@ -62,6 +62,11 @@ export async function entities(
   kind?: string,
   action: "read" | "export" = "read",
   dates?: { from: string; to: string },
+  selection?: {
+    active?: "true" | "false";
+    userId?: string;
+    referenceId?: string;
+  },
 ) {
   const params: unknown[] = [],
     p = (v: unknown) => {
@@ -70,8 +75,21 @@ export async function entities(
     };
   const cte = scopeCte(actor, p, action),
     filter = fullScope(actor, p, "t.content", action);
+  const selected = selection
+    ? [
+        selection.active
+          ? `t.kind='timer' AND (t.content->'data'->>'stoppedAt' IS NULL)=${p(selection.active === "true")}`
+          : "TRUE",
+        selection.userId
+          ? `t.content->'data'->>'userId'=${p(selection.userId)}`
+          : "TRUE",
+        selection.referenceId
+          ? `(t.content->'data'->'target'->>'id'=${p(selection.referenceId)} OR t.content->'data'->>'dossierId'=${p(selection.referenceId)})`
+          : "TRUE",
+      ].join(" AND ")
+    : "TRUE";
   const rows = await tx.query(
-    `${cte} SELECT t.content FROM cabinet_time t WHERE ${filter}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT 20001`,
+    `${cte} SELECT t.content FROM cabinet_time t WHERE ${filter} AND ${selected}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT 20001`,
     params,
   );
   if (rows.length > 20000)
@@ -452,7 +470,7 @@ export async function report(
     )
   )[0]!;
   const rows = await tx.query(
-    `${cte} SELECT t.content FROM cabinet_time t WHERE ${where} ORDER BY t.content->'data'->>'date',t.id LIMIT ${p(q.limit)} OFFSET ${p(q.offset)}`,
+    `${cte} SELECT t.content,r.kind record_kind,r.content->>'title' record_label,pr.content->'target'->>'label' production_label FROM cabinet_time t LEFT JOIN cabinet_records r ON t.content->'data'->'link'->>'kind'='record' AND r.id=(t.content->'data'->'link'->>'id')::uuid LEFT JOIN cabinet_production_rows pr ON t.content->'data'->'link'->>'kind'='production' AND pr.id=(t.content->'data'->'link'->>'id')::uuid WHERE ${where} ORDER BY t.content->'data'->>'date',t.id LIMIT ${p(q.limit)} OFFSET ${p(q.offset)}`,
     params,
   );
   return {
@@ -463,6 +481,27 @@ export async function report(
     amount: Number(totals.unrated) > 0 ? null : (totals.amount ?? "0.00"),
     planned: q.recordId ? await effectivePlan(tx, actor, q.recordId) : null,
     entries: rows.map((r) => TimeEntitySchema.parse(r.content)),
+    relations: rows.flatMap((r) => {
+      const e = TimeEntitySchema.parse(r.content);
+      if (e.data.kind !== "entry" || e.data.link.kind === "free") return [];
+      const link = e.data.link;
+      return [
+        {
+          id: link.id,
+          label: String(
+            link.kind === "production" ? r.production_label : r.record_label,
+          ),
+          href:
+            link.kind === "production"
+              ? "#production?id=" + link.id
+              : "#" +
+                r.record_kind +
+                "?id=" +
+                link.id +
+                (r.record_kind === "tache" ? "&section=time" : ""),
+        },
+      ];
+    }),
     total: Number(totals.total),
     hasMore: q.offset + rows.length < Number(totals.total),
   };

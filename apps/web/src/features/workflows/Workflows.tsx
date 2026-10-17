@@ -189,7 +189,13 @@ export function Workflows({
     const params = new URLSearchParams(queryString(query));
     params.set("view", mode);
     params.set("anchor", anchor);
-    if (id) params.set("id", id);
+    if (id) {
+      params.set("id", id);
+      const section = new URLSearchParams(location.hash.split("?")[1]).get(
+        "section",
+      );
+      if (section) params.set("section", section);
+    }
     history.replaceState(null, "", `#${page}?${params}`);
   }, [query, mode, anchor, id, calendar]);
   const fetchQuery = queryString({

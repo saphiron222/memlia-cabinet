@@ -48,7 +48,7 @@ function split(total: number, weights: { userId: string; weight: number }[]) {
 export async function calculateWorkload(
   tx: Connection,
   actor: SessionUser,
-  q: TimeQuery,
+  q: TimeQuery & { roleId?: string },
   override?: TimeEntity,
 ) {
   period(q);
@@ -433,7 +433,8 @@ export async function calculateWorkload(
       (readsOthers(actor)
         ? !r.userId || ids.has(r.userId)
         : r.userId === actor.id) &&
-      (!q.userId || r.userId === q.userId),
+      (!q.userId || r.userId === q.userId) &&
+      (!q.roleId || r.roleId === q.roleId),
   );
   const people = users
     .filter((u) => !q.userId || u.id === q.userId)

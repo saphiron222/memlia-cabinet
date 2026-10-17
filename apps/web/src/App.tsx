@@ -1,3 +1,4 @@
+import { Time } from "./features/time/Time";
 import AuthContainer from "./upstream/cal/AuthContainer";
 import { AppHeader as PlaneAppHeader } from "./upstream/plane/app-header";
 import { Navigation, pageContext } from "./interface/Navigation";
@@ -236,6 +237,9 @@ function Auth({
   );
 }
 type Page =
+  | "temps"
+  | "temps-cabinet"
+  | "charge"
   | "production"
   | "calendrier"
   | "notifications"
@@ -248,6 +252,9 @@ type Page =
   | "collectes"
   | RecordKind;
 const icons = {
+  temps: IconCalendar,
+  "temps-cabinet": IconCalendar,
+  charge: IconCalendar,
   production: IconCheckbox,
   calendrier: IconCalendar,
   notifications: IconCheckbox,
@@ -266,6 +273,9 @@ const icons = {
 function route(): Page {
   const hash = location.hash.slice(1).split("?")[0];
   return [
+    "temps",
+    "temps-cabinet",
+    "charge",
     "production",
     "calendrier",
     "notifications",
@@ -354,6 +364,10 @@ function Cabinet({
         Aller au contenu
       </a>
       <Navigation
+        timeCabinet={user.permissions.some(
+          (p) =>
+            p.action === "time_read" && p.kind === "*" && p.dossierId === null,
+        )}
         hash={hash}
         collapsed={collapsed}
         toggle={() => void saveSettings({ sidebarCollapsed: !collapsed })}
@@ -433,27 +447,33 @@ function Cabinet({
                 {pageContext(page)} <span aria-hidden> / </span>
               </span>
               <h1 ref={heading} tabIndex={-1}>
-                {page === "production"
-                  ? "Production"
-                  : page === "calendrier"
-                    ? "Calendrier"
-                    : page === "notifications"
-                      ? "Notifications"
-                      : page === "fiscal"
-                        ? "Fiscalité"
-                        : page === "compte"
-                          ? "Mon compte"
-                          : page === "imports"
-                            ? "Reprise"
-                            : page === "administration"
-                              ? "Administration"
-                              : page === "accueil"
-                                ? "Accueil"
-                                : page === "documents"
-                                  ? "Documents"
-                                  : page === "collectes"
-                                    ? "Collectes"
-                                    : labels[page]}
+                {page === "temps"
+                  ? "Mes temps"
+                  : page === "temps-cabinet"
+                    ? "Temps du cabinet"
+                    : page === "charge"
+                      ? "Plan de charge"
+                      : page === "production"
+                        ? "Production"
+                        : page === "calendrier"
+                          ? "Calendrier"
+                          : page === "notifications"
+                            ? "Notifications"
+                            : page === "fiscal"
+                              ? "Fiscalité"
+                              : page === "compte"
+                                ? "Mon compte"
+                                : page === "imports"
+                                  ? "Reprise"
+                                  : page === "administration"
+                                    ? "Administration"
+                                    : page === "accueil"
+                                      ? "Accueil"
+                                      : page === "documents"
+                                        ? "Documents"
+                                        : page === "collectes"
+                                          ? "Collectes"
+                                          : labels[page]}
               </h1>
               <span className="muted">
                 {installation?.name ?? "Cabinet partagé"}
@@ -462,7 +482,9 @@ function Cabinet({
           }
         />
         <ErrorSummary message={fault || accountError || undefined} />
-        {page === "production" ? (
+        {page === "temps" || page === "temps-cabinet" || page === "charge" ? (
+          <Time key={page} user={user} mode={page} />
+        ) : page === "production" ? (
           <Production user={user} />
         ) : page === "tache" || page === "calendrier" ? (
           <Workflows key={page} user={user} calendar={page === "calendrier"} />

@@ -291,8 +291,8 @@
     },
     {
       "local": "apps/web/src/features/workflows/Workflows.tsx",
-      "sha256": "70a1aa24663ef7c03715052b049afb2d8cba7c1e670064fc2fa46170ebced318",
-      "role": "Canonical controller; task Weeks compose actual Cal PanelCard with Plane KanbanCard; annual uses AnnualCalendar"
+      "sha256": "ad6bcf90c82ba4050fa4b042cf9661b0741826dac3ab440be36cc30041eb04b2",
+      "role": "Canonical controller; task Weeks compose actual Cal PanelCard with Plane KanbanCard; annual uses AnnualCalendar; preserves canonical task time section in URL (Task5)"
     },
     {
       "local": "apps/web/src/upstream/twenty/table.css",
@@ -308,6 +308,41 @@
       "local": "apps/web/src/upstream/plane/platform.ts",
       "sha256": "0c760a5caaf4e4b702531bc152974295436af98d7727df3cc4d8d16a9a9880f9",
       "role": "Cabinet mobile media-query adapter"
+    },
+    {
+      "local": "apps/web/src/features/workflows/TaskDetail.tsx",
+      "sha256": "1b85a639b35f2914ef563d4edac385e207c30d1caa3e95e4b106ff2248666ec0",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Time.tsx",
+      "sha256": "28247c298e10c2b885d3080ecbebe4b205272bc6dbd467642ca6e0ca906c0001",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/TimeReport.tsx",
+      "sha256": "7452942c36e2a33f2fc6bb7fd55ccaf483df889cabbfcdd8909724e6a308fa1b",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Configuration.tsx",
+      "sha256": "702ec3af443d75847a761414b674a43c771e7f152fb0fff90731cb2211b6b430",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Workload.tsx",
+      "sha256": "6b3877ae16dd23d6392cf861f053c6cda379ad363c71b6cf2bda5a32bf3b7f95",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/shared.tsx",
+      "sha256": "9a5d264a9f303bc7944517e3497cda9215df81ef7b0c7fecb363f21ab8528bc0",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/time.css",
+      "sha256": "c1b2b3084058039b2f6f952e791e1c91597f0c03c7e2ca41d78c85cdab92940e",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     }
   ],
   "packages": [

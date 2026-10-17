@@ -60,6 +60,14 @@ const groups = [
     ],
   },
   {
+    name: "Gestion",
+    links: [
+      ["temps", "Mes temps", IconCalendar],
+      ["temps-cabinet", "Temps du cabinet", IconCalendar],
+      ["charge", "Plan de charge", IconChartBar],
+    ],
+  },
+  {
     name: "Documents & sources",
     links: [
       ["documents", "Documents", IconFiles],
@@ -76,6 +84,7 @@ const groups = [
   },
 ] as const;
 export function Navigation({
+  timeCabinet = false,
   hash,
   collapsed,
   toggle,
@@ -83,6 +92,7 @@ export function Navigation({
   footer,
   onWidthChange,
 }: {
+  timeCabinet?: boolean;
   hash: string;
   collapsed: boolean;
   toggle: () => void;
@@ -128,11 +138,13 @@ export function Navigation({
     >
       <nav aria-label="Navigation principale" className="flex flex-col gap-3">
         {groups.map((group) => {
-          const links = group.links.filter(([, label]) =>
-            label
-              .toLocaleLowerCase("fr")
-              .includes(search.toLocaleLowerCase("fr")),
-          );
+          const links = group.links
+            .filter(([href]) => href !== "temps-cabinet" || timeCabinet)
+            .filter(([, label]) =>
+              label
+                .toLocaleLowerCase("fr")
+                .includes(search.toLocaleLowerCase("fr")),
+            );
           if (!links.length) return null;
           return (
             <SidebarMenuItems

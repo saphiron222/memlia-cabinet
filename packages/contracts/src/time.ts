@@ -193,6 +193,7 @@ export const TimeReportSchema = z.object({
   realizedSeconds: z.number().int(),
   planned: TimePlanSchema.nullable(),
   entries: z.array(TimeEntitySchema),
+  relations: z.array(z.object({ id, label: z.string(), href: z.string() })),
   total: z.number().int(),
   hasMore: z.boolean(),
   amount: money.nullable(),

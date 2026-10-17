@@ -127,6 +127,14 @@ test("manual and timer time retain nature, explicit task link, seconds, replay s
   expect(concurrentStart.json()).toEqual(started.json());
   expect(started.statusCode, started.body).toBe(200);
   const timer = started.json();
+  const active = await f.request(
+    "GET",
+    "/time/entities?kind=timer&active=true&userId=" + actor.id,
+  );
+  expect(active.statusCode, active.body).toBe(200);
+  expect(active.json().items.map((e: { id: string }) => e.id)).toEqual([
+    timer.id,
+  ]);
   const another = await f.request("POST", "/time/timers/start", {
     ...start,
     operationId: operationId(),
@@ -298,6 +306,22 @@ test("dated forfait late activity, midmonth change, weighted role collaborators 
   );
   expect(r.statusCode, r.body).toBe(200);
   const w = r.json();
+  const byRole = await f.request(
+    "GET",
+    "/time/workload?from=2026-10-01&to=2026-10-31&roleId=" + role.id,
+  );
+  expect(byRole.statusCode, byRole.body).toBe(200);
+  expect(
+    byRole
+      .json()
+      .people.reduce(
+        (s: number, p: { plannedMinutes: number }) => s + p.plannedMinutes,
+        0,
+      ),
+  ).toBe(380);
+  expect(
+    byRole.json().rows.every((r: { roleId: string }) => r.roleId === role.id),
+  ).toBe(true);
   expect(
     w.rows.reduce(
       (s: number, r: { plannedMinutes: number }) => s + (r.plannedMinutes ?? 0),

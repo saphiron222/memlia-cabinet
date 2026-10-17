@@ -1,3 +1,5 @@
+import { TaskTime } from "../time/TimeReport";
+import "../time/time.css";
 import { TabButton } from "../../upstream/plane/controls";
 import { formatCivilDate } from "./civil";
 import { tabKeys } from "./tabs";
@@ -347,6 +349,15 @@ export function TaskDetail({
                     aria-selected={tab === key}
                     onClick={() => {
                       setTab(key!);
+                      const params = new URLSearchParams(
+                        location.hash.split("?")[1],
+                      );
+                      params.set("section", key!);
+                      window.history.replaceState(
+                        null,
+                        "",
+                        location.hash.split("?")[0] + "?" + params,
+                      );
                       if (key === "history")
                         void request(
                           "/records/" + id + "/history",
@@ -437,22 +448,12 @@ export function TaskDetail({
                 </section>
               )}
               {tab === "time" && (
-                <section id="task-time">
-                  <h3>Temps lié à cette tâche</h3>
-                  <dl className="work-time">
-                    <dt>Prévu</dt>
-                    <dd>
-                      {record.data.plannedMinutes === null
-                        ? "Inconnu"
-                        : `${record.data.plannedMinutes} minutes`}
-                    </dd>
-                    <dt>Réalisé</dt>
-                    <dd>Indisponible — saisies de temps non raccordées</dd>
-                  </dl>
-                  <a href={"#tache?id=" + id + "&section=time"}>
-                    Lien permanent vers le temps de cette tâche
-                  </a>
-                </section>
+                <TaskTime
+                  user={user}
+                  id={id}
+                  label={record.title}
+                  date={record.data.dueDate ?? record.createdAt.slice(0, 10)}
+                />
               )}
               {tab === "history" && (
                 <section>
