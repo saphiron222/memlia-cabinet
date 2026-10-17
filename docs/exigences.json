@@ -749,15 +749,87 @@
       "acceptanceCriteria": [
         {
           "id": "F-BILANS-AC-01",
-          "expected": "La génération par dossier, exercice et famille ne duplique pas un bilan existant et signale les bilans manquants."
+          "expected": "La génération par dossier, exercice et famille ne duplique pas un bilan existant et signale les bilans manquants.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-BILANS-AC-02",
-          "expected": "Une étape conserve son type et sa valeur ; sa modification exige la permission applicable et le rôle prévu par sa configuration."
+          "expected": "Une étape conserve son type et sa valeur ; sa modification exige la permission applicable et le rôle prévu par sa configuration.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-BILANS-AC-03",
-          "expected": "Dupliquer une année recopie la configuration sans validation passée ; dates prévues et charge restante reflètent les étapes encore à traiter."
+          "expected": "Dupliquer une année recopie la configuration sans validation passée ; dates prévues et charge restante reflètent les étapes encore à traiter.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         }
       ]
     },
@@ -775,15 +847,87 @@
       "acceptanceCriteria": [
         {
           "id": "F-DCA-AC-01",
-          "expected": "Assemblée, tentative de dépôt et acceptation des comptes gardent des dates, états et pièces distincts."
+          "expected": "Assemblée, tentative de dépôt et acceptation des comptes gardent des dates, états et pièces distincts.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-DCA-AC-02",
-          "expected": "La campagne conserve dossier, exercice, applicabilité et provenance ; une marque manuelle ne devient pas un reçu du registre."
+          "expected": "La campagne conserve dossier, exercice, applicabilité et provenance ; une marque manuelle ne devient pas un reçu du registre.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-DCA-AC-03",
-          "expected": "Les filtres et tris retrouvent les dossiers attendus, y compris attente, rejet, non applicable et dépôt accepté."
+          "expected": "Les filtres et tris retrouvent les dossiers attendus, y compris attente, rejet, non applicable et dépôt accepté.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         }
       ]
     },
@@ -804,15 +948,87 @@
       "acceptanceCriteria": [
         {
           "id": "F-CUSTOM-AC-01",
-          "expected": "Une règle crée des occurrences stables par population, période et échéance, avec responsable, checklist et liens documentaires."
+          "expected": "Une règle crée des occurrences stables par population, période et échéance, avec responsable, checklist et liens documentaires.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-CUSTOM-AC-02",
-          "expected": "Pause et reprise empêchent les créations pendant la suspension ; une régénération conserve les occurrences déjà traitées."
+          "expected": "Pause et reprise empêchent les créations pendant la suspension ; une régénération conserve les occurrences déjà traitées.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-CUSTOM-AC-03",
-          "expected": "Fait, non fait et non applicable restent distincts et cohérents dans la grille filtrée, le détail et l'export."
+          "expected": "Fait, non fait et non applicable restent distincts et cohérents dans la grille filtrée, le détail et l'export.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         }
       ]
     },
@@ -1300,15 +1516,87 @@
       "acceptanceCriteria": [
         {
           "id": "F-SUIVI-AC-01",
-          "expected": "Un process ponctuel accepte sa cible dossier, contact, utilisateur ou libre et conserve l'identité des lignes et étapes."
+          "expected": "Un process ponctuel accepte sa cible dossier, contact, utilisateur ou libre et conserve l'identité des lignes et étapes.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-SUIVI-AC-02",
-          "expected": "Un suivi périodique conserve une fréquence propre à chaque colonne et une valeur indépendante par cible et période."
+          "expected": "Un suivi périodique conserve une fréquence propre à chaque colonne et une valeur indépendante par cible et période.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         },
         {
           "id": "F-SUIVI-AC-03",
-          "expected": "Le modèle IRPP Contact contient ses neuf colonnes annuelles et ne déclenche ni module fiscal ni dépôt automatique par son activation."
+          "expected": "Le modèle IRPP Contact contient ses neuf colonnes annuelles et ne déclenche ni module fiscal ni dépôt automatique par son activation.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
+            ],
+            "tests": [
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
+            ],
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase",
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
+          }
         }
       ]
     },
@@ -2068,17 +2356,28 @@
           "id": "F-CUSTOMFIELDS-AC-03",
           "expected": "Une étape réutilisable conserve statuts ordonnés, couleur et icône et rend le même état dans grille, formulaire et aperçu.",
           "implementation": {
-            "status": "partial-local",
+            "status": "implemented-local",
             "files": [
-              "apps/server/src/administration/custom-fields.ts"
+              "packages/contracts/src/production.ts",
+              "apps/server/src/production/service.ts",
+              "apps/server/src/production/generation.ts",
+              "apps/server/src/production/query.ts",
+              "apps/server/src/production/grid-export.ts",
+              "apps/server/src/production/export.ts",
+              "apps/web/src/features/production/Production.tsx",
+              "apps/web/src/features/production/ModelEditor.tsx",
+              "apps/web/src/features/production/RowDetail.tsx"
             ],
             "tests": [
-              "apps/server/test/referential.test.ts",
-              "tests/e2e/administration.spec.ts"
+              "apps/server/test/production.test.ts",
+              "apps/server/test/jobs.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/production.spec.ts"
             ],
-            "ci": "not-run-for-task1",
+            "ci": "not-run-for-task4",
             "fieldValidation": "last-phase",
-            "remaining": "Types d’étape réutilisables : Task4."
+            "traceability": "docs/production.md",
+            "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
           }
         }
       ]
@@ -2203,17 +2502,16 @@
           "implementation": {
             "status": "partial-local",
             "files": [
-              "apps/server/src/imports/service.ts",
-              "apps/server/src/imports/parser.ts"
+              "apps/server/src/production/imports.ts",
+              "apps/server/src/workflows/imports.ts"
             ],
             "tests": [
-              "apps/server/test/imports.test.ts",
-              "apps/server/test/import-parser.test.ts",
-              "tests/e2e/administration.spec.ts"
+              "apps/server/test/production.test.ts",
+              "apps/server/test/workflows.test.ts"
             ],
-            "ci": "not-run-for-task1",
-            "fieldValidation": "last-phase",
-            "remaining": "Reprise de modèles pipeline/checklist/étapes : Tasks3/4/6."
+            "remaining": "Pipeline Task6, validation cabinet et réception consolidée.",
+            "ci": "not-run-for-task4",
+            "fieldValidation": "last-phase"
           }
         }
       ]
@@ -4538,10 +4836,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4566,10 +4882,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4594,10 +4928,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4619,10 +4971,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4644,10 +5014,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4673,10 +5061,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -4702,10 +5108,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -5178,10 +5602,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6093,10 +6535,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6120,10 +6580,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6150,10 +6628,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6179,10 +6675,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6208,10 +6722,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6235,10 +6767,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6262,10 +6812,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -6366,11 +6934,28 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
         "fieldValidation": "last-phase",
-        "remaining": "Task4"
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {
@@ -8920,11 +9505,19 @@
         "observations/rea-runtime-public/faq-answers.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
+        "status": "partial-local",
+        "files": [
+          "apps/server/src/production/imports.ts",
+          "apps/server/src/workflows/imports.ts",
+          "apps/web/src/features/production/Production.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/workflows.test.ts"
+        ],
+        "ci": "not-run-for-task4",
         "fieldValidation": "last-phase",
-        "remaining": "Tasks3/4/6"
+        "remaining": "Pipeline Task6 ; checklists Task3 et types/statuts Task4 construits. Validation explicite du cabinet sur ses modèles réels requise."
       }
     },
     {
@@ -9131,10 +9724,28 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/production.ts",
+          "apps/server/src/production/service.ts",
+          "apps/server/src/production/generation.ts",
+          "apps/server/src/production/query.ts",
+          "apps/server/src/production/grid-export.ts",
+          "apps/server/src/production/export.ts",
+          "apps/web/src/features/production/Production.tsx",
+          "apps/web/src/features/production/ModelEditor.tsx",
+          "apps/web/src/features/production/RowDetail.tsx"
+        ],
+        "tests": [
+          "apps/server/test/production.test.ts",
+          "apps/server/test/jobs.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/production.spec.ts"
+        ],
+        "ci": "not-run-for-task4",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/production.md",
+        "remaining": "Qualification consolidée Task11/12 ; fournisseurs réels et recette cabinet en dernière phase. Temps/charge réalisé Task5 ; échanges Task9."
       }
     },
     {

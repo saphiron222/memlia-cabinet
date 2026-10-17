@@ -1,0 +1,47 @@
+# Production : bilans, échéances et suivis
+
+Task4 construit les quatre familles de production dans une grille commune, avec des configurations et des valeurs persistées. L’interface compose les primitives MIT et les jetons Twenty figés. Aucun code d’application AGPL n’est repris.
+
+## Modèle et usages
+
+Un bilan est identifié par dossier, exercice et famille. La configuration annuelle conserve ses étapes stables, leurs types, rôles, responsables, dates prévues, minutes prévues et forfait exact. La duplication décale les dates prévues d’un an (29 février ramené au dernier jour valide), sans reprendre les lignes, validations, dates effectives ni reçus. Une nouvelle génération retrouve un bilan existant au lieu de le doubler. L’échéance commune est la première étape datée encore à traiter ; sa validation avance cette échéance et la responsabilité prévue. Le calendrier ouvre la même identité de bilan. Le temps effectivement passé reste du ressort de Task5.
+
+Les types d’étape conservent les identités, l’ordre, la couleur, l’icône et le caractère final de leurs statuts. Grille, fiche et aperçu utilisent le même rendu. Les cellules texte, statut, date, booléen, réalisation et montant sont contrôlées au service. Une modification nécessite la permission de mise à jour, le rôle supplémentaire éventuel et, pour une approbation, la permission correspondante. Une ancienne version produit un conflit explicite. Le rejeu est contrôlé avec les droits courants.
+
+Assemblée, date de liasse, dépôt prévu, travail terminé manuellement, observations de soumission/attente/rejet et acceptation restent séparés. L’acceptation exige une pièce originale identifiée de source fournisseur ou simulée, de même provenance que l’observation. Une marque manuelle ne crée aucun reçu INPI. Les observations antérieures sont conservées. Les filtres et tris de campagne retrouvent les situations, dates et étiquettes attendues.
+
+Une échéance personnalisée conserve sa population, sa nature (personnalisée, DAS2, dépôt des comptes, CVAE), sa règle civile hebdomadaire/mensuelle/trimestrielle/annuelle, son responsable, sa checklist et ses pièces. Les pièces du modèle sont appliquées au dossier correspondant. L’aperçu et la génération utilisent le même calendrier. Pause/fermeture empêchent les créations ; la reprise retrouve les identités. La régénération ajuste les dates, responsables et étiquettes des occurrences vierges ; toute cellule, pièce, saisie métier ou modification de checklist protège une occurrence travaillée. Les observations fournisseur avec source/campagne ne sont jamais déduites de la génération ou de la réalisation locale.
+
+Un process ponctuel cible dossier, contact, utilisateur ou ligne libre. La politique de doublons est configurable. Un suivi périodique cible dossier/contact et conserve des cellules distinctes par fréquence de colonne. Renommer une colonne conserve ses valeurs. Changer une cible peuplée exige une migration explicite, versionnée, avec une correspondance par ligne et contrôle des pièces. Les anciennes portées restent protégées. Le modèle IRPP Contact comporte neuf colonnes annuelles indépendantes : questionnaire, pièces, revenus, charges/crédits, préparation, validation client, dépôt, date et blocage. Il ne crée pas une occurrence fiscale IRPP.
+
+## Reprise, sortie et exploitation
+
+L’échange annoncé `memlia-stages-1` accepte CSV UTF-8 séparé par point-virgule et XLSX via le parseur commun. Le mapping nomme les colonnes modèle/statut/couleur/icône/final. Les couleurs sont gray/blue/green/orange/red/purple, les icônes circle/check/clock/alert/minus, l’état final true/false. L’aperçu conserve les groupes utilisables malgré une ligne invalide et rapporte chaque élément non repris. L’engagement explicite produit de vrais modèles éditables ; il ne prétend pas interpréter un format privé fournisseur. La reprise de pipeline appartient à Task6 ; les checklists au fournisseur Task3.
+
+La migration additive10 ajoute configurations/historiques, lignes/historiques, résultats de génération, reprises de modèles et instantanés d’export. Les bilans/échéances ont l’identité canonique de leur obligation non fiscale ; un PUT générique ne peut modifier leur état protégé. Checklists/commentaires, GED, calendrier, file et maintenance sont partagés.
+
+Les générations sont limitées explicitement à20 000 occurrences par demande, avec transactions de10, résultats par cible conservés séparément et progression coalescée par100. Le journal commun reste limité à500 événements. L’export CSV asynchrone est borné à100 000 lignes, avec curseur et instantanés engagés atomiquement, et parties limitées à8 MiB ; une ligne CSV trop grande est refusée. La sortie complète inclut configurations et versions, lignes et versions, reprises, résultats de génération, exports figés et liens. Chaque restitution contrôle les droits courants et historiques ; les prédicats de liste protègent aussi les pièces confidentielles avant pagination. La sauvegarde/restauration PostgreSQL17 prend en charge le schéma10, les originaux GED et ces nouveaux états.
+
+## Traçabilité du lot
+
+Les tests comportementaux se trouvent dans `apps/server/test/production.test.ts`, les limites/reprises communes dans `apps/server/test/jobs.test.ts`, la restauration réelle dans `apps/server/test/backup.test.ts` et les parcours dans `tests/e2e/production.spec.ts`. La matrice HTTP donne le nom précis du test de chaque route.
+
+| Exigences / critères | Code propriétaire | Réception locale ciblée |
+|---|---|---|
+| PAR-021, F-BILANS-AC-01 | generation.ts, service.ts | identité canonique, rejeu sans doublon, résultat de chaque cible |
+| PAR-022, PAR-069, F-BILANS-AC-02 | service.ts, RowDetail.tsx, value.tsx | types, rôle ET approbation, révocation avant rejeu, concurrence |
+| PAR-023, F-BILANS-AC-03 | service.ts, workflows/routes.ts, Workflows.tsx | échéance de prochaine étape, calendrier même identité, charge restante |
+| PAR-070, F-BILANS-AC-03 | service.ts, ModelEditor.tsx | année source peuplée, validation et original fictif conservés ; année suivante vierge, plans/forfait repris |
+| PAR-024/025, F-DCA-AC-01/02/03 | service.ts, query.ts, RowDetail.tsx | marque locale distincte, reçu simulé original, dates, attente/rejet/non applicable, filtres et tris |
+| PAR-026/027, F-CUSTOM-AC-01/02 | generation.ts, query.ts, grid-export.ts | périodes, état, pause/reprise, filtres et restitution typée |
+| PAR-071/072, F-CUSTOM-AC-01/02 | generation.ts, service.ts, PopulationEditor.tsx | règle civile, occurrence vierge régénérée, occurrence traitée préservée, liens GED/checklist |
+| PAR-073, F-CUSTOM-AC-03 | production.ts, service.ts, RowDetail.tsx | activation/génération/réalisation indépendantes des observations source/campagne |
+| PAR-041/074/075, F-SUIVI-AC-01/02/03 | service.ts, Production.tsx, ModelEditor.tsx | doublons, renommage, migration explicite, périodes indépendantes, montant exact0/1200.50, export et reload |
+| INT-SC-02 | ModelEditor.tsx, Production.tsx | création réelle du modèle IRPP9colonnes, indépendant du module fiscal |
+| PAR-079, F-CUSTOMFIELDS-AC-03 | production.ts, value.tsx, ModelEditor.tsx | identités ordonnées, type partagé, couleur/icône cohérentes grille/fiche/aperçu |
+| AUD-011 portion étapes, F-IMPORT-AC-03 | imports.ts, Production.tsx | CSV/XLSX annoncé, mapping, erreur mixte conservée, validation explicite |
+| Transversal | query.ts, export.ts, document-scope.ts, jobs/runner.ts | droits avant pagination et restitution, historique confidentiel, seuil journal, curseur atomique, backup/restore |
+
+La réception locale détaillée et les captures fictives restent privées. Les contrôles globaux et PostgreSQL17 du candidat sont consignés dans le rapport local du lot. Aucune CI Task4, intégration fournisseur réel ou validation cabinet n’est revendiquée ici. Task11 garde mesures de volume/OS/exploitation consolidées ; Task12 garde comparaison visuelle exacte et qualification d’accessibilité globale. Les portails réels restent réservés à la dernière phase en cabinet.
+
+Réception du 17 octobre 2026 : contrôle des125routes et59fichiersTwenty réussi ; build web/serveur réussi (avertissement de taille du bundle web),32parcoursChromium réussis. Le passage global a donné148réussites,4échecs et2casPGignorés ; les4échecs ont été corrigés et revérifiés précisément, avec2cas supplémentaires de statut/résultat de génération. La réception est composite et ne prétend pas à un second passage global inchangé. Sur PostgreSQL17 réel,21cas (production, file, deux restaurations) puis le cas final de résultat de génération passent. Revue indépendante et CI du candidat restent à faire.

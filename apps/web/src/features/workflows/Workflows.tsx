@@ -24,8 +24,7 @@ import { CsvExport } from "../records/CsvExport";
 import { TaskDetail } from "./TaskDetail";
 import { TaskForm } from "./TaskForm";
 import { WorkflowModels } from "./WorkflowModels";
-const link = (r: CabinetRecord) =>
-  r.kind === "obligation" ? "#fiscal?id=" + r.id : "#tache?id=" + r.id;
+
 const dateLabel = (date: string | null) =>
   date ? formatCivilDate(date) : "Sans échéance";
 const due = (r: CabinetRecord) =>
@@ -79,6 +78,12 @@ export function Workflows({
     [create, setCreate] = useState(false),
     [configuration, setConfiguration] = useState(false),
     [year, setYear] = useState(String(new Date().getFullYear()));
+  const link = (r: CabinetRecord) =>
+    result?.productionIds.includes(r.id)
+      ? "#production?id=" + r.id
+      : r.kind === "obligation"
+        ? "#fiscal?id=" + r.id
+        : "#tache?id=" + r.id;
   useEffect(() => {
     const change = () =>
       setId(new URLSearchParams(location.hash.split("?")[1]).get("id"));

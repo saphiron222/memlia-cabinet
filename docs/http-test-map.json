@@ -414,5 +414,89 @@
   "POST /api/v1/notifications/:id": {
     "file": "apps/server/test/workflows.test.ts",
     "test": "mentions and subscriptions recheck recipient rights, preserve internal audience and notification read state after restart"
+  },
+  "GET /api/v1/production/calendar": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "confidential production history is filtered before pagination, calendar and export; read-only readers cannot mutate"
+  },
+  "GET /api/v1/production/people": {
+    "file": "tests/e2e/production.spec.ts",
+    "test": "production : dense bilan grid, typed detail, keyboard, concurrency, reload, model and independent IRPP followup"
+  },
+  "GET /api/v1/production/rows/:id/capabilities": {
+    "file": "tests/e2e/production.spec.ts",
+    "test": "production : dense bilan grid, typed detail, keyboard, concurrency, reload, model and independent IRPP followup"
+  },
+  "POST /api/v1/production/preview": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "POST /api/v1/production/generate": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "GET /api/v1/production/jobs/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "GET /api/v1/production/jobs/:id/results": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "POST /api/v1/production/models": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "POST /api/v1/production/models/:id/duplicate": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "GET /api/v1/production/models/:id/rows": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "GET /api/v1/production/models/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "GET /api/v1/production/models": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "POST /api/v1/production/models/:id/rows": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "GET /api/v1/production/rows/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "POST /api/v1/production/rows/:id/commands": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "POST /api/v1/production/models/:id/migrate-targets": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "process duplicate policy, column rename and explicit target migration retain row and cell identity"
+  },
+  "POST /api/v1/production/imports/preview": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "stage reprise retains mixed invalid rows in report and explicitly commits usable ordered models"
+  },
+  "POST /api/v1/production/imports/:id/commit": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "stage reprise retains mixed invalid rows in report and explicitly commits usable ordered models"
+  },
+  "POST /api/v1/production/exports": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/production/exports/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/production/exports/:id/parts/:part": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
   }
 }
