@@ -1,3 +1,4 @@
+import { registerWorkflowRoutes } from "./workflows/routes.js";
 import { registerFiscalRoutes } from "./fiscal/routes.js";
 import { registerExportRoutes, Exports } from "./administration/export.js";
 import { registerScopeRoutes } from "./administration/scopes.js";
@@ -288,6 +289,7 @@ export async function createApplication(options: ApplicationOptions) {
     reply.clearCookie("memlia_session", { path: "/" });
     return SessionSchema.parse({ user: null });
   });
+  registerWorkflowRoutes(app, { db, now, user });
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });
   registerAdministrationRoutes(app, { db, now, user });
