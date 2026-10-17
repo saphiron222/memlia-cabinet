@@ -105,12 +105,14 @@ Réception du lot : revue indépendante puis deux corrections ciblées approuvé
 
 **Coverage:** F-BILANS, F-DCA, F-CUSTOM, F-SUIVI.
 
-- [ ] RED then GREEN: duplicate 2026 balance configuration to 2027 keeps steps/order/types but no previous approvals, deposit receipts or dates. Role-specific approval checks both action and extra role.
-- [ ] Implement year/family balance grids, dates liasse/AG/deposit, stage model editor/reorder, progress and documents/receipts; a locally completed step does not create an INPI receipt.
-- [ ] Implement reusable stage types with ordered stable statuses, color/icon and consistent grid/form/preview rendering (F-CUSTOMFIELDS-AC-03 / PAR-079). Supplied stage-model reprise has preview, explicit validation and unmapped-element report, sharing the import boundary.
-- [ ] RED then GREEN: custom obligation generation and one-off processes allow the configured duplicate-dossier policy, preserve rows on column rename and reject a target change without explicit migration.
-- [ ] Implement process/suivi template/row/column editors, typed cell commands with expectedVersion, per-column periods and export; nine annual IRPP contact columns are distinct from the fiscal IRPP occurrence.
-- [ ] Test concurrent cell editing, rights, replay and browser reload; check/test/build, commit and report.
+- [x] RED then GREEN: duplicate 2026 balance configuration to 2027 keeps steps/order/types but no previous approvals, deposit receipts or dates. Role-specific approval checks both action and extra role.
+- [x] Implement year/family balance grids, dates liasse/AG/deposit, stage model editor/reorder, progress and documents/receipts; a locally completed step does not create an INPI receipt.
+- [x] Implement reusable stage types with ordered stable statuses, color/icon and consistent grid/form/preview rendering (F-CUSTOMFIELDS-AC-03 / PAR-079). Supplied stage-model reprise has preview, explicit validation and unmapped-element report, sharing the import boundary.
+- [x] RED then GREEN: custom obligation generation and one-off processes allow the configured duplicate-dossier policy, preserve rows on column rename and reject a target change without explicit migration.
+- [x] Implement process/suivi template/row/column editors, typed cell commands with expectedVersion, per-column periods and export; nine annual IRPP contact columns are distinct from the fiscal IRPP occurrence.
+- [x] Test concurrent cell editing, rights, replay and browser reload; check/test/build, commit and report.
+
+Réception du lot : revue indépendante et quatre corrections ciblées sans constat ouvert, puis [CI de branche réussie sur `7abcdb8`](https://github.com/saphiron222/memlia-cabinet/actions/runs/39063833430) et [CI de pull request réussie](https://github.com/saphiron222/memlia-cabinet/actions/runs/39063836806), le 17 octobre 2026. Chaque exécution comporte 173 tests PGlite réussis et trois cas réservés à PostgreSQL ignorés, 176 tests PostgreSQL 17 réussis, dont les deux restaurations réelles, et 37 parcours Chromium réussis. Contrôles, build, smoke compilé, exclusion du contexte privé et cycle réel du conteneur passent. Le réglage PostgreSQL observé en CI est JIT `on` ; la compilation disponible a été vérifiée séparément dans les essais Linux ciblés. Le dernier passage local Linux complet a été invalidé par un arrêt de son environnement, et ne constitue pas une preuve verte. Mesures de volume/exploitation, refonte visuelle Task13 puis réception consolidée Tasks11/12 et vrais portails en cabinet restent à réaliser.
 
 ### Task 13: Refonte de l’interface existante — Plane prioritaire, Twenty et cal.diy
 
