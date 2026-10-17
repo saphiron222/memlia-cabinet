@@ -162,3 +162,15 @@ export const DashboardSchema = z.object({
   overdueTasks: z.number(),
 });
 export type Dashboard = z.infer<typeof DashboardSchema>;
+
+export const RecordListQuerySchema = z
+  .object({
+    kind: RecordKindSchema.optional(),
+    q: z.string().max(300).optional(),
+    dossierId: z.uuid().optional(),
+    archived: z.enum(["true", "false"]).default("false"),
+    offset: z.coerce.number().int().min(0).default(0),
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+  })
+  .strict();
+export type RecordListQuery = z.infer<typeof RecordListQuerySchema>;

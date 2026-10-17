@@ -7,6 +7,7 @@ import {
   UpdateRecordInputSchema,
   TaskTransitionInputSchema,
   RecordListSchema,
+  RecordListQuerySchema,
   RecordKindSchema,
   HistorySchema,
   DashboardSchema,
@@ -58,20 +59,10 @@ export function registerRecordRoutes(
       });
     }),
   );
-  const querySchema = z
-    .object({
-      kind: RecordKindSchema.optional(),
-      q: z.string().max(300).optional(),
-      dossierId: z.uuid().optional(),
-      archived: z.enum(["true", "false"]).default("false"),
-      offset: z.coerce.number().int().min(0).default(0),
-      limit: z.coerce.number().int().min(1).max(200).default(50),
-    })
-    .strict();
   const filtered = async (
     tx: Connection,
     actor: SessionUser,
-    query: ReturnType<typeof querySchema.parse>,
+    query: ReturnType<typeof RecordListQuerySchema.parse>,
     action: "read" | "export",
   ) =>
     (await listRecords(tx, actor, action))
@@ -92,7 +83,7 @@ export function registerRecordRoutes(
   app.get("/api/v1/records", async (req) =>
     db.transaction(async (tx) => {
       const actor = await user(tx, req);
-      const query = querySchema.parse(req.query);
+      const query = RecordListQuerySchema.parse(req.query);
       if (
         !actor.permissions.some(
           (p) =>
@@ -113,7 +104,7 @@ export function registerRecordRoutes(
   app.get("/api/v1/records/export.csv", async (req, reply) =>
     db.transaction(async (tx) => {
       const actor = await user(tx, req);
-      const query = querySchema.parse(req.query);
+      const query = RecordListQuerySchema.parse(req.query);
       if (
         !actor.permissions.some(
           (p) =>

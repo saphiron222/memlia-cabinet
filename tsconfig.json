@@ -8,7 +8,21 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": ["node", "vitest/globals"],
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["packages/ui/vendor/src/*"]
+    }
   },
-  "include": ["apps/**/*.ts", "packages/**/*.ts", "vitest.config.ts"]
+  "include": [
+    "apps/**/*.ts",
+    "packages/**/*.ts",
+    "vitest.config.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "playwright.config.ts"
+  ]
 }

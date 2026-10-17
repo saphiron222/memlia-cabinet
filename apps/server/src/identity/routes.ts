@@ -4,6 +4,7 @@ import {
   CreateUserInputSchema,
   UpdateUserInputSchema,
   SessionUserSchema,
+  UserListSchema,
 } from "@memlia/contracts";
 import { createUser, asUser } from "./service.js";
 import type { RouteContext } from "../context.js";
@@ -19,7 +20,7 @@ export function registerUserRoutes(
     db.transaction(async (tx) => {
       const actor = await user(tx, req);
       requireGlobal(actor, "manage_users");
-      return z.object({ items: z.array(SessionUserSchema) }).parse({
+      return UserListSchema.parse({
         items: (
           await tx.query("SELECT * FROM cabinet_users ORDER BY email")
         ).map(asUser),

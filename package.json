@@ -11,12 +11,16 @@
     "apps/*"
   ],
   "scripts": {
-    "check": "tsc --noEmit",
+    "check": "tsc --noEmit && node scripts/verify-ui.mjs",
     "test": "vitest run",
     "build": "npm run build --workspaces --if-present",
-    "dev:server": "tsx apps/server/src/index.ts"
+    "dev:server": "tsx apps/server/src/index.ts",
+    "dev:web": "npm run dev --workspace @memlia/web",
+    "test:e2e": "playwright test",
+    "dev:isolated": "tsx tests/e2e/serve.ts"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@types/node": "22.19.0",
     "prettier": "3.7.4",
     "tsx": "4.23.15",

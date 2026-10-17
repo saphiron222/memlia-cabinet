@@ -75,3 +75,6 @@ export const CatalogueSchema = z.object({
     }),
   ),
 });
+
+export const UserListSchema = z.object({ items: z.array(SessionUserSchema) });
+export type UserList = z.infer<typeof UserListSchema>;
