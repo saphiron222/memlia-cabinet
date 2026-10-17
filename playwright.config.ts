@@ -9,10 +9,14 @@ export default defineConfig({
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
   },
-  webServer: {
+  webServer: [4173, 4175].map((port) => ({
     command: "npx tsx tests/e2e/serve.ts",
-    url: "http://127.0.0.1:4173",
+    url: `http://127.0.0.1:${port}`,
+    env: {
+      MEMLIA_TEST_WEB_PORT: String(port),
+      MEMLIA_TEST_API_PORT: String(port + 1),
+    },
     reuseExistingServer: false,
     timeout: 60000,
-  },
+  })),
 });

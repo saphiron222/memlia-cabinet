@@ -76,13 +76,16 @@ test("installation, dossiers, tâches : persistance, checklist, transitions et e
   });
 });
 
-async function login(page: import("@playwright/test").Page) {
+async function login(
+  page: import("@playwright/test").Page,
+  origin = "http://127.0.0.1:4173",
+) {
   const status = SetupStatusSchema.parse(
     await (await page.request.get("/api/v1/setup")).json(),
   );
   if (status.needsSetup) {
     await page.request.post("/api/v1/setup", {
-      headers: { Origin: "http://127.0.0.1:4173" },
+      headers: { Origin: origin },
       data: SetupInputSchema.parse({
         name: "Camille Fictive",
         email: "camille@example.test",
@@ -90,7 +93,7 @@ async function login(page: import("@playwright/test").Page) {
       }),
     });
     await page.request.post("/api/v1/logout", {
-      headers: { Origin: "http://127.0.0.1:4173" },
+      headers: { Origin: origin },
       data: {},
     });
   }
@@ -372,9 +375,10 @@ async function createFixture(
   page: import("@playwright/test").Page,
   kind: "dossier" | "contact",
   title: string,
+  origin = "http://127.0.0.1:4173",
 ) {
   const response = await page.request.post("/api/v1/records", {
-    headers: { Origin: "http://127.0.0.1:4173" },
+    headers: { Origin: origin },
     data: CreateRecordInputSchema.parse({
       operationId: crypto.randomUUID(),
       record: { kind, title, data: {} },
@@ -473,4 +477,152 @@ test("étiquettes : saisir plusieurs valeurs au clavier puis recharger", async (
   await expect(page.getByLabel("Étiquettes", { exact: true })).toHaveValue(
     "bilan, urgent",
   );
+});
+
+async function limitedDossierUser(
+  page: import("@playwright/test").Page,
+  suffix: string,
+) {
+  const origin = "http://127.0.0.1:4175";
+  await login(page, origin);
+  const a = await createFixture(page, "dossier", `Dossier A ${suffix}`, origin);
+  const b = await createFixture(page, "dossier", `Dossier B ${suffix}`, origin);
+  const taskResponse = await page.request.post("/api/v1/records", {
+    headers: { Origin: origin },
+    data: CreateRecordInputSchema.parse({
+      operationId: crypto.randomUUID(),
+      record: {
+        kind: "tache",
+        title: `Tâche A ${suffix}`,
+        dossierId: a.id,
+        data: {},
+      },
+    }),
+  });
+  expect(taskResponse.status()).toBe(201);
+  const task = CabinetRecordSchema.parse(await taskResponse.json());
+  const { CreateUserInputSchema } = await import("@memlia/contracts");
+  const email = `limite-${suffix}@example.test`;
+  const created = await page.request.post("/api/v1/users", {
+    headers: { Origin: origin },
+    data: CreateUserInputSchema.parse({
+      operationId: crypto.randomUUID(),
+      name: "Utilisateur limité fictif",
+      email,
+      password: "Droits-limites-fictifs",
+      permissions: [
+        { action: "read", kind: "*", dossierId: null },
+        { action: "update", kind: "tache", dossierId: a.id },
+        { action: "create", kind: "tache", dossierId: a.id },
+      ],
+    }),
+  });
+  expect(created.status()).toBe(201);
+  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await page.getByLabel("Adresse email").fill(email);
+  await page.getByLabel("Mot de passe").fill("Droits-limites-fictifs");
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await page.getByRole("link", { name: "Tâches", exact: true }).click();
+  return { a, b, task };
+}
+
+test.describe("Droits par dossier", () => {
+  test.use({ baseURL: "http://127.0.0.1:4175" });
+
+  test("droits limités au dossier A : corriger un rattachement sans perdre la saisie", async ({
+    page,
+  }) => {
+    const { a, b, task } = await limitedDossierUser(page, "modification");
+    await page.getByRole("button", { name: task.title, exact: true }).click();
+    await page
+      .getByLabel("Titre", { exact: true })
+      .fill("Saisie conservée sur A");
+    await page
+      .getByLabel("Description", { exact: true })
+      .fill("Notes à conserver malgré le rattachement refusé.");
+    for (const destination of ["", b.id]) {
+      await page.getByLabel("Dossier lié").selectOption(destination);
+      await expect(page.getByLabel("Dossier lié")).toBeEnabled();
+      await expect(page.getByLabel("Titre", { exact: true })).toBeEnabled();
+      const refused = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/records/" + task.id) &&
+          response.request().method() === "PUT",
+      );
+      await page
+        .getByRole("button", { name: "Enregistrer", exact: true })
+        .click();
+      expect((await refused).status()).toBe(404);
+      await expect(page.getByRole("alert")).toBeFocused();
+      await expect(page.getByLabel("Dossier lié")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      await page.getByRole("link", { name: /^Dossier lié :/ }).click();
+      await expect(page.getByLabel("Dossier lié")).toBeFocused();
+      await page.getByLabel("Dossier lié").selectOption(a.id);
+      await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
+        "Saisie conservée sur A",
+      );
+      await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
+        "Notes à conserver malgré le rattachement refusé.",
+      );
+    }
+    await page
+      .getByRole("button", { name: "Enregistrer", exact: true })
+      .click();
+    await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
+    await page.getByRole("button", { name: "Fermer la fiche" }).click();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Saisie conservée sur A", exact: true })
+      .click();
+    await expect(page.getByLabel("Dossier lié")).toHaveValue(a.id);
+    await expect(page.getByLabel("Description", { exact: true })).toHaveValue(
+      "Notes à conserver malgré le rattachement refusé.",
+    );
+  });
+
+  test("création limitée au dossier A : rattachement initial corrigeable", async ({
+    page,
+  }) => {
+    const { a, b } = await limitedDossierUser(page, "creation");
+    await page.getByRole("button", { name: "Créer une tâche" }).click();
+    await expect(page.getByLabel("Dossier lié")).toHaveValue("");
+    await expect(page.getByLabel("Dossier lié")).toBeEnabled();
+    await page
+      .getByLabel("Titre", { exact: true })
+      .fill("Création autorisée sur A");
+    for (const destination of ["", b.id]) {
+      await page.getByLabel("Dossier lié").selectOption(destination);
+      const refused = page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/records") &&
+          response.request().method() === "POST",
+      );
+      await page
+        .getByRole("button", { name: "Enregistrer", exact: true })
+        .click();
+      expect((await refused).status()).toBe(403);
+      await expect(page.getByLabel("Dossier lié")).toBeEnabled();
+      await expect(page.getByLabel("Dossier lié")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      await expect(page.getByLabel("Titre", { exact: true })).toHaveValue(
+        "Création autorisée sur A",
+      );
+    }
+    await page.getByLabel("Dossier lié").selectOption(a.id);
+    await page
+      .getByRole("button", { name: "Enregistrer", exact: true })
+      .click();
+    await expect(page.getByText("Modifications enregistrées.")).toBeVisible();
+    await page.getByRole("button", { name: "Fermer la fiche" }).click();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Création autorisée sur A", exact: true })
+      .click();
+    await expect(page.getByLabel("Dossier lié")).toHaveValue(a.id);
+  });
 });

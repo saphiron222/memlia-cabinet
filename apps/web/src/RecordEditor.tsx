@@ -91,16 +91,20 @@ export function RecordEditor({
     [checkLabel, setCheckLabel] = useState(""),
     [lookupError, setLookupError] = useState("");
   const operation = useRef<{ signature: string; id: string } | null>(null);
-  const can = (action: SessionUser["permissions"][number]["action"]) =>
+  const can = (
+    action: SessionUser["permissions"][number]["action"],
+    scope = kind === "dossier" ? saved?.id : draft.dossierId,
+  ) =>
     user.permissions.some(
       (p) =>
         p.action === action &&
         (p.kind === "*" || p.kind === kind) &&
-        (p.dossierId === null ||
-          p.dossierId === (kind === "dossier" ? saved?.id : draft.dossierId)),
+        (p.dossierId === null || p.dossierId === scope),
     );
+  // Editing the persisted record must remain possible while its proposed
+  // dossier changes. The server separately authorizes the destination on save.
   const editable = saved
-    ? can("update")
+    ? can("update", saved.kind === "dossier" ? saved.id : saved.dossierId)
     : user.permissions.some(
         (p) => p.action === "create" && (p.kind === "*" || p.kind === kind),
       );
@@ -209,7 +213,10 @@ export function RecordEditor({
         setFault(message(e));
         if (
           e instanceof RequestError &&
-          ["DOSSIER_REQUIRED", "INVALID_RELATION"].includes(e.code)
+          (["DOSSIER_REQUIRED", "INVALID_RELATION"].includes(e.code) ||
+            (kind !== "dossier" &&
+              [403, 404].includes(e.status) &&
+              !can(saved ? "update" : "create")))
         )
           setErrors({ dossierId: e.message });
         setConflict(e instanceof RequestError && e.code === "VERSION_CONFLICT");
