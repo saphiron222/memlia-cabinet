@@ -739,6 +739,20 @@ test("round2 N1 calendar opens prior-year balance with its own frozen configurat
     detail.getByText("N1 Étape future", { exact: true }),
   ).toHaveCount(0);
   await expect(detail).toContainText("configuration v1");
+  await expect(page).toHaveURL(new RegExp("#production\\?id=" + row.id));
+  await expect(
+    page.getByRole("dialog", { name: "Détail de l’échéance" }),
+  ).toHaveCount(0);
+  await page.reload();
+  await expect(detail).toBeVisible();
+  await expect(page.getByLabel("Année", { exact: true })).toHaveValue(year);
+  await expect(
+    detail.getByText("N1 Étape conservée", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    detail.getByText("N1 Étape future", { exact: true }),
+  ).toHaveCount(0);
+  await expect(detail).toContainText("configuration v1");
   await page.screenshot({
     path: `evidence/private/task13/${captureRun}/regression-task4/round2-calendar-frozen-detail.png`,
     fullPage: true,

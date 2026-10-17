@@ -291,7 +291,7 @@
     },
     {
       "local": "apps/web/src/features/workflows/Workflows.tsx",
-      "sha256": "7829544f622f61e6c8e21ea28dee4d9b75b066bcf2f7c2541d3fa90ed2f8e04d",
+      "sha256": "70a1aa24663ef7c03715052b049afb2d8cba7c1e670064fc2fa46170ebced318",
       "role": "Canonical controller; task Weeks compose actual Cal PanelCard with Plane KanbanCard; annual uses AnnualCalendar"
     },
     {

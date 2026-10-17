@@ -465,9 +465,21 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
   await page.goto("/#calendrier");
   await page.getByRole("tab", { name: "Année", exact: true }).click();
   await expect(page.getByLabel("Calendrier annuel")).toBeVisible();
-  await expect(
-    page.locator(".work-calendar .work-event .work-date"),
-  ).toHaveText(["20/10/2026", "20/10/2026", "31/10/2026"]);
+  const annualEvents = page
+    .getByRole("region", { name: "Échéances de cette page", exact: true })
+    .getByRole("link");
+  await expect(annualEvents).toHaveCount(3);
+  await expect(annualEvents.locator(".work-date")).toHaveText([
+    "20/10/2026",
+    "20/10/2026",
+    "31/10/2026",
+  ]);
+  for (const id of fiscalIds)
+    await expect(
+      page
+        .getByRole("region", { name: "Échéances de cette page", exact: true })
+        .locator(`a[href="#fiscal?id=${id}"]`),
+    ).toHaveCount(1);
   await expect(
     page.getByText("TVA · À préparer", { exact: true }),
   ).toBeVisible();

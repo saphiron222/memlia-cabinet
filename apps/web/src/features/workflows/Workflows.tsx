@@ -288,7 +288,7 @@ export function Workflows({
         href={link(r)}
         key={r.id}
         onClick={
-          calendar
+          calendar && !result?.productionIds.includes(r.id)
             ? (event) => {
                 if (
                   event.button !== 0 ||
