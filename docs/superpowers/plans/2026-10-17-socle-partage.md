@@ -82,11 +82,13 @@
 **Interfaces:**
 - `DocumentStore` accepts validated document bytes/stream and metadata, returns an immutable local document reference with SHA-256, size, media type, source and dossier.
 - HTTP multipart upload/list/download uses authenticated dossier scope; filenames are display values, never filesystem paths.
+- Logical documents have explicit version links independent of filenames; locally extracted supported PDF/text content is indexed for authorized search. Missing/corrupt content is distinguished from metadata visibility.
 
 - [ ] Write a failing upload/list/download round-trip test with a fictitious PDF and a second-version document.
 - [ ] Implement local temporary write, content validation and atomic commitment; retain provenance and versions.
 - [ ] Write failing tests for HTML disguised as PDF, path traversal name, forbidden dossier, interrupted file and duplicate bytes with distinct source versions.
 - [ ] Implement explicit outcomes, check that no invalid document is made definitive, and run the suite green.
+- [ ] Add a failing two-document text search and version-chain test; extract supported local text, search only authorized documents, and return an explicit extraction/content-availability state for unsupported or damaged content. Same filenames never merge unrelated originals.
 - [ ] Connect upload/download/list to the UI; browser test and build green; commit.
 
 ### Task 4: Contrat de collecte et 17 simulateurs explicites
