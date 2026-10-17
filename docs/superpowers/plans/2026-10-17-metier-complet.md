@@ -35,14 +35,21 @@
 
 ### Task 1: Référentiel complet, équipes, configuration et reprise
 
+Préparation technique : `docs/recherche-imports-referentiel.md` (contrat public de recherche d'entreprise, lecteurs CSV/XLSX, limites et contrôles à construire ; aucune preuve d'exécution acquise par cette recherche).
+
 **Files:** Extend `packages/contracts/src/records.ts`; create `packages/contracts/src/administration.ts`, `apps/server/src/administration/*`, `apps/server/src/imports/*`, `apps/web/src/features/administration/*`, `apps/web/src/features/imports/*`; tests `apps/server/test/administration.test.ts`, `apps/server/test/imports.test.ts`, `tests/e2e/administration.spec.ts`.
 
 **Interfaces:** Extend the canonical resource catalogue with explicitly validated dossier/contact fields, établissements, équipes, sites, affectations, custom-field definitions, saved views and installation preferences. Routes under `/api/v1/administration` and `/api/v1/imports`. `previewImport` returns stable line identities, column mapping, normalized values, duplicate candidates and errors; `commitImport` consumes the preview identity/version, authorized accepted line IDs and operation ID. It rechecks permissions and source hashes.
 
 **Coverage:** F-DOSSIERS, F-EQUIPES, F-CUSTOMFIELDS, F-IMPORT, F-COMPTE, F-DROITS, F-MODULES, F-ABONNEMENT, F-ENTERPRISE, F-EXPORT, F-DASHBOARD. Multi-cabinets means separately isolated installations with explicit installation identity and export/import boundaries; no shared implicit tenant.
 
+**Shared criterion ownership:** notification event/channel preferences finish in Task3; reusable ordered stage types in Task4; assisted pipeline/checklist/stage-model reprise in Tasks3/4/6; password/invitation/recovery and real supplier connection states in Task10. A family touched here is not automatically complete.
+
 - [ ] RED then GREEN: mapped CSV with reordered headers, SIREN `001234567`, invalid SIRET, duplicate contact, unknown enum, empty date; accepted rows survive reopening, rejected rows have an exportable report, replay creates no duplicate.
+- [ ] Support actual local XLSX as well as UTF-8 CSV for dossier/contact/assignment preview and commit. Bound archive expansion, rows and columns; preserve textual identifiers and distinguish blank from zero; never evaluate a formula or follow an external relationship. Verify a real XLSX fixture, errors and updates, rather than accepting renamed CSV. Research primary contracts/libraries before choosing the parser.
 - [ ] Implement full dossier/contact forms, establishments, source/manual conflict resolution, archive/reactivate, teams/sites, explicit rights and user administration. Display archived records only when selected. Bulk commands return per-line results and recheck rights at execution.
+- [ ] Implement company search from a documented public contract, with local HTTP fixture tests and explicit unavailable/error states; selecting a result only proposes creation/merge, never a fiscal habilitation. Implement detected-company create/hide/restore, automatic versus manual decision and stable source-to-dossier reconciliation without duplicates. Supplier-derived detections retain their real/simulated provenance.
+- [ ] Implement named ordered roles, persisted permissions and team/site assignments with immediate effective-right recalculation; a shared team grants no implicit access to unrelated dossiers. Test direct, list and export after removal as well as the editor UI.
 - [ ] RED then GREEN: custom number/date/boolean/choice fields preserve unknown versus zero; changing a field type with incompatible values is rejected until an explicit migration; renaming a field preserves its ID and values.
 - [ ] RED then GREEN: reassignment/removal changes direct/list/export visibility immediately; a batch containing an unauthorized dossier changes only authorized rows and returns a non-disclosing refusal. Build actual UI import preview/mapping/commit and saved filter/sort/pagination views.
 - [ ] Extend the dashboard with period/scope filters, actual task/obligation progress charts and personal widget ordering. RED then GREEN: counters, chart, opened detail and filtered export agree; user A's arrangement survives login and never changes user B's arrangement.
@@ -76,6 +83,7 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 - [ ] RED then GREEN: monthly nominal day 31 gives 2027-02-28 and 2028-02-29; quarter/year/week rules, past start and DST respect civil dates and configured zone; repeat generation after interruption yields identical IDs without duplicates.
 - [ ] Implement full task fields (type, billing, urgency, assignees, tags, dossier/prospect, files), drag actions with keyboard alternative, list/Kanban/week/calendar, saved views and time links.
 - [ ] RED then GREEN: editing a checklist model affects future occurrences only unless an explicit merge is requested; existing checked/removed/reordered items and completed tasks remain unchanged; conflicting concurrent edits return 409.
+- [ ] Complete the assisted reprise criterion for supplied checklist models: announced exchange format, preview/mapping, explicit model validation and report of unmapped elements. Reuse the import boundary and create real versioned models, not a claimed private Teradion importer.
 - [ ] RED then GREEN: a subscription or mention grants no read access; after permission removal, pending notifications omit protected content; client messages and internal comments with identical text never cross their audiences.
 - [ ] Implement in-app notification read/dismiss/preferences and deterministic reminder scheduling, test reload consistency through browser, check/test/build, commit and report.
 
@@ -89,6 +97,7 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 
 - [ ] RED then GREEN: duplicate 2026 balance configuration to 2027 keeps steps/order/types but no previous approvals, deposit receipts or dates. Role-specific approval checks both action and extra role.
 - [ ] Implement year/family balance grids, dates liasse/AG/deposit, stage model editor/reorder, progress and documents/receipts; a locally completed step does not create an INPI receipt.
+- [ ] Implement reusable stage types with ordered stable statuses, color/icon and consistent grid/form/preview rendering (F-CUSTOMFIELDS-AC-03 / PAR-079). Supplied stage-model reprise has preview, explicit validation and unmapped-element report, sharing the import boundary.
 - [ ] RED then GREEN: custom obligation generation and one-off processes allow the configured duplicate-dossier policy, preserve rows on column rename and reject a target change without explicit migration.
 - [ ] Implement process/suivi template/row/column editors, typed cell commands with expectedVersion, per-column periods and export; nine annual IRPP contact columns are distinct from the fiscal IRPP occurrence.
 - [ ] Test concurrent cell editing, rights, replay and browser reload; check/test/build, commit and report.
@@ -116,6 +125,7 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 
 - [ ] RED then GREEN: move prospect through configurable pipeline, keep manual temperature separate, convert twice with same operation and obtain one dossier; separately configured stage/quote/letter trigger fires once.
 - [ ] Implement company/person/future-company prospect, source/honoraires/notes/missions, former cabinet, pipeline/list/detail, conversion review and linked dossier; full onboarding model/checklist/blockers, manual/import/INPI creation origins.
+- [ ] Complete assisted reprise for supplied pipeline models: preview stage correspondences and unmapped values, explicit validation and a report, then persist an actual editable pipeline model. No automatic private supplier connector is implied.
 - [ ] RED then GREEN: two differently sourced fiscal access steps stay distinct; a manual checkbox creates no verified habilitation. A missing required identity/mandate blocks activation with a specific reason.
 - [ ] Implement LAB evidence, justified human vigilance level, revisions/reminders and export; do not invent an automated regulatory assessment. Test permissions, partial bulk results and browser conversion/onboarding, check/test/build, commit and report.
 
