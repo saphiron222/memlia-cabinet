@@ -152,6 +152,17 @@ export const DepositSchema = z
       .default([]),
   })
   .strict();
+export const ProductionObservationSchema = z
+  .object({
+    id: z.uuid(),
+    source: z.enum(["supplier", "simulated"]),
+    reference: name,
+    campaign: z.string().min(1).max(30),
+    observedOn: CivilDateSchema,
+    state: z.enum(["observed", "not_observed", "unavailable", "rejected"]),
+    documentIds: z.array(z.uuid()).max(50),
+  })
+  .strict();
 export const ProductionRowSchema = z.object({
   id: z.uuid(),
   modelId: z.uuid(),
@@ -160,7 +171,9 @@ export const ProductionRowSchema = z.object({
   target: ProductionTargetSchema,
   period: z.string().max(30),
   occurrenceKey: z.string().max(300),
-  touched:z.boolean().default(false),
+  workVersionAtCreation: z.number().int().nonnegative().default(0),
+  touched: z.boolean().default(false),
+  observations: z.array(ProductionObservationSchema).max(100).default([]),
   recordId: z.uuid().nullable(),
   scope: CabinetRecordSchema.nullable(),
   cells: z.array(ProductionCellSchema).max(2000).default([]),
@@ -187,6 +200,10 @@ export const ProductionCommandSchema = z
     operationId: z.uuid(),
     expectedVersion: z.number().int().positive(),
     command: z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("observation"),
+        observation: ProductionObservationSchema,
+      }),
       z.object({
         kind: z.literal("cell"),
         columnId: z.uuid(),
@@ -243,6 +260,10 @@ export const ProductionGenerationSchema = z
 export const ProductionQuerySchema = z.object({
   after: z.uuid().optional(),
   q: z.string().max(200).default(""),
+  year: z
+    .string()
+    .regex(/^$|^\d{4}$/)
+    .default(""),
   period: z.string().max(30).default(""),
   state: z.enum(["", "not_done", "done", "not_applicable"]).default(""),
   tag: z.string().max(80).default(""),
@@ -250,13 +271,16 @@ export const ProductionQuerySchema = z.object({
     .enum([
       "",
       "waiting",
+      "submitted",
       "rejected",
       "accepted",
       "not_applicable",
       "not_submitted",
     ])
     .default(""),
-  sort: z.enum(["id", "title", "dueDate"]).default("id"),
+  sort: z
+    .enum(["id", "title", "dueDate", "assemblyDate", "depositDate"])
+    .default("id"),
   direction: z.enum(["asc", "desc"]).default("asc"),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -303,6 +327,30 @@ export const ProductionImportPreviewSchema = z.object({
 export type ProductionImportPreview = z.infer<
   typeof ProductionImportPreviewSchema
 >;
+export const ProductionGenerationResultSchema = z.object({
+  runId: z.uuid(),
+  modelId: z.uuid(),
+  modelVersion: z.number().int(),
+  targetId: z.uuid(),
+  ordinal: z.number().int(),
+  period: z.string(),
+  rowId: z.uuid().nullable(),
+  state: z.enum(["created", "existing", "regenerated", "refused"]),
+  code: z.string().nullable(),
+});
+export const ProductionGridSnapshotSchema = z.object({
+  exportId: z.uuid(),
+  jobId: z.uuid(),
+  actorId: z.uuid(),
+  model: ProductionModelSchema,
+  query: ProductionQuerySchema,
+  createdAt: z.string(),
+});
+export const ProductionGridSnapshotRowSchema = z.object({
+  exportId: z.uuid(),
+  part: z.number().int(),
+  row: ProductionRowSchema,
+});
 export const ProductionExportSchema = z.object({
   id: z.uuid(),
   entity: z.enum([
@@ -311,11 +359,17 @@ export const ProductionExportSchema = z.object({
     "row",
     "row_version",
     "stage_import",
+    "generation_result",
+    "grid_export",
+    "grid_export_row",
   ]),
   data: z.union([
     ProductionModelSchema,
     ProductionRowSchema,
     ProductionImportPreviewSchema,
+    ProductionGenerationResultSchema,
+    ProductionGridSnapshotSchema,
+    ProductionGridSnapshotRowSchema,
   ]),
 });
 export const ProductionPeopleSchema = z.object({
@@ -329,3 +383,22 @@ export const ProductionCapabilitiesSchema = z.object({
     z.object({ id: z.uuid(), edit: z.boolean(), approve: z.boolean() }),
   ),
 });
+
+export function productionValueFinal(
+  column: ProductionColumn,
+  value: string | boolean | null,
+  models: ProductionModel[],
+) {
+  if (value === null || value === "") return false;
+  if (column.type === "status") {
+    const m = models.find((m) => m.id === column.stageTypeId);
+    return (
+      m?.model.kind === "stage_type" &&
+      m.model.statuses.some((s) => s.id === value && s.final)
+    );
+  }
+  if (column.type === "boolean") return value === true;
+  if (column.type === "completion")
+    return value === "done" || value === "not_applicable";
+  return true;
+}

@@ -1,3 +1,4 @@
+import { productionDocumentIdsSql } from "../production/document-scope.js";
 import { assignmentScope } from "../administration/access.js";
 import type {
   Action,
@@ -151,6 +152,26 @@ export async function canAccess(
       )
         return false;
     }
+  }
+  if (record.kind === "obligation" && !record.data.fiscal) {
+    const pieces = await tx.query(
+      `SELECT d.dossier_id,d.content FROM (${productionDocumentIdsSql("$1")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid`,
+      [record.id],
+    );
+    for (const d of pieces)
+      if (
+        !d.content ||
+        d.dossier_id !== record.dossierId ||
+        ((d.content as { confidential: boolean }).confidential &&
+          !(await scopedPermission(
+            tx,
+            user,
+            "confidential",
+            "dossier",
+            record.dossierId,
+          )))
+      )
+        return false;
   }
   return true;
 }

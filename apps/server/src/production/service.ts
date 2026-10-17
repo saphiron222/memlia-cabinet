@@ -1,3 +1,4 @@
+import { productionValueFinal, productionPeriod } from "@memlia/contracts";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
@@ -41,9 +42,39 @@ export async function modelAccess(
   actor: SessionUser,
   m: ProductionModel,
 ) {
-  if (m.model.kind !== "stage_type")
+  if (m.model.kind !== "stage_type") {
     for (const id of m.model.population)
-      await requireAccess(tx, actor, "read", await loadRecord(tx, id));
+      if (m.model.target !== "utilisateur")
+        await requireAccess(tx, actor, "read", await loadRecord(tx, id));
+      else {
+        requireGlobal(actor, "read");
+        await activeAssignee(tx, id);
+      }
+    for (const id of m.model.documentIds) {
+      const docs = await tx.query(
+        "SELECT dossier_id,content FROM cabinet_documents WHERE id=$1",
+        [id],
+      );
+      if (!docs[0]) fail(404, "NOT_FOUND", "Pièce inaccessible.");
+      await requireAccess(
+        tx,
+        actor,
+        "read",
+        await loadRecord(tx, String(docs[0].dossier_id)),
+      );
+      if (
+        (docs[0].content as { confidential: boolean }).confidential &&
+        !(await scopedPermission(
+          tx,
+          actor,
+          "confidential",
+          "dossier",
+          String(docs[0].dossier_id),
+        ))
+      )
+        fail(404, "NOT_FOUND", "Pièce inaccessible.");
+    }
+  }
 }
 export async function saveProductionModel(
   tx: Connection,
@@ -123,10 +154,16 @@ export async function saveProductionModel(
           );
       }
       if (old?.model.kind === "stage_type" && i.model.kind === "stage_type") {
+        const used = await tx.query(
+          "SELECT DISTINCT cell->>'value' AS status FROM cabinet_production_row_versions h JOIN cabinet_production_models m ON m.id=(h.content->>'modelId')::uuid CROSS JOIN LATERAL jsonb_array_elements(h.content->'cells') cell WHERE EXISTS(SELECT 1 FROM jsonb_array_elements(m.content->'model'->'columns') col WHERE col->>'id'=cell->>'columnId' AND col->>'stageTypeId'=$1)",
+          [old.id],
+        );
+        const usedIds = new Set(used.map((r) => String(r.status)));
         const next = i.model;
         if (
           old.model.statuses.some(
             (s) =>
+              usedIds.has(s.id) &&
               !next.statuses.some((n) => n.id === s.id && n.final === s.final),
           )
         )
@@ -257,6 +294,7 @@ export async function authorizeRow(
     await requireAccess(tx, actor, action, await loadRecord(tx, row.recordId));
   await validateDocuments(tx, actor, row, [
     ...row.documentIds,
+    ...row.observations.flatMap((o) => o.documentIds),
     ...row.cells.flatMap((c) => c.documentIds),
     ...row.deposit.attempts.flatMap((a) => [
       ...a.documentIds,
@@ -360,12 +398,20 @@ export async function createProductionRow(
   now: Date,
   dueDate: string | null = null,
   generation = false,
+  checklistVersion?: number,
+  frozenModel?: ProductionModel,
 ) {
-  const m = await loadProductionModel(tx, modelId);
+  const m = frozenModel ?? (await loadProductionModel(tx, modelId));
   if (!generation) await modelAccess(tx, actor, m);
   if (m.model.kind === "stage_type")
     fail(400, "TEMPLATE_REQUIRED", "Modèle de production requis.");
   const template = m.model;
+  if (template.kind === "balance" && i.period !== String(template.year))
+    fail(
+      400,
+      "INVALID_ANNUAL_PERIOD",
+      "La ligne doit appartenir à l’exercice configuré.",
+    );
   const scope = await targetScope(tx, actor, i.target, "read");
   if (template.target !== i.target.kind)
     fail(400, "INVALID_TARGET", "La cible ne correspond pas au modèle.");
@@ -377,10 +423,17 @@ export async function createProductionRow(
   const key =
     template.kind === "balance"
       ? `balance:${template.family}:${template.year}:${i.target.id}`
-      : `${modelId}:${i.target.kind}:${i.target.id ?? i.target.label}:${i.period}${template.allowDuplicates && (template.kind === "process"||template.kind==="custom"&&!generation) ? ":" + i.operationId : ""}`;
+      : `${modelId}:${i.target.kind}:${i.target.id ?? i.target.label}:${i.period}${template.allowDuplicates && (template.kind === "process" || (template.kind === "custom" && !generation)) ? ":" + i.operationId : ""}`;
   const existing = await tx.query(
-    "SELECT id FROM cabinet_production_rows WHERE occurrence_key=$1",
-    [key],
+    "SELECT id FROM cabinet_production_rows WHERE occurrence_key=$1 OR ($2::boolean AND model_id=$3 AND content->'target'->>'kind'=$4 AND COALESCE(content->'target'->>'id',content->'target'->>'label')=$5 AND content->>'period'=$6) LIMIT 1",
+    [
+      key,
+      !template.allowDuplicates,
+      modelId,
+      i.target.kind,
+      i.target.id ?? i.target.label,
+      i.period,
+    ],
   );
   if (existing[0]) await loadProductionRow(tx, actor, String(existing[0].id));
   const result = await idempotent(
@@ -400,7 +453,7 @@ export async function createProductionRow(
         .map((c) => c.plannedDate)
         .filter((d): d is string => !!d)
         .sort();
-      const date = dueDate ?? dates.at(-1) ?? null;
+      const date = dueDate ?? dates[0] ?? null;
       if (template.kind === "balance" || template.kind === "custom") {
         const record = await saveRecord(
           tx,
@@ -419,6 +472,15 @@ export async function createProductionRow(
             }),
           },
           now,
+          undefined,
+          "created",
+          undefined,
+          {
+            kind: generation ? "generated" : "manual",
+            reference: generation ? m.id : actor.id,
+            version: String(m.version),
+            at: now.toISOString(),
+          },
         );
         recordId = record.id;
       }
@@ -435,7 +497,16 @@ export async function createProductionRow(
         dueDate: date,
         assigneeId: template.assigneeId,
         tags: template.tags,
-        documentIds: template.documentIds,
+        documentIds:
+          scope?.kind === "dossier"
+            ? (
+                await tx.query(
+                  "SELECT id FROM cabinet_documents WHERE id=ANY($1::uuid[]) AND dossier_id=$2",
+                  [template.documentIds, scope.id],
+                )
+              ).map((d) => String(d.id))
+            : template.documentIds,
+        workVersionAtCreation: recordId && template.checklistModelId ? 1 : 0,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       });
@@ -453,6 +524,7 @@ export async function createProductionRow(
             command: {
               kind: "instantiate",
               modelId: template.checklistModelId,
+              ...(checklistVersion ? { modelVersion: checklistVersion } : {}),
             },
           },
           now,
@@ -487,7 +559,7 @@ export async function commandProductionRow(
   id: string,
   i: z.infer<typeof ProductionCommandSchema>,
   now: Date,
-  regeneration=false,
+  regeneration = false,
 ) {
   const old = await loadProductionRow(tx, actor, id, "update");
   const model = await loadProductionModel(tx, old.modelId);
@@ -595,6 +667,66 @@ export async function commandProductionRow(
           documentIds: c.documentIds,
           note: c.note,
         });
+        if (template.kind === "balance" || template.kind === "custom") {
+          const types = await Promise.all(
+            [
+              ...new Set(
+                template.columns.flatMap((x) =>
+                  x.stageTypeId ? [x.stageTypeId] : [],
+                ),
+              ),
+            ].map((id) => loadProductionModel(tx, id)),
+          );
+          const date = row.dueDate ?? `${row.period.slice(0, 4)}-01-01`;
+          const values = template.columns.map((column) => ({
+            column,
+            cell: row.cells.find(
+              (x) =>
+                x.columnId === column.id &&
+                x.period === productionPeriod(column, date),
+            ),
+          }));
+          row.state =
+            values.length &&
+            values.every((x) => x.cell?.value === "not_applicable")
+              ? "not_applicable"
+              : values.length &&
+                  values.every(
+                    (x) =>
+                      productionValueFinal(
+                        x.column,
+                        x.cell?.value ?? null,
+                        types,
+                      ) &&
+                      (!x.column.approval || x.cell?.approved),
+                  )
+                ? "done"
+                : "not_done";
+          if (template.kind === "balance") {
+            const pending = values
+              .filter(
+                (x) =>
+                  !productionValueFinal(
+                    x.column,
+                    x.cell?.value ?? null,
+                    types,
+                  ) ||
+                  (x.column.approval && !x.cell?.approved),
+              )
+              .filter((x) => x.column.plannedDate)
+              .sort((a, b) =>
+                a.column.plannedDate!.localeCompare(b.column.plannedDate!),
+              );
+            row.dueDate = pending[0]?.column.plannedDate ?? null;
+            row.assigneeId =
+              pending[0]?.column.assigneeId ?? template.assigneeId;
+          }
+        }
+      } else if (c.kind === "observation") {
+        if (row.observations.some((x) => x.id === c.observation.id))
+          fail(409, "OBSERVATION_EXISTS", "Observation déjà conservée.");
+        await validateDocuments(tx, actor, row, c.observation.documentIds);
+        row.observations.push(c.observation);
       } else if (c.kind === "properties") {
         if (row.assigneeId !== c.assigneeId)
           await authorizeRow(tx, actor, row, "assign");
@@ -667,7 +799,7 @@ export async function commandProductionRow(
         );
         row.deposit = c.deposit;
       }
-      row.touched=old.touched||!regeneration;
+      row.touched = old.touched || !regeneration;
       row.version++;
       row.updatedAt = now.toISOString();
       row.modelVersion = model.version;
@@ -772,7 +904,7 @@ export async function migrateProductionTargets(
           fail(409, "VERSION_CONFLICT", "Une ligne a changé.");
         if (model.model.kind === "stage_type")
           fail(400, "INVALID_TARGET", "Modèle incompatible.");
-        const key = mapping.target.id ?? mapping.target.label;
+        const key = `${mapping.target.id ?? mapping.target.label}:${row.period}`;
         if (!model.model.allowDuplicates && targets.has(key))
           fail(
             409,
@@ -784,6 +916,7 @@ export async function migrateProductionTargets(
         row.scope = await targetScope(tx, actor, row.target);
         await validateDocuments(tx, actor, row, [
           ...row.documentIds,
+          ...row.observations.flatMap((o) => o.documentIds),
           ...row.cells.flatMap((c) => c.documentIds),
         ]);
         row.version++;

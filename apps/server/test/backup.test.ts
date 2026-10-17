@@ -144,6 +144,61 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(upload.statusCode).toBe(201);
       const document = upload.json();
+      const productionPost = async (
+        path: string,
+        payload: Record<string, unknown>,
+      ) => {
+        const response = await app!.inject({
+          method: "POST",
+          url: "/api/v1" + path,
+          headers: { origin, cookie },
+          payload,
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        return response.json();
+      };
+      const stageId = randomUUID();
+      const productionModel = await productionPost("/production/models", {
+        operationId: randomUUID(),
+        id: randomUUID(),
+        expectedVersion: 0,
+        model: {
+          kind: "balance",
+          name: "Bilan restauré",
+          year: 2026,
+          family: "BIC",
+          target: "dossier",
+          fee: "1234.56",
+          columns: [
+            { id: stageId, name: "Révision", type: "boolean", approval: true },
+          ],
+        },
+      });
+      const productionRow = await productionPost(
+        `/production/models/${productionModel.id}/rows`,
+        {
+          operationId: randomUUID(),
+          expectedVersion: 1,
+          target: { kind: "dossier", id: record.id, label: record.title },
+          period: "2026",
+        },
+      );
+      const productionBefore = await productionPost(
+        `/production/rows/${productionRow.id}/commands`,
+        {
+          operationId: randomUUID(),
+          expectedVersion: 1,
+          command: {
+            kind: "cell",
+            columnId: stageId,
+            period: "once",
+            value: true,
+            approve: true,
+            documentIds: [document.id],
+          },
+        },
+      );
+
       const fiscalCreated = await app.inject({
         method: "POST",
         url: "/api/v1/fiscal",
@@ -480,6 +535,21 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(download.statusCode).toBe(200);
       expect(download.rawPayload).toEqual(bytes);
+      const productionAfter = await app.inject({
+        url: "/api/v1/production/rows/" + productionBefore.id,
+        headers: { cookie },
+      });
+      expect(productionAfter.statusCode, productionAfter.body).toBe(200);
+      expect(productionAfter.json()).toEqual(productionBefore);
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/production/models/" + productionModel.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(productionModel);
+
       const restoredFiscal = await app.inject({
         url: `/api/v1/fiscal/${fiscal.record.id}`,
         headers: { cookie },

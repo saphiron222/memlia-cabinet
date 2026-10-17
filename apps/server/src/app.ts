@@ -1,5 +1,5 @@
-import {registerStageImportRoutes} from "./production/imports.js";
-import {registerProductionRoutes} from "./production/routes.js";
+import { registerStageImportRoutes } from "./production/imports.js";
+import { registerProductionRoutes } from "./production/routes.js";
 import { registerChecklistImportRoutes } from "./workflows/imports.js";
 import { Reminders } from "./notifications/reminders.js";
 import { registerNotificationRoutes } from "./notifications/routes.js";
@@ -322,8 +322,8 @@ export async function createApplication(options: ApplicationOptions) {
   });
   registerChecklistImportRoutes(app, { db, now, user }, importParser);
   registerNotificationRoutes(app, { db, now, user }, reminders);
-  registerProductionRoutes(app, {db,now,user},jobs);
-  registerStageImportRoutes(app,{db,now,user},importParser);
+  registerProductionRoutes(app, { db, now, user }, jobs, civilDate);
+  registerStageImportRoutes(app, { db, now, user }, importParser);
   registerWorkflowRoutes(app, { db, now, user }, jobs, civilDate);
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });

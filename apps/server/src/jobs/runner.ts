@@ -16,7 +16,7 @@ export interface JobContext<C> {
   checkpoint: C;
   signal: AbortSignal;
   commit<T>(
-    checkpoint: C,
+    checkpoint: C | ((result: T) => C),
     code: string | null,
     message: string,
     work: (tx: Connection, actor: SessionUser) => Promise<T>,
@@ -105,11 +105,17 @@ export class JobRunner {
           signal,
           commit: async (checkpoint, code, message, work) => {
             signal.throwIfAborted();
-            const parsed = bounded(definition.checkpoint, checkpoint);
+            let parsed: C;
             const value = await this.db.transaction(async (tx) => {
               signal.throwIfAborted();
               const actor = await validated(tx, job, owner);
               const result = await work(tx, actor);
+              parsed = bounded(
+                definition.checkpoint,
+                typeof checkpoint === "function"
+                  ? (checkpoint as (result: unknown) => C)(result)
+                  : checkpoint,
+              );
               await tx.query(
                 "UPDATE cabinet_jobs SET checkpoint=$1::jsonb,updated_at=$2,lease_until=$3 WHERE id=$4",
                 [
@@ -119,10 +125,10 @@ export class JobRunner {
                   job.id,
                 ],
               );
-              if(code!==null) await this.event(tx, job.id, code, message);
+              if (code !== null) await this.event(tx, job.id, code, message);
               return result;
             });
-            context.checkpoint = parsed;
+            context.checkpoint = parsed!;
             return value;
           },
         };

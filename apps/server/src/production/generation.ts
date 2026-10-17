@@ -16,10 +16,11 @@ import {
 } from "./service.js";
 import { loadRecord } from "../records/service.js";
 import { requireGlobal } from "../records/permissions.js";
-import { stableId } from "../workflows/generation.js";
+import { stableId, weekPeriod } from "../workflows/generation.js";
 import { ApiFault, fail } from "../errors.js";
 const input = ProductionGenerationSchema.omit({ operationId: true }).extend({
   model: ProductionModelSchema,
+  checklistVersion: z.number().int().positive().nullable(),
 });
 export class ProductionGeneration {
   private enqueue;
@@ -77,7 +78,9 @@ export class ProductionGeneration {
                       ? date.slice(0, 4)
                       : model.rule?.frequency === "quarterly"
                         ? `${date.slice(0, 4)}-Q${Math.ceil(Number(date.slice(5, 7)) / 3)}`
-                        : date.slice(0, 7);
+                        : model.rule?.frequency === "weekly"
+                          ? weekPeriod(date)
+                          : date.slice(0, 7);
                 let rowId: string | null = null,
                   state = "created",
                   code: string | null = null;
@@ -107,9 +110,14 @@ export class ProductionGeneration {
                     this.now(),
                     model.kind === "balance" ? null : date,
                     true,
+                    i.checklistVersion ?? undefined,
+                    i.model,
                   );
                   rowId = row.id;
-                  state = before.length ? "existing" : "created";
+                  state =
+                    before.length || row.modelId !== i.modelId
+                      ? "existing"
+                      : "created";
                   if (
                     before.length &&
                     model.kind === "custom" &&
@@ -117,7 +125,8 @@ export class ProductionGeneration {
                     row.state === "not_done" &&
                     !row.cells.length &&
                     !row.documentIds.length &&
-                    row.dueDate !== date
+                    (row.dueDate !== date ||
+                      row.modelVersion !== i.model.version)
                   ) {
                     const work = await tx.query(
                       "SELECT content FROM cabinet_work WHERE id=$1",
@@ -125,17 +134,8 @@ export class ProductionGeneration {
                     );
                     const untouched =
                       !work[0] ||
-                      ((
-                        work[0].content as {
-                          comments: unknown[];
-                          checklist: { items: { done: boolean }[] } | null;
-                        }
-                      ).comments.length === 0 &&
-                        !(
-                          work[0].content as {
-                            checklist: { items: { done: boolean }[] } | null;
-                          }
-                        ).checklist?.items.some((x) => x.done));
+                      (work[0].content as { version: number }).version ===
+                        row.workVersionAtCreation;
                     if (untouched) {
                       await commandProductionRow(
                         tx,
@@ -156,10 +156,15 @@ export class ProductionGeneration {
                           command: {
                             kind: "properties",
                             dueDate: date,
-                            assigneeId: row.assigneeId,
-                            tags: row.tags,
+                            assigneeId: model.assigneeId,
+                            tags: model.tags,
                             state: row.state,
-                            documentIds: row.documentIds,
+                            documentIds: (
+                              await tx.query(
+                                "SELECT id FROM cabinet_documents WHERE id=ANY($1::uuid[]) AND dossier_id=$2",
+                                [model.documentIds, targetId],
+                              )
+                            ).map((d) => String(d.id)),
                           },
                         },
                         this.now(),
@@ -229,12 +234,20 @@ export class ProductionGeneration {
   ) {
     await this.preview(tx, actor, i);
     const model = await loadProductionModel(tx, i.modelId);
+    const checklist =
+      model.model.kind !== "stage_type" && model.model.checklistModelId
+        ? await tx.query(
+            "SELECT content->>'version' AS version FROM cabinet_workflow_models WHERE id=$1",
+            [model.model.checklistModelId],
+          )
+        : [];
     return {
       jobId: await this.enqueue(tx, actor, i.operationId, {
         modelId: i.modelId,
         from: i.from,
         to: i.to,
         model,
+        checklistVersion: checklist[0] ? Number(checklist[0].version) : null,
       }),
     };
   }

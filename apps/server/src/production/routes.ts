@@ -32,7 +32,14 @@ export function registerProductionRoutes(
   app: FastifyInstance,
   { db, user, now }: RouteContext,
   jobs: JobRunner,
+  civilDate: (instant: Date) => string,
 ) {
+  app.get("/api/v1/production/calendar", async (req) =>
+    db.transaction(async (tx) => {
+      await user(tx, req);
+      return { today: civilDate(now()) };
+    }),
+  );
   app.get("/api/v1/production/people", async (req) =>
     db.transaction(async (tx) => {
       const actor = await user(tx, req);

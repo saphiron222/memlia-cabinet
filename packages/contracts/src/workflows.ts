@@ -384,6 +384,7 @@ export const WorkflowExportSchema = z.discriminatedUnion("entity", [
 export type WorkflowExport = z.infer<typeof WorkflowExportSchema>;
 
 export const WorkflowCalendarSchema = RecordListSchema.extend({
+  productionIds: z.array(z.uuid()).default([]),
   dossiers: z.record(z.uuid(), z.string()),
 });
 

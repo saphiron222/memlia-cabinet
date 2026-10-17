@@ -150,7 +150,15 @@ export function registerWorkflowRoutes(
           .filter((id): id is string => id !== null),
       ))
         dossiers[dossierId] = (await loadRecord(tx, dossierId)).title;
-      return { ...result, dossiers };
+      const production = await tx.query(
+        "SELECT id FROM cabinet_production_rows WHERE id=ANY($1::uuid[])",
+        [result.items.map((r) => r.id)],
+      );
+      return {
+        ...result,
+        dossiers,
+        productionIds: production.map((r) => r.id),
+      };
     }),
   );
   app.post("/api/v1/workflows/targets/:id/task", async (req) =>

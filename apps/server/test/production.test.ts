@@ -255,16 +255,73 @@ test("custom rule generation pauses, resumes and preserves treated occurrences w
     "2026-02-28",
     "2026-03-31",
   ]);
- const first=rows.find((r:any)=>r.period==='2026-01');
- const mark=await f.request('POST',`/production/rows/${first.id}/commands`,{operationId:operationId(),expectedVersion:1,command:{kind:'properties',dueDate:first.dueDate,assigneeId:null,tags:[],state:'done',documentIds:[]}});expect(mark.statusCode,mark.body).toBe(200);
- const paused=await model({...m.model,paused:true},m.id,m.version);
- expect((await f.request('POST','/production/generate',{operationId:operationId(),modelId:m.id,from:'2026-01-01',to:'2026-03-31'})).statusCode).toBe(409);
- await model({...paused.model,paused:false,rule:{...paused.model.rule,nominalDay:15}},m.id,paused.version);
- const rerun=await f.request('POST','/production/generate',{operationId:operationId(),modelId:m.id,from:'2026-01-01',to:'2026-03-31'});expect(rerun.statusCode,rerun.body).toBe(202);await waitJob(rerun.json().jobId);
- const saved=(await f.request('GET',`/production/models/${m.id}/rows`)).json().items;
- expect(saved).toHaveLength(3);expect(saved.find((r:any)=>r.id===first.id)).toMatchObject({state:'done',dueDate:'2026-01-31'});expect(saved.filter((r:any)=>r.id!==first.id).map((r:any)=>r.dueDate).sort()).toEqual(['2026-02-15','2026-03-15']);
- const outcomes=(await f.request('GET',`/production/jobs/${rerun.json().jobId}/results`)).json().items;expect(outcomes).toHaveLength(3);expect(outcomes.filter((x:any)=>x.state==='regenerated')).toHaveLength(2);
-
+  const first = rows.find((r: any) => r.period === "2026-01");
+  const mark = await f.request(
+    "POST",
+    `/production/rows/${first.id}/commands`,
+    {
+      operationId: operationId(),
+      expectedVersion: 1,
+      command: {
+        kind: "properties",
+        dueDate: first.dueDate,
+        assigneeId: null,
+        tags: [],
+        state: "done",
+        documentIds: [],
+      },
+    },
+  );
+  expect(mark.statusCode, mark.body).toBe(200);
+  const paused = await model({ ...m.model, paused: true }, m.id, m.version);
+  expect(
+    (
+      await f.request("POST", "/production/generate", {
+        operationId: operationId(),
+        modelId: m.id,
+        from: "2026-01-01",
+        to: "2026-03-31",
+      })
+    ).statusCode,
+  ).toBe(409);
+  await model(
+    {
+      ...paused.model,
+      paused: false,
+      rule: { ...paused.model.rule, nominalDay: 15 },
+    },
+    m.id,
+    paused.version,
+  );
+  const rerun = await f.request("POST", "/production/generate", {
+    operationId: operationId(),
+    modelId: m.id,
+    from: "2026-01-01",
+    to: "2026-03-31",
+  });
+  expect(rerun.statusCode, rerun.body).toBe(202);
+  await waitJob(rerun.json().jobId);
+  const saved = (
+    await f.request("GET", `/production/models/${m.id}/rows`)
+  ).json().items;
+  expect(saved).toHaveLength(3);
+  expect(saved.find((r: any) => r.id === first.id)).toMatchObject({
+    state: "done",
+    dueDate: "2026-01-31",
+  });
+  expect(
+    saved
+      .filter((r: any) => r.id !== first.id)
+      .map((r: any) => r.dueDate)
+      .sort(),
+  ).toEqual(["2026-02-15", "2026-03-15"]);
+  const outcomes = (
+    await f.request("GET", `/production/jobs/${rerun.json().jobId}/results`)
+  ).json().items;
+  expect(outcomes).toHaveLength(3);
+  expect(outcomes.filter((x: any) => x.state === "regenerated")).toHaveLength(
+    2,
+  );
 });
 
 async function waitJob(id: string) {
@@ -302,6 +359,29 @@ test("stage reprise retains mixed invalid rows in report and explicitly commits 
   expect(p.unmapped).toEqual([
     { line: 3, reason: "Statut, couleur, icône ou état final invalide." },
   ]);
+  const { xlsxFixture } = await import("./xlsx-fixture.js");
+  const xlsx = await f.request("POST", "/production/imports/preview", {
+    format: "memlia-stages-1",
+    filename: "stages.xlsx",
+    base64: xlsxFixture([
+      ["Modèle", "Statut", "Couleur", "Icône", "Final"],
+      ["Révision XLSX", "Validé", "green", "check", "true"],
+    ]).toString("base64"),
+    mapping: {
+      model: "Modèle",
+      status: "Statut",
+      color: "Couleur",
+      icon: "Icône",
+      final: "Final",
+    },
+  });
+  expect(xlsx.statusCode, xlsx.body).toBe(201);
+  expect(xlsx.json().models[0].statuses[0]).toMatchObject({
+    name: "Validé",
+    color: "green",
+    icon: "check",
+    final: true,
+  });
   const c = await f.request("POST", `/production/imports/${p.id}/commit`, {
     operationId: operationId(),
     validatedModels: [0],
@@ -645,8 +725,19 @@ test("followup cell periods remain independent and async CSV plus complete exit 
     `/administration/exports/${exportId}/download`,
   );
   expect(download.statusCode, download.body).toBe(200);
-  const production=[];
-  for(const part of download.json().parts){const p=await f.request('GET',`/administration/exports/${exportId}/parts/${part.number}`);expect(p.statusCode,p.body).toBe(200);production.push(...p.json().production);}
+  const production = [];
+  for (const part of download.json().parts) {
+    const p = await f.request(
+      "GET",
+      `/administration/exports/${exportId}/parts/${part.number}`,
+    );
+    expect(p.statusCode, p.body).toBe(200);
+    production.push(...p.json().production);
+  }
+  expect(production.some((e: any) => e.entity === "grid_export")).toBe(true);
+  expect(production.some((e: any) => e.entity === "grid_export_row")).toBe(
+    true,
+  );
   expect(
     production.some(
       (x: any) =>
@@ -660,4 +751,499 @@ test("followup cell periods remain independent and async CSV plus complete exit 
       (x: any) => x.entity === "row_version" && x.data.id === row.id,
     ),
   ).toHaveLength(3);
+});
+
+test("custom local completion and supplier observations remain distinct with typed state and campaign provenance", async () => {
+  const parent = await start(),
+    col = operationId();
+  const m = await model({
+    kind: "custom",
+    name: "DAS2 locale",
+    nature: "DAS2",
+    target: "dossier",
+    rule: {
+      frequency: "yearly",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      nominalDay: 31,
+      lastDay: false,
+      weekDay: 1,
+    },
+    allowDuplicates: true,
+    columns: [{ id: col, name: "Réalisation", type: "completion" }],
+  });
+  const create = () =>
+    f.request("POST", `/production/models/${m.id}/rows`, {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: parent.id, label: parent.title },
+      period: "2026",
+    });
+  const a = (await create()).json(),
+    b = (await create()).json();
+  expect(a.id).not.toBe(b.id);
+  const completed = await f.request(
+    "POST",
+    `/production/rows/${a.id}/commands`,
+    {
+      operationId: operationId(),
+      expectedVersion: 1,
+      command: { kind: "cell", columnId: col, period: "once", value: "done" },
+    },
+  );
+  expect(completed.statusCode, completed.body).toBe(200);
+  expect(completed.json().state).toBe("done");
+  expect(completed.json().observations).toEqual([]);
+  const observed = await f.request(
+    "POST",
+    `/production/rows/${a.id}/commands`,
+    {
+      operationId: operationId(),
+      expectedVersion: 2,
+      command: {
+        kind: "observation",
+        observation: {
+          id: operationId(),
+          source: "simulated",
+          reference: "Fournisseur fictif",
+          campaign: "2026",
+          observedOn: "2026-10-17",
+          state: "not_observed",
+          documentIds: [],
+        },
+      },
+    },
+  );
+  expect(observed.statusCode, observed.body).toBe(200);
+  expect(observed.json().state).toBe("done");
+  expect(observed.json().observations[0]).toMatchObject({
+    campaign: "2026",
+    state: "not_observed",
+    source: "simulated",
+  });
+});
+
+test("confidential production history is filtered before pagination, calendar and export; read-only readers cannot mutate", async () => {
+  const d = await start();
+  const c = operationId();
+  const m = await model({
+    kind: "balance",
+    name: "Bilans protégés",
+    target: "dossier",
+    year: 2026,
+    family: "BIC",
+    columns: [{ id: c, name: "Note", type: "text" }],
+  });
+  const r = (
+    await f.request("POST", `/production/models/${m.id}/rows`, {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d.id, label: d.title },
+      period: "2026",
+    })
+  ).json();
+  const meta = {
+    operationId: operationId(),
+    dossierId: d.id,
+    filename: "confidentiel.txt",
+    mediaType: "text/plain",
+    confidential: true,
+    source: { kind: "manual", reference: "Fictif", version: "1" },
+  };
+  const upload = await f.app.inject({
+    method: "POST",
+    url: "/api/v1/documents",
+    headers: {
+      origin: "http://localhost:3000",
+      cookie: f.cookie,
+      "content-type": "multipart/form-data; boundary=piece",
+    },
+    payload: Buffer.from(
+      `--piece\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n${JSON.stringify(meta)}\r\n--piece\r\nContent-Disposition: form-data; name="file"; filename="confidentiel.txt"\r\nContent-Type: text/plain\r\n\r\nOriginal fictif\r\n--piece--\r\n`,
+    ),
+  });
+  expect(upload.statusCode, upload.body).toBe(201);
+  const command = {
+    operationId: operationId(),
+    expectedVersion: 1,
+    command: {
+      kind: "cell",
+      columnId: c,
+      period: "once",
+      value: "Note protégée",
+      documentIds: [upload.json().id],
+    },
+  };
+  expect(
+    (await f.request("POST", `/production/rows/${r.id}/commands`, command))
+      .statusCode,
+  ).toBe(200);
+  expect(
+    (
+      await f.request("POST", `/production/rows/${r.id}/commands`, {
+        operationId: operationId(),
+        expectedVersion: 2,
+        command: {
+          kind: "cell",
+          columnId: c,
+          period: "once",
+          value: "Révisée",
+          documentIds: [],
+        },
+      })
+    ).statusCode,
+  ).toBe(200);
+  const d2 = (
+    await f.request("POST", "/records", dossier("Visible fictif"))
+  ).json();
+  const visible = (
+    await f.request("POST", `/production/models/${m.id}/rows`, {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d2.id, label: d2.title },
+      period: "2026",
+    })
+  ).json();
+  const person = (
+    await f.request("POST", "/users", {
+      operationId: operationId(),
+      email: "scope-production@example.test",
+      name: "Lecture production",
+      password: "MotDePasseFictif123!",
+      permissions: ["read", "export"].map((action) => ({
+        action,
+        kind: "*",
+        dossierId: null,
+      })),
+    })
+  ).json();
+  const login = await f.request(
+    "POST",
+    "/login",
+    { email: person.email, password: "MotDePasseFictif123!" },
+    "",
+  );
+  const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+  const list = await f.request(
+    "GET",
+    `/production/models/${m.id}/rows`,
+    undefined,
+    cookie,
+  );
+  expect(list.statusCode, list.body).toBe(200);
+  expect(list.json().items.map((r: any) => r.id)).toEqual([visible.id]);
+  expect(list.json().hasMore).toBe(false);
+  expect(
+    (await f.request("GET", `/production/rows/${r.id}`, undefined, cookie))
+      .statusCode,
+  ).toBe(404);
+  expect(
+    (
+      await f.request(
+        "POST",
+        `/production/rows/${r.id}/commands`,
+        command,
+        cookie,
+      )
+    ).statusCode,
+  ).toBe(404);
+  expect(
+    (
+      await f.request(
+        "POST",
+        `/production/rows/${visible.id}/commands`,
+        { ...command, operationId: operationId() },
+        cookie,
+      )
+    ).statusCode,
+  ).toBe(404);
+  const calendar = await f.request(
+    "GET",
+    "/workflows/calendar?kind=obligation",
+    undefined,
+    cookie,
+  );
+  expect(calendar.statusCode, calendar.body).toBe(200);
+  expect(calendar.json().items.map((r: any) => r.id)).toEqual([visible.id]);
+  expect(calendar.json().productionIds).toEqual([visible.id]);
+  const today = await f.request("GET", "/production/calendar");
+  expect(today.json()).toEqual({ today: "2026-10-17" });
+});
+
+test("DCA filters preserve waiting, rejection and non-applicability while annual planned work advances on the shared calendar", async () => {
+  const parent = await start();
+  const col1 = operationId(),
+    col2 = operationId();
+  const m = await model({
+    kind: "balance",
+    name: "Campagne comptes",
+    target: "dossier",
+    year: 2026,
+    family: "BIC",
+    columns: [
+      {
+        id: col1,
+        name: "Révision",
+        type: "boolean",
+        plannedDate: "2026-04-10",
+        plannedMinutes: 90,
+      },
+      {
+        id: col2,
+        name: "Finalisation",
+        type: "date",
+        plannedDate: "2026-05-20",
+        plannedMinutes: 30,
+      },
+    ],
+  });
+  const rows = [];
+  for (const [index, state] of [
+    "waiting",
+    "rejected",
+    "not_applicable",
+    "not_submitted",
+  ].entries()) {
+    const d =
+      index === 0
+        ? parent
+        : (
+            await f.request("POST", "/records", dossier("Comptes " + index))
+          ).json();
+    const response = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      {
+        operationId: operationId(),
+        expectedVersion: 1,
+        target: { kind: "dossier", id: d.id, label: d.title },
+        period: "2026",
+      },
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    const r = response.json();
+    expect(r.dueDate).toBe("2026-04-10");
+    const update = await f.request(
+      "POST",
+      `/production/rows/${r.id}/commands`,
+      {
+        operationId: operationId(),
+        expectedVersion: 1,
+        command: {
+          kind: "deposit",
+          deposit: {
+            applicable: state !== "not_applicable",
+            assemblyDate: `2026-06-${String(index + 10).padStart(2, "0")}`,
+            manualComplete: true,
+            attempts: ["waiting", "rejected"].includes(state)
+              ? [
+                  {
+                    id: operationId(),
+                    date: "2026-06-15",
+                    state,
+                    source: "manual",
+                    reference: "Fictif",
+                    documentIds: [],
+                    receiptDocumentId: null,
+                  },
+                ]
+              : [],
+          },
+        },
+      },
+    );
+    expect(update.statusCode, update.body).toBe(200);
+    rows.push(update.json());
+    const filtered = await f.request(
+      "GET",
+      `/production/models/${m.id}/rows?deposit=${state}`,
+    );
+    expect(filtered.statusCode, filtered.body).toBe(200);
+    expect(filtered.json().items.map((r: any) => r.id)).toEqual([r.id]);
+  }
+  const sorted = await f.request(
+    "GET",
+    `/production/models/${m.id}/rows?sort=assemblyDate&direction=desc`,
+  );
+  expect(sorted.json().items.map((r: any) => r.id)).toEqual(
+    rows.map((r) => r.id).reverse(),
+  );
+  const changed = await f.request(
+    "POST",
+    `/production/rows/${rows[0].id}/commands`,
+    {
+      operationId: operationId(),
+      expectedVersion: 2,
+      command: { kind: "cell", columnId: col1, period: "once", value: true },
+    },
+  );
+  expect(changed.statusCode, changed.body).toBe(200);
+  expect(changed.json().dueDate).toBe("2026-05-20");
+  const calendar = (
+    await f.request(
+      "GET",
+      "/workflows/calendar?kind=obligation&from=2026-05-01&to=2026-05-31",
+    )
+  ).json();
+  expect(calendar.items.map((r: any) => r.id)).toEqual([rows[0].id]);
+  expect(calendar.productionIds).toEqual([rows[0].id]);
+});
+
+test("reusable status models can evolve before use and preserve used values through reorder, rename and preview", async () => {
+  const d = await start(),
+    a = operationId(),
+    b = operationId();
+  let type = await model({
+    kind: "stage_type",
+    name: "Validation",
+    statuses: [
+      { id: a, name: "À revoir", color: "gray", icon: "circle", final: false },
+      { id: b, name: "En cours", color: "blue", icon: "clock", final: false },
+    ],
+  });
+  type = await model(
+    {
+      ...type.model,
+      statuses: [
+        {
+          ...type.model.statuses[1],
+          name: "Validé",
+          color: "green",
+          icon: "check",
+          final: true,
+        },
+        type.model.statuses[0],
+      ],
+    },
+    type.id,
+    type.version,
+  );
+  const col = operationId(),
+    m = await model({
+      kind: "process",
+      name: "Contrôle",
+      target: "dossier",
+      columns: [
+        { id: col, name: "État", type: "status", stageTypeId: type.id },
+      ],
+    });
+  const row = (
+    await f.request("POST", `/production/models/${m.id}/rows`, {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d.id, label: d.title },
+      period: "once",
+    })
+  ).json();
+  const cell = await f.request("POST", `/production/rows/${row.id}/commands`, {
+    operationId: operationId(),
+    expectedVersion: 1,
+    command: { kind: "cell", columnId: col, period: "once", value: b },
+  });
+  expect(cell.statusCode, cell.body).toBe(200);
+  type = await model(
+    {
+      ...type.model,
+      statuses: [
+        type.model.statuses[1],
+        {
+          ...type.model.statuses[0],
+          name: "Revu",
+          color: "purple",
+          icon: "check",
+        },
+      ],
+    },
+    type.id,
+    type.version,
+  );
+  expect(type.model.statuses.map((s: any) => s.id)).toEqual([a, b]);
+  expect(
+    (await f.request("GET", `/production/rows/${row.id}`)).json().cells[0]
+      .value,
+  ).toBe(b);
+  expect(
+    (
+      await f.request("POST", "/production/models", {
+        operationId: operationId(),
+        id: type.id,
+        expectedVersion: type.version,
+        model: { ...type.model, statuses: [type.model.statuses[0]] },
+      })
+    ).statusCode,
+  ).toBe(409);
+});
+
+test("generation reports the existing annual family identity even when another configuration owns it", async () => {
+  const d = await start();
+  const a = await model({
+    kind: "balance",
+    name: "Famille BIC",
+    target: "dossier",
+    year: 2026,
+    family: "BIC",
+  });
+  const row = (
+    await f.request("POST", `/production/models/${a.id}/rows`, {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d.id, label: d.title },
+      period: "2026",
+    })
+  ).json();
+  const b = await model({
+    kind: "balance",
+    name: "Autre population BIC",
+    target: "dossier",
+    year: 2026,
+    family: "BIC",
+    population: [d.id],
+  });
+  const started = await f.request("POST", "/production/generate", {
+    operationId: operationId(),
+    modelId: b.id,
+    from: "2026-01-01",
+    to: "2026-12-31",
+  });
+  expect(started.statusCode, started.body).toBe(202);
+  await waitJob(started.json().jobId);
+  const results = (
+    await f.request("GET", `/production/jobs/${started.json().jobId}/results`)
+  ).json();
+  expect(results.items).toMatchObject([{ state: "existing", rowId: row.id }]);
+  const exit = (
+    await f.request("POST", "/administration/exports", {
+      operationId: operationId(),
+    })
+  ).json();
+  let state;
+  for (let n = 0; n < 200; n++) {
+    state = (
+      await f.request("GET", `/administration/exports/${exit.id}`)
+    ).json();
+    if (["completed", "failed"].includes(state.job.state)) break;
+    await new Promise((r) => setTimeout(r, 30));
+  }
+  expect(state.job.state, JSON.stringify(state)).toBe("completed");
+  const manifest = (
+    await f.request("GET", `/administration/exports/${exit.id}/download`)
+  ).json();
+  const exported = [];
+  for (const part of manifest.parts) {
+    const data = await f.request(
+      "GET",
+      `/administration/exports/${exit.id}/parts/${part.number}`,
+    );
+    expect(data.statusCode, data.body).toBe(200);
+    exported.push(...data.json().production);
+  }
+  expect(
+    exported.find((e) => e.entity === "generation_result").data,
+  ).toMatchObject({
+    runId: started.json().jobId,
+    modelId: b.id,
+    modelVersion: 1,
+    rowId: row.id,
+    state: "existing",
+  });
 });

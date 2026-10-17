@@ -60,8 +60,8 @@ export class ProductionGridExport {
       execute: async (i, ctx) => {
         while (!ctx.checkpoint.complete) {
           const prior = ctx.checkpoint;
-          const result = await ctx.commit(
-            { ...prior },
+          await ctx.commit(
+            (result: typeof prior) => result,
             null,
             "",
             async (tx, actor) => {
@@ -81,7 +81,16 @@ export class ProductionGridExport {
               let part = prior.part,
                 bytes = 0;
               for (const row of page.items) {
-                const size = Buffer.byteLength(JSON.stringify(row));
+                const size = Math.max(
+                  Buffer.byteLength(JSON.stringify(row)),
+                  Buffer.byteLength(csv(i.model, [row])),
+                );
+                if (size > 8 * 1024 * 1024)
+                  fail(
+                    413,
+                    "EXPORT_ROW_LIMIT",
+                    "Une ligne dépasse la taille maximale d’une partie CSV.",
+                  );
                 if (bytes === 0 || bytes + size > 1024 * 1024) {
                   part++;
                   bytes = 0;
@@ -92,6 +101,12 @@ export class ProductionGridExport {
                   [i.exportId, row.id, part, JSON.stringify(row)],
                 );
               }
+              if (prior.count + page.items.length > 100000)
+                fail(
+                  413,
+                  "EXPORT_LIMIT",
+                  "Divisez la grille au-delà de 100 000 lignes.",
+                );
               return {
                 after: page.items.at(-1)?.id ?? prior.after,
                 count: prior.count + page.items.length,
@@ -99,20 +114,6 @@ export class ProductionGridExport {
                 complete: !page.hasMore,
               };
             },
-          );
-          if (result.count > 100000)
-            fail(
-              413,
-              "EXPORT_LIMIT",
-              "Divisez la grille au-delà de 100 000 lignes.",
-            );
-          await ctx.commit(
-            result,
-            result.complete || result.count % 1000 === 0
-              ? "production.exported"
-              : null,
-            "Parties CSV préparées.",
-            async () => {},
           );
         }
         return { parts: ctx.checkpoint.part };
@@ -209,6 +210,9 @@ function csv(model: ProductionModel, rows: ProductionRow[]) {
       "colonne",
       "type",
       "fréquence",
+      "responsable_étape",
+      "date_prévue_étape",
+      "minutes_prévues_étape",
       "période_cellule",
       "valeur",
       "approbation_locale",
@@ -243,6 +247,9 @@ function csv(model: ProductionModel, rows: ProductionRow[]) {
           column?.name,
           column?.type,
           column?.frequency,
+          column?.assigneeId,
+          column?.plannedDate,
+          column?.plannedMinutes,
           cell?.period,
           cell?.value,
           cell?.approved,

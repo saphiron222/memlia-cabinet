@@ -1511,7 +1511,7 @@ test("additive fiscal migration upgrades version six without granting module or 
   await f.maintainDatabase(async (db) =>
     db.transaction(async (tx) => {
       await tx.query(
-        "DROP TABLE cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
+        "DROP TABLE cabinet_production_export_rows, cabinet_production_exports, cabinet_production_generation_results, cabinet_production_imports, cabinet_production_row_versions, cabinet_production_rows, cabinet_production_model_versions, cabinet_production_models, cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
       );
       await tx.query("DROP INDEX cabinet_task_occurrence");
       await tx.query("DROP TABLE cabinet_fiscal_events");
@@ -1550,7 +1550,7 @@ test("additive fiscal migration upgrades version six without granting module or 
       (
         await db.query("SELECT max(version) AS version FROM schema_migrations")
       )[0]!.version,
-    ).toBe(9);
+    ).toBe(10);
     expect(await db.query("SELECT * FROM cabinet_fiscal_events")).toEqual([]);
   });
 });

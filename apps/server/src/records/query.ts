@@ -1,3 +1,4 @@
+import { productionDocumentIdsSql } from "../production/document-scope.js";
 import {
   CabinetRecordSchema,
   RecordKindSchema,
@@ -46,7 +47,8 @@ export function authorizedPredicate(
   const related = followContact
     ? ` AND NOT EXISTS(WITH RECURSIVE fiscal_reachable(id) AS (SELECT value::uuid FROM jsonb_array_elements_text(${fiscalLinks("r")}) UNION SELECT link.value::uuid FROM fiscal_reachable reached JOIN cabinet_records linked ON linked.id=reached.id CROSS JOIN LATERAL jsonb_array_elements_text(${fiscalLinks("linked")}) link(value)) SELECT 1 FROM fiscal_reachable reached LEFT JOIN cabinet_records fiscal_related ON fiscal_related.id=reached.id WHERE fiscal_related.id IS NULL OR (${authorizedPredicate(actor, "read", parameter, false).replaceAll(/\br\./g, "fiscal_related.")}) IS NOT TRUE)`
     : "";
-  return `((${own}) AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(${links}) AS link(id) LEFT JOIN cabinet_records parent ON parent.id=link.id::uuid AND parent.kind='dossier' WHERE parent.id IS NULL OR (${parent}) IS NOT TRUE) AND CASE WHEN r.kind='tache' OR (r.kind='obligation' AND jsonb_typeof(r.content->'data'->'fiscal')='object') THEN (TRUE ${related}${documents}) ELSE TRUE END)`;
+  const productionDocuments = `NOT EXISTS(SELECT 1 FROM (${productionDocumentIdsSql("r.id")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid WHERE d.id IS NULL OR d.dossier_id IS DISTINCT FROM (r.content->>'dossierId')::uuid OR ((d.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "d.dossier_id")}) IS NOT TRUE))`;
+  return `((${own}) AND ${productionDocuments} AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(${links}) AS link(id) LEFT JOIN cabinet_records parent ON parent.id=link.id::uuid AND parent.kind='dossier' WHERE parent.id IS NULL OR (${parent}) IS NOT TRUE) AND CASE WHEN r.kind='tache' OR (r.kind='obligation' AND jsonb_typeof(r.content->'data'->'fiscal')='object') THEN (TRUE ${related}${documents}) ELSE TRUE END)`;
 }
 export function recordFilter(
   actor: SessionUser,

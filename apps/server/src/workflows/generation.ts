@@ -214,7 +214,7 @@ export class WorkflowGeneration {
   }
 }
 
-function weekPeriod(date: string) {
+export function weekPeriod(date: string) {
   const monday = new Date(date + "T00:00:00Z");
   monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
   return "week:" + monday.toISOString().slice(0, 10);
