@@ -211,6 +211,8 @@ Préparation technique : `docs/recherche-installation-locale.md` (maintenance, s
 
 ### Task 12: Réception transversale, fidélité Twenty et traçabilité complète
 
+Préparation de la référence indépendante : `docs/recherche-reference-twenty.md` et les deux artefacts officiels du SHA exact préservés localement avant expiration. Leur intégrité est vérifiée ; leur couverture et leur rendu restent à qualifier.
+
 **Files:** Extend browser suites by real workflow, `scripts/verify-scope.mjs`, `docs/exigences.json`, `docs/etat-realisation.md`, `docs/recette-fonctionnelle.md`, `README.md`; add only useful visual baseline artifacts with fictitious content.
 
 **Interfaces:** Requirement traceability records code/tests/local result/CI result/field status independently. A requirement can have several artifacts; a menu entry or a shared generic test alone cannot mark it implemented. Source provenance checks compare Twenty vendored file hashes/adaptations. Functional receipt runs against the production build with an isolated fictional cabinet.
