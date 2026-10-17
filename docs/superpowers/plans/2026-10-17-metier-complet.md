@@ -141,7 +141,7 @@ Préparation technique : `docs/recherche-lab-onboarding.md` (sources françaises
 
 ### Task 7: Modèles Word, génération PDF, lettres et signature
 
-Préparation technique : `docs/recherche-documents-locaux.md` et `docs/recherche-signature-locale.md` (sources, versions et limites ; aucune proposition n'y vaut preuve d'exécution). L'adaptateur optionnel Documenso v2.20.0 permet de construire une prémisse sur un protocole publié ; il ne choisit ni n'active le prestataire du cabinet.
+Préparation technique : `docs/recherche-documents-locaux.md`, `docs/recherche-signature-locale.md` et `docs/recherche-livraison-conversion-linux.md` (sources, versions et limites ; aucune proposition n'y vaut preuve d'exécution). La dernière note précise les archives Linux amd64/arm64 et empreintes publiées de deux candidates LibreOffice ; choix, installation, rendu et isolation restent à qualifier dans ce lot et le lot 11. L'adaptateur optionnel Documenso v2.20.0 permet de construire une prémisse sur un protocole publié ; il ne choisit ni n'active le prestataire du cabinet.
 
 **Files:** Create `packages/contracts/src/templates.ts`, `apps/server/src/templates/*`, `apps/web/src/features/templates/*`; extend GED for generated outputs; tests `apps/server/test/templates.test.ts`, `tests/e2e/templates.spec.ts`; conversion runtime in `Dockerfile` when needed.
 
