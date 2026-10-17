@@ -1,3 +1,4 @@
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { PGlite } from "@electric-sql/pglite";
 import { Pool } from "pg";
 import { mkdir } from "node:fs/promises";
@@ -59,7 +60,9 @@ export async function openDatabase(options: {
       "DATABASE_URL requis ; PGlite exige allowEmbeddedDatabase explicite.",
     );
   await mkdir(options.dataDirectory, { recursive: true, mode: 0o700 });
-  const pg = new PGlite(join(options.dataDirectory, "postgres"));
+  const pg = new PGlite(join(options.dataDirectory, "postgres"), {
+    extensions: { pg_trgm },
+  });
   await pg.waitReady;
   try {
     await pg.transaction((tx) =>

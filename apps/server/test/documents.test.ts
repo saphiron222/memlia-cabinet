@@ -501,7 +501,7 @@ it("upgrades a version-one database without losing cabinet records and reports a
     await f.maintainDatabase(async (db) => {
       await db.transaction(async (tx) => {
         await tx.query("DROP TABLE cabinet_documents");
-        await tx.query("DELETE FROM schema_migrations WHERE version=2");
+        await tx.query("DELETE FROM schema_migrations WHERE version>=2");
       });
     });
     expect((await f.request("GET", "/records/" + d.id)).json().title).toBe(
@@ -512,6 +512,304 @@ it("upgrades a version-one database without losing cabinet records and reports a
     expect(uploaded.json().extraction.status).toBe("needs_ocr");
     await f.restart();
     expect((await f.request("GET", "/documents")).json().total).toBe(1);
+  } finally {
+    await f.close();
+  }
+});
+
+it("bounds SQL reads before pagination and searches large originals across authorized dossier scopes with a real index", async () => {
+  const f = await fixture();
+  try {
+    const admin = await f.setup();
+    const a = (
+        await f.request("POST", "/records", dossier("A recherche"))
+      ).json(),
+      b = (await f.request("POST", "/records", dossier("B recherche"))).json(),
+      c = (
+        await f.request("POST", "/records", {
+          ...dossier("C privé"),
+          record: { ...dossier().record, confidential: true },
+        })
+      ).json();
+    const reader = (
+      await f.request("POST", "/users", {
+        operationId: operationId(),
+        ...credentials,
+        email: "large-reader@example.test",
+        permissions: [
+          { action: "read", kind: "dossier", dossierId: a.id },
+          { action: "read", kind: "dossier", dossierId: c.id },
+        ],
+      })
+    ).json();
+    const { DocumentStore } = await import("../src/documents/store.js");
+    const { DocumentInputSchema, DocumentQuerySchema } =
+      await import("@memlia/contracts");
+    const store = new DocumentStore(f.options.dataDirectory);
+    const visible: string[] = [];
+    const large =
+      "remplissage fictif ".repeat(120_000) + " ORCHIDÉE 100%_\\ fin";
+    for (let i = 0; i < 8; i++) {
+      const scope = i < 5 ? a.id : i < 7 ? b.id : c.id;
+      const confidential = i === 4;
+      const prepared = await store.prepare(
+        DocumentInputSchema.parse(
+          metadata(scope, {
+            filename: `nom-${i}-fictif.txt`,
+            mediaType: "text/plain",
+            confidential,
+          }),
+        ),
+        Buffer.from(large),
+      );
+      await f.maintainDatabase(async (db) => {
+        const ref = await db.transaction((tx) =>
+          store.commit(tx, admin, prepared, new Date()),
+        );
+        if (i < 4) visible.push(ref.id);
+      });
+      await store.discard(prepared);
+    }
+    visible.sort();
+    await f.maintainDatabase(async (db) => {
+      await db.transaction(async (tx) => {
+        const transfers: {
+          sql: string;
+          params: unknown[];
+          rows: Record<string, unknown>[];
+          bytes: number;
+        }[] = [];
+        const measured: import("../src/storage/database.js").Connection = {
+          async query(sql, params = []) {
+            const rows = await tx.query(sql, params);
+            transfers.push({
+              sql,
+              params: [...params],
+              rows,
+              bytes: Buffer.byteLength(JSON.stringify(rows)),
+            });
+            return rows as never;
+          },
+        };
+        const result = await store.list(
+          measured,
+          reader,
+          DocumentQuerySchema.parse({ dossierId: a.id, offset: 1, limit: 2 }),
+        );
+        expect(result.total).toBe(4);
+        expect(result.items.map((d) => d.id)).toEqual(visible.slice(1, 3));
+        expect(
+          transfers
+            .flatMap((x) => x.rows)
+            .some((row) => "extracted_text" in row || "search_text" in row),
+        ).toBe(false);
+        expect(transfers.reduce((n, x) => n + x.bytes, 0)).toBeLessThan(12000);
+        expect(
+          transfers
+            .filter((x) => x.rows.some((row) => "content" in row))
+            .flatMap((x) => x.rows),
+        ).toHaveLength(2);
+        const listing = transfers.find((x) =>
+          x.rows.some((row) => "content" in row),
+        )!;
+        const listingBytes = transfers.reduce((n, x) => n + x.bytes, 0);
+        expect(
+          (
+            await store.list(
+              tx,
+              reader,
+              DocumentQuerySchema.parse({ dossierId: b.id, q: "chidée" }),
+            )
+          ).total,
+        ).toBe(0);
+        for (const q of [
+          "chidée",
+          "CHIDÉE",
+          "100%_\\",
+          "é",
+          "nom-2-fictif",
+          "absent-marker",
+        ]) {
+          transfers.length = 0;
+          const found = await store.list(
+            measured,
+            reader,
+            DocumentQuerySchema.parse({
+              q,
+              limit: 1,
+              offset: q === "absent-marker" ? 0 : 1,
+            }),
+          );
+          const total =
+            q === "absent-marker" ? 0 : q === "nom-2-fictif" ? 1 : 4;
+          expect(found.total).toBe(total);
+          expect(found.items.map((d) => d.id)).toEqual(
+            total === 4 ? visible.slice(1, 2) : [],
+          );
+          expect(transfers.reduce((n, x) => n + x.bytes, 0)).toBeLessThan(
+            12000,
+          );
+          expect(
+            transfers
+              .flatMap((x) => x.rows)
+              .some((row) => "extracted_text" in row || "search_text" in row),
+          ).toBe(false);
+        }
+        transfers.length = 0;
+        await store.list(
+          measured,
+          admin,
+          DocumentQuerySchema.parse({ q: "chidée", limit: 2 }),
+        );
+        const search = transfers.find((x) =>
+          x.rows.some((row) => "content" in row),
+        )!;
+        // A small fixture may naturally favor sequential scans. This diagnostic proves
+        // the actual production query can execute using the installed index.
+        await tx.query("SET LOCAL enable_seqscan=off");
+        await tx.query("SET LOCAL enable_indexscan=off");
+        const plan = await tx.query(
+          "EXPLAIN (ANALYZE, FORMAT JSON) " + search.sql,
+          search.params,
+        );
+        const planText = JSON.stringify(plan);
+        expect(planText).toContain("cabinet_documents_search");
+        const listingPlan = await tx.query(
+          "EXPLAIN (ANALYZE, FORMAT JSON) " + listing.sql,
+          listing.params,
+        );
+        expect(JSON.stringify(listingPlan)).toContain(
+          "cabinet_documents_dossier",
+        );
+        if (process.env.MEMLIA_GED_EVIDENCE_PATH)
+          await writeFile(
+            process.env.MEMLIA_GED_EVIDENCE_PATH,
+            JSON.stringify(
+              {
+                sourceBytes: Buffer.byteLength(large) * 8,
+                listingBytes,
+                searchBytes: transfers.reduce((n, x) => n + x.bytes, 0),
+                listingSQL: listing.sql,
+                searchSQL: search.sql,
+                listingPlan,
+                searchPlan: plan,
+              },
+              null,
+              2,
+            ),
+          );
+        await tx.query(
+          "UPDATE cabinet_users SET permissions=$1::jsonb WHERE id=$2",
+          [
+            JSON.stringify([
+              ...reader.permissions,
+              { action: "confidential", kind: "dossier", dossierId: a.id },
+            ]),
+            reader.id,
+          ],
+        );
+        expect(
+          (
+            await store.list(
+              tx,
+              reader,
+              DocumentQuerySchema.parse({ q: "chidée" }),
+            )
+          ).total,
+        ).toBe(5);
+        await tx.query(
+          "UPDATE cabinet_users SET permissions=$1::jsonb WHERE id=$2",
+          [
+            JSON.stringify([
+              { action: "read", kind: "dossier", dossierId: c.id },
+            ]),
+            reader.id,
+          ],
+        );
+        expect(
+          (
+            await store.list(
+              tx,
+              reader,
+              DocumentQuerySchema.parse({ q: "chidée" }),
+            )
+          ).total,
+        ).toBe(0);
+        console.log(
+          "GED bounded SQL: " +
+            transfers.reduce((n, x) => n + x.bytes, 0) +
+            " bytes for two results over " +
+            Buffer.byteLength(large) * 8 +
+            " source bytes; search index cabinet_documents_search used.",
+        );
+      });
+    });
+  } finally {
+    await f.close();
+  }
+});
+
+it("backfills indexed search from schema two and keeps a shared extension outside disposable installation schemas", async () => {
+  const f = await fixture();
+  try {
+    await f.setup();
+    const d = (
+      await f.request("POST", "/records", dossier("Migration recherche"))
+    ).json();
+    const content = "İ ORCHIDÉE 100%_\\ ancien original";
+    const original = (
+      await upload(
+        f,
+        metadata(d.id, { filename: "HOMONYME.txt", mediaType: "text/plain" }),
+        Buffer.from(content),
+        "HOMONYME.txt",
+        "text/plain",
+      )
+    ).json();
+    await f.maintainDatabase(async (db) => {
+      await db.transaction(async (tx) => {
+        await tx.query("DROP INDEX IF EXISTS cabinet_documents_search");
+        await tx.query(
+          "ALTER TABLE cabinet_documents DROP COLUMN IF EXISTS search_text",
+        );
+        await tx.query("DELETE FROM schema_migrations WHERE version=3");
+      });
+    });
+    expect(
+      (
+        await f.request("GET", "/documents?q=" + encodeURIComponent("i\u0307"))
+      ).json(),
+    ).toMatchObject({ total: 1, items: [{ id: original.id }] });
+    expect(
+      (
+        await f.request(
+          "GET",
+          "/documents?q=" + encodeURIComponent("chidée 100%_\\"),
+        )
+      ).json(),
+    ).toMatchObject({ total: 1, items: [{ id: original.id }] });
+    await f.maintainDatabase(async (db) => {
+      const namespaces = await db.query(
+        "SELECT n.nspname,e.extversion FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pg_trgm'",
+      );
+      expect(namespaces).toEqual([{ nspname: "public", extversion: "1.6" }]);
+    });
+    const other = await fixture();
+    try {
+      await other.setup();
+    } finally {
+      await other.close();
+    }
+    expect(
+      (await f.request("GET", "/documents?q=chidée")).json().items[0].id,
+    ).toBe(original.id);
+    await f.maintainDatabase(async (db) =>
+      expect(
+        await db.query(
+          "SELECT indexname FROM pg_indexes WHERE schemaname=current_schema() AND indexname='cabinet_documents_search'",
+        ),
+      ).toHaveLength(1),
+    );
   } finally {
     await f.close();
   }

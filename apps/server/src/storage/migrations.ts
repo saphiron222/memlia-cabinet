@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 2)
+  if (version > 3)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -35,6 +35,7 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((sql) => sql.trim())
       .filter(Boolean))
       await connection.query(statement);
+  if (version < 3) await migrateDocumentSearch(connection);
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -43,3 +44,53 @@ CREATE TABLE cabinet_documents (id uuid PRIMARY KEY, dossier_id uuid NOT NULL RE
 CREATE INDEX cabinet_documents_dossier ON cabinet_documents(dossier_id);
 INSERT INTO schema_migrations(version) VALUES (2);
 `;
+
+// Version 3 upgrades published schema 2 without changing either prior migration.
+async function migrateDocumentSearch(connection: Connection) {
+  // Extensions belong to the database, not a disposable installation/test schema.
+  // Keep the shared opclass in public so dropping one schema cannot remove another
+  // installation's index. An existing differently placed extension is not moved.
+  await connection.query(
+    "CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public VERSION '1.6'",
+  );
+  const extensions = await connection.query(
+    "SELECT n.nspname,e.extversion FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='pg_trgm'",
+  );
+  if (
+    extensions[0]?.nspname !== "public" ||
+    extensions[0]?.extversion !== "1.6"
+  )
+    throw new Error(
+      "La GED exige pg_trgm 1.6 dans le schéma public. Faire vérifier cette extension partagée par l’administrateur avant la migration.",
+    );
+  await connection.query(
+    "ALTER TABLE cabinet_documents ADD COLUMN search_text text",
+  );
+  // One bounded original at a time, preserving the previous JavaScript French
+  // lowercase semantics even for Unicode expansions (e.g. dotted capital I).
+  let after: string | null = null;
+  while (true) {
+    const rows: { id: string; filename: string; extracted_text: string }[] =
+      await connection.query(
+        "SELECT id, content->>'filename' AS filename, extracted_text FROM cabinet_documents WHERE ($1::uuid IS NULL OR id>$1::uuid) ORDER BY id LIMIT 1",
+        [after],
+      );
+    const row = rows[0];
+    if (!row) break;
+    await connection.query(
+      "UPDATE cabinet_documents SET search_text=$1 WHERE id=$2",
+      [
+        `${row.filename}\n${row.extracted_text}`.toLocaleLowerCase("fr"),
+        row.id,
+      ],
+    );
+    after = row.id;
+  }
+  await connection.query(
+    "ALTER TABLE cabinet_documents ALTER COLUMN search_text SET NOT NULL",
+  );
+  await connection.query(
+    "CREATE INDEX cabinet_documents_search ON cabinet_documents USING gin(search_text public.gin_trgm_ops)",
+  );
+  await connection.query("INSERT INTO schema_migrations(version) VALUES (3)");
+}

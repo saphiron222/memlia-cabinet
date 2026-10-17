@@ -32,6 +32,7 @@ type Staged = {
   input: DocumentInput;
   path: string;
   sha256: string;
+  searchText: string;
   size: number;
   extraction: Awaited<ReturnType<typeof extract>>;
 };
@@ -83,6 +84,8 @@ export class DocumentStore {
         sha256: hash.digest("hex"),
         size,
         extraction,
+        searchText:
+          `${metadata.filename}\n${extraction.text}`.toLocaleLowerCase("fr"),
       });
       return prepared;
     } catch (error) {
@@ -141,7 +144,7 @@ export class DocumentStore {
   ): Promise<DocumentReference> {
     const staged = this.staged.get(prepared);
     if (!staged) throw Error("Préparation inconnue ou déjà libérée.");
-    const { input, sha256, size, extraction } = staged;
+    const { input, sha256, size, extraction, searchText } = staged;
     const current = await this.authorize(tx, actor, input);
     const reference = await idempotent(
       tx,
@@ -193,7 +196,7 @@ export class DocumentStore {
           await directory.close();
         }
         await tx.query(
-          "INSERT INTO cabinet_documents(id,dossier_id,logical_id,previous_id,version,content,extracted_text) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7)",
+          "INSERT INTO cabinet_documents(id,dossier_id,logical_id,previous_id,version,content,extracted_text,search_text) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8)",
           [
             reference.id,
             reference.dossierId,
@@ -202,6 +205,7 @@ export class DocumentStore {
             reference.version,
             JSON.stringify(reference),
             extraction.text,
+            searchText,
           ],
         );
         return reference;
@@ -224,6 +228,7 @@ export class DocumentStore {
   }
   private async read(
     document: DocumentReference,
+    includeBytes = false,
   ): Promise<{ availability: Document["availability"]; bytes?: Buffer }> {
     try {
       const file = await open(
@@ -234,9 +239,16 @@ export class DocumentStore {
         const stat = await file.stat();
         if (!stat.isFile() || stat.size !== document.size)
           return { availability: "corrupt" };
-        const bytes = await file.readFile();
-        return createHash("sha256").update(bytes).digest("hex") ===
-          document.sha256
+        const hash = createHash("sha256");
+        const bytes = includeBytes ? await file.readFile() : undefined;
+        if (bytes) hash.update(bytes);
+        else
+          for await (const chunk of file.createReadStream({
+            autoClose: false,
+            highWaterMark: 64 * 1024,
+          }))
+            hash.update(chunk);
+        return hash.digest("hex") === document.sha256
           ? { availability: "available", bytes }
           : { availability: "corrupt" };
       } finally {
@@ -269,37 +281,56 @@ export class DocumentStore {
   async list(tx: Connection, actor: SessionUser, query: DocumentQuery) {
     const current = await this.actor(tx, actor),
       filter = DocumentQuerySchema.parse(query);
-    const rows = await tx.query(
-      "SELECT content,extracted_text FROM cabinet_documents ORDER BY logical_id,version",
-    );
-    const visible: DocumentReference[] = [];
-    for (const row of rows) {
-      const ref = DocumentReferenceSchema.parse(row.content);
-      if (
-        (filter.dossierId && ref.dossierId !== filter.dossierId) ||
-        (filter.logicalId && ref.logicalId !== filter.logicalId)
-      )
-        continue;
-      if (!(await this.visible(tx, current, ref))) continue;
-      if (
-        filter.q &&
-        !`${ref.filename}\n${row.extracted_text}`
-          .toLocaleLowerCase("fr")
-          .includes(filter.q.toLocaleLowerCase("fr"))
-      )
-        continue;
-      visible.push(ref);
+    const params: unknown[] = [];
+    const parameter = (value: unknown) => {
+      params.push(value);
+      return "$" + params.length;
+    };
+    const scope = (action: "read" | "confidential") => {
+      if (hasPermission(current, action, "dossier")) return "TRUE";
+      const dossierIds = [
+        ...new Set(current.permissions.map((p) => p.dossierId)),
+      ].filter(
+        (id): id is string =>
+          id !== null && hasPermission(current, action, "dossier", id),
+      );
+      return `d.dossier_id = ANY(${parameter(dossierIds)}::uuid[])`;
+    };
+    const where = [
+      scope("read"),
+      `(NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR (${scope("confidential")}))`,
+    ];
+    if (filter.dossierId)
+      where.push(`d.dossier_id=${parameter(filter.dossierId)}::uuid`);
+    if (filter.logicalId)
+      where.push(`d.logical_id=${parameter(filter.logicalId)}::uuid`);
+    if (filter.q) {
+      const literal = filter.q
+        .toLocaleLowerCase("fr")
+        .replace(/[\\%_]/g, "\\$&");
+      where.push(
+        `d.search_text LIKE ${parameter("%" + literal + "%")} ESCAPE '\\'`,
+      );
     }
-    const items = await Promise.all(
-      visible
-        .slice(filter.offset, filter.offset + filter.limit)
-        .map(async (ref) => ({
-          ...ref,
-          availability: (await this.read(ref)).availability,
-        })),
+    const from = `FROM cabinet_documents d JOIN cabinet_records r ON r.id=d.dossier_id AND r.kind='dossier' WHERE ${where.join(" AND ")}`;
+    // Both statements enforce exactly the same current scope before count/page.
+    // Extracted text is never projected or transferred to the application here.
+    const totals = await tx.query(`SELECT count(*) AS total ${from}`, params);
+    const limit = parameter(filter.limit),
+      offset = parameter(filter.offset);
+    const rows = await tx.query(
+      `SELECT d.content ${from} ORDER BY d.logical_id,d.version LIMIT ${limit} OFFSET ${offset}`,
+      params,
     );
-    return { items, total: visible.length };
+    const items = await Promise.all(
+      rows.map(async (row) => {
+        const ref = DocumentReferenceSchema.parse(row.content);
+        return { ...ref, availability: (await this.read(ref)).availability };
+      }),
+    );
+    return { items, total: Number(totals[0]!.total) };
   }
+
   async download(tx: Connection, actor: SessionUser, id: string) {
     const document = await this.get(tx, actor, id),
       current = await this.actor(tx, actor);
@@ -309,7 +340,7 @@ export class DocumentStore {
       "export",
       await loadRecord(tx, document.dossierId),
     );
-    const result = await this.read(document);
+    const result = await this.read(document, true);
     if (result.availability === "missing")
       fail(
         410,
