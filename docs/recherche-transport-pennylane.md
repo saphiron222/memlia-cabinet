@@ -1,0 +1,33 @@
+# Transport du partage Pennylane — complément Task10
+
+Consultation publique du **17 octobre 2026** ; aucune installation, connexion fournisseur ou fixture exécutée. Cette note affine `recherche-protocoles-collecte-publics.md` : la limite « transport SQL non acquis » reste vraie pour **l’entrepôt effectif du cabinet**, mais un parcours public **Redshift/ODBC** est désormais acquis, au-delà d’un faux `query()`.
+
+## Faits : deux contextes Pennylane
+
+| Publication | Contrat effectivement publié |
+| --- | --- |
+| [Démarrage technique actuel](https://data-sharing.pennylane.com/docs/en/getting_started.html), sans version affichée | JDBC/Python/ODBC possibles, sans nom/version/lien de pilote ; mention explicite de **ClickHouse** dans les performances SQL. Activation fournit serveur, port, base, utilisateur, mot de passe. Droits par utilisateur/schéma ; une connexion par entrepôt, parfois deux. Aucun protocole réseau HTTP/TCP précis, TLS, DSN ou format de paquet ClickHouse acquis. |
+| [Power BI, 26 juillet 2026, étapes 2–3](https://help.pennylane.com/fr/articles/18737-integrer-vos-donnees-pennylane-dans-microsoft-power-bi) | Sélectionner **Amazon Redshift**, puis serveur/base/utilisateur/mot de passe. Ce n’est pas seulement une indication d’un formulaire tiers. |
+| [Lien ODBC, 25 novembre 2024, prérequis/téléchargement](https://help.pennylane.com/fr/articles/241000-lien-odbc-comptabilite) | Nomme la base **Redshift**, lie les pilotes AWS Windows/Linux/macOS ; fichiers ODC générés dans Pennylane. Article destiné aux comptables en entreprise, proposant Pennylane Connect aux cabinets. Son affirmation ancienne d’accès à tous dossiers ne remplace pas les permissions granulaires du guide actuel. |
+
+**Non résolu :** migration, coexistence ou documentation ancienne ? Aucune de ces pages ne permet d’attribuer un moteur/version au cabinet. ODBC/JDBC sont des interfaces applicatives ; leur seule mention ne définit pas les octets échangés ni un HTTP accessible.
+
+## Contrat pilote acquis pour la variante Redshift
+
+Les liens Pennylane aboutissent aux pages AWS **ODBC 1.x**, proposant 64 bits **1.6.3** ; le PDF de configuration lié répond 403 dans l’outil de lecture. AWS publie séparément **ODBC 2.x, 2.2.4.0** ; aucune compatibilité Pennylane avec cette version précise n’est certifiée ici. [Lien1.x](https://docs.aws.amazon.com/fr_fr/redshift/latest/mgmt/odbc-driver-windows-how-to-install.html), [PDF lié indisponible](https://docs.aws.amazon.com/redshift/latest/mgmt/configure-odbc-connection.html), [2.2.4.0](https://docs.aws.amazon.com/redshift/latest/mgmt/odbc20-install-win.html).
+
+| Frontière | Faits AWS/standard utilisables localement |
+| --- | --- |
+| Connexion ODBC 2.x | DSN ou chaîne : `Driver`/`DSN`, `Server` (`HostName`/`Host`), `Port`, `Database`, `UID`/`User`, `PWD`/`Password`. Authentification standard utilisateur/mot de passe ; `ReadOnly=1`. `SSLMode=verify-full` vérifie CA et nom serveur ; défaut `verify-ca`, `Min_TLS` défaut 1.2. Ce sont des options **AWS**, pas des paramètres Pennylane reçus. [Options2.x](https://docs.aws.amazon.com/redshift/latest/mgmt/odbc20-configuration-options.html). |
+| Résultats typés | `BIGINT→SQL_BIGINT`, `BOOLEAN→SQL_BIT`, `DATE→SQL_TYPE_DATE`, `DECIMAL→SQL_NUMERIC`, `DOUBLE PRECISION→SQL_DOUBLE`, `TIMESTAMP→SQL_TYPE_TIMESTAMP`, `VARCHAR→SQL_VARCHAR`. [Conversions2.x](https://docs.aws.amazon.com/redshift/latest/mgmt/odbc20-converting-data-types.html). Préserver grands identifiants/décimaux, NULL et fuseau absent. |
+| Interface standard | `SQLDriverConnect` avec `SQL_DRIVER_NOPROMPT` ; diagnostics `SQLGetDiagRec`, notamment 08001/08S01/28000/HYT00. `SQLFetch` parcourt les lignes, `SQL_NO_DATA` termine ; `SQL_SUCCESS_WITH_INFO` peut signaler troncature. [Connexion ODBC](https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqldriverconnect-function), [Fetch](https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlfetch-function), [GetData/NULL](https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlgetdata-function). |
+
+**Transport vérifiable par source officielle :** le pilote AWS2.2.4, révision `56d35297f9bee0cc31c0148581c87ca455639a39`, utilise `PQconnectdbParams`, la version de protocole 3.0 et décode `RowDescription`, `DataRow`, `ErrorResponse`, `ReadyForQuery`. Son intégration distingue valeur vide/NULL et type OID. [Connexion](https://github.com/aws/amazon-redshift-odbc-driver/blob/56d35297f9bee0cc31c0148581c87ca455639a39/src/pgclient/src/interfaces/libpq/fe-connect.c#L1788), [messages](https://github.com/aws/amazon-redshift-odbc-driver/blob/56d35297f9bee0cc31c0148581c87ca455639a39/src/pgclient/src/interfaces/libpq/fe-protocol3.c), [adaptation ODBC](https://github.com/aws/amazon-redshift-odbc-driver/blob/56d35297f9bee0cc31c0148581c87ca455639a39/src/odbc/rsodbc/rslibpq.c). La source accepte notamment les challenges mot de passe et MD5 ; cela ne prouve pas le challenge configuré chez Pennylane. [Authentification figée](https://github.com/aws/amazon-redshift-odbc-driver/blob/56d35297f9bee0cc31c0148581c87ca455639a39/src/pgclient/src/interfaces/libpq/fe-auth.c#L820). Cela ne rend pas officiellement interchangeable un client PostgreSQL quelconque.
+
+## Proposition locale défendable, non décidée
+
+Construire un collecteur exécutant réellement **le pilote AWS ODBC retenu et figé**, via gestionnaire ODBC, contre un **serveur de fixture TCP/TLS local** reproduisant le sous-ensemble de messages de cette révision, y compris initialisation et sondes réellement émises. Port, certificat et identités seraient fictifs ; aucun port fournisseur présumé. Commencer par un SELECT borné sur une société, métadonnées et lignes des tables fiscales documentées. Une imitation de l’API ODBC seule ne prouverait pas le transport.
+
+Scénarios à construire : authentification refusée, certificat/nom invalide, permission refusée, NULL/chaîne vide/zéro, grands bigint/décimaux, plusieurs lots, interruption au milieu d’une ligne, erreur serveur après des lignes. Ne valider un lot qu’après sa fin complète ; reprendre par nouvelle requête bornée/déduplication durable. Aucun curseur réseau ou session ODBC ne constitue un checkpoint fournisseur persistant garanti.
+
+Cette fixture prouverait le chemin application→gestionnaire→pilote→socket/TLS→résultat, **pour cette variante locale**. Restent non acquis : moteur réel, pilote/version accordés, paramètres TLS/réseau, permissions effectives, rétention/snapshot/reprise source et limites chiffrées. Pas de contrat transport ClickHouse supplémentaire trouvé ; pas d’HTTP supposé ouvert. La configuration et la recette cabinet détermineront la variante applicable.
