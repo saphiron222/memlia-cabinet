@@ -120,7 +120,11 @@ test("manual and timer time retain nature, explicit task link, seconds, replay s
     natureId: nature.id,
     link: { kind: "record", id: t.id },
   };
-  const started = await f.request("POST", "/time/timers/start", start);
+  const [started, concurrentStart] = await Promise.all([
+    f.request("POST", "/time/timers/start", start),
+    f.request("POST", "/time/timers/start", start),
+  ]);
+  expect(concurrentStart.json()).toEqual(started.json());
   expect(started.statusCode, started.body).toBe(200);
   const timer = started.json();
   const another = await f.request("POST", "/time/timers/start", {
@@ -211,7 +215,7 @@ test("dated forfait late activity, midmonth change, weighted role collaborators 
       email: "second@example.test",
       name: "Deuxième fictif",
       password: "UnMotDePasseFictif123!",
-      permissions: [],
+      permissions: [{ action: "read", kind: "*", dossierId: null }],
     })
   ).json();
   const roleResponse = await f.request("POST", "/administration/roles", {
@@ -310,4 +314,183 @@ test("dated forfait late activity, midmonth change, weighted role collaborators 
     capacityMinutes: 4620,
     capacitySource: "individual",
   });
+  const login = await f.request(
+    "POST",
+    "/login",
+    { email: "second@example.test", password: "UnMotDePasseFictif123!" },
+    "",
+  );
+  const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+  const own = await f.request(
+    "GET",
+    `/time/workload?from=2026-10-01&to=2026-10-31&userId=${person.id}`,
+    undefined,
+    cookie,
+  );
+  expect(own.statusCode, own.body).toBe(200);
+  expect(own.json().people[0].plannedMinutes).toBe(190);
+  expect(own.body).not.toContain(actor.id);
+});
+test("reassignment preview changes both totals once, commit checks versions, and exit contains all time history", async () => {
+  const { actor, t } = await start();
+  const second = (
+    await f.request("POST", "/users", {
+      operationId: operationId(),
+      email: "move@example.test",
+      name: "Réaffecté fictif",
+      password: "UnMotDePasseFictif123!",
+      permissions: [],
+    })
+  ).json();
+  const a = await save({
+    kind: "allocation",
+    target: { kind: "record", id: t.id },
+    from: "2026-10-01",
+    to: "2026-10-31",
+    weights: [{ userId: actor.id, weight: 1 }],
+    policyVersion: 1,
+  });
+  await save({
+    kind: "plan",
+    level: "occurrence",
+    targetId: t.id,
+    minutes: 45,
+    component: "variable",
+  });
+  const input = {
+    allocationId: a.id,
+    expectedVersion: a.version,
+    from: "2026-10-01",
+    to: "2026-10-31",
+    weights: [{ userId: second.id, weight: 1 }],
+  };
+  const preview = await f.request("POST", "/time/reassignment/preview", input);
+  expect(preview.statusCode, preview.body).toBe(200);
+  expect(
+    preview.json().after.people.find((p: { id: string }) => p.id === second.id)
+      .plannedMinutes,
+  ).toBe(45);
+  const commit = {
+    ...input,
+    sourceVersions: preview.json().sourceVersions,
+    operationId: operationId(),
+  };
+  const saved = await f.request("POST", "/time/reassignment/commit", commit);
+  expect(saved.statusCode, saved.body).toBe(200);
+  expect(
+    (await f.request("POST", "/time/reassignment/commit", commit)).json(),
+  ).toEqual(saved.json());
+  const w = (
+    await f.request("GET", "/time/workload?from=2026-10-01&to=2026-10-31")
+  ).json();
+  expect(
+    w.people.find((p: { id: string }) => p.id === actor.id).plannedMinutes,
+  ).toBe(0);
+  expect(
+    w.people.find((p: { id: string }) => p.id === second.id).plannedMinutes,
+  ).toBe(45);
+  const run = (
+    await f.request("POST", "/administration/exports", {
+      operationId: operationId(),
+    })
+  ).json();
+  for (let i = 0; i < 200; i++) {
+    const r = (
+      await f.request("GET", `/administration/exports/${run.id}`)
+    ).json();
+    if (r.job.state === "completed") break;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  const manifest = (
+    await f.request("GET", `/administration/exports/${run.id}/download`)
+  ).json();
+  expect(manifest.parts).toBeDefined();
+  const all = [];
+  for (const p of manifest.parts) {
+    const r = await f.request("GET", p.downloadUrl.replace("/api/v1", ""));
+    expect(r.statusCode, r.body).toBe(200);
+    all.push(...r.json().time);
+  }
+  expect(
+    all
+      .filter((x) => x.data.id === a.id)
+      .map((x) => [x.entity, x.data.version])
+      .sort(),
+  ).toEqual([
+    ["current", 2],
+    ["history", 1],
+    ["history", 2],
+  ]);
+});
+test("CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights", async () => {
+  const { actor, parent, t } = await start();
+  const nature = await save({ kind: "nature", name: "Contrôle", active: true });
+  const entry = await save({
+    kind: "entry",
+    date: "2026-10-17",
+    userId: actor.id,
+    natureId: nature.id,
+    link: { kind: "record", id: t.id },
+    seconds: 1234,
+    source: "manual",
+    timerId: null,
+    rate: null,
+  });
+  const command = {
+    operationId: operationId(),
+    query: { from: "2026-10-01", to: "2026-10-31" },
+  };
+  const run = await f.request("POST", "/time/exports", command);
+  expect(run.statusCode, run.body).toBe(202);
+  const id = run.json().id;
+  let result;
+  for (let i = 0; i < 100; i++) {
+    result = await f.request("GET", "/time/exports/" + id);
+    if (result.json().job.state === "completed") break;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  expect(result!.json().job.state, result!.body).toBe("completed");
+  const csv = await f.request("GET", `/time/exports/${id}/parts/1`);
+  expect(csv.statusCode, csv.body).toBe(200);
+  expect(csv.body).toContain("1234");
+  expect(csv.body).toContain(entry.id);
+  expect(
+    (await f.request("GET", "/time/targets?kind=tache&q=Bilan")).json().items,
+  ).toContainEqual({ id: t.id, kind: "record", label: t.title });
+  expect(
+    (await f.request("GET", "/time/" + entry.id + "/history")).json().items,
+  ).toHaveLength(1);
+  const changed = await f.request("PUT", "/records/" + parent.id, {
+    operationId: operationId(),
+    expectedVersion: parent.version,
+    record: {
+      kind: "dossier",
+      title: parent.title,
+      confidential: true,
+      data: parent.data,
+    },
+  });
+  expect(changed.statusCode, changed.body).toBe(200);
+  await f.maintainDatabase(async (db) => {
+    await db.transaction(async (tx) => {
+      await tx.query(
+        "UPDATE cabinet_users SET permissions=(SELECT jsonb_agg(p) FROM jsonb_array_elements(permissions) p WHERE p->>'action'<>'confidential') WHERE id=$1",
+        [actor.id],
+      );
+    });
+  });
+  expect(
+    (
+      await f.request("GET", "/time/report?from=2026-10-01&to=2026-10-31")
+    ).json().total,
+  ).toBe(0);
+  expect(
+    (await f.request("GET", `/time/exports/${id}/parts/1`)).statusCode,
+  ).toBe(404);
+  expect((await f.request("POST", "/time/exports", command)).statusCode).toBe(
+    404,
+  );
+  expect(
+    (await f.request("GET", "/time/" + entry.id + "/history")).statusCode,
+  ).toBe(404);
 });

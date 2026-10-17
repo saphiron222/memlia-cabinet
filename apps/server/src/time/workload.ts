@@ -49,13 +49,26 @@ export async function calculateWorkload(
   tx: Connection,
   actor: SessionUser,
   q: TimeQuery,
+  override?: TimeEntity,
 ) {
   period(q);
   if (q.userId && q.userId !== actor.id && !readsOthers(actor))
     fail(404, "NOT_FOUND", "Utilisateur inaccessible.");
-  const config = (await entities(tx, actor)).filter(
-    (e) => e.data.kind !== "entry" && e.data.kind !== "timer",
-  );
+  const calculationActor: SessionUser = readsOthers(actor)
+    ? actor
+    : {
+        ...actor,
+        permissions: [
+          ...actor.permissions,
+          { action: "time_read", kind: "*", dossierId: null },
+        ],
+      };
+  const baseConfig = await entities(tx, calculationActor);
+  const config = (
+    override
+      ? baseConfig.map((e) => (e.id === override.id ? override : e))
+      : baseConfig
+  ).filter((e) => e.data.kind !== "entry" && e.data.kind !== "timer");
   const days = dates(q.from, q.to),
     params: unknown[] = [];
   const p = (v: unknown) => {
@@ -289,7 +302,12 @@ export async function calculateWorkload(
                 : [],
             ),
             sum = weights.reduce((s, w) => s + w.weight, 0);
-          for (const a of assignments) versions[a.id] = a.version;
+          for (const a of assignments)
+            if (
+              readsOthers(actor) ||
+              (a.data.kind === "assignment" && a.data.userId === actor.id)
+            )
+              versions[a.id] = a.version;
           if (!sum) add("", BigInt(d.monthlyMinutes), BigInt(denominator));
           else
             for (const w of weights)
@@ -336,7 +354,7 @@ export async function calculateWorkload(
       }
     }
   // Actual attribution is the author of the entry, never rewritten by a new allocation.
-  const actual = await entities(tx, actor, "entry");
+  const actual = await entities(tx, actor, "entry", "read", q);
   for (const e of actual) {
     if (e.data.kind !== "entry" || e.data.date < q.from || e.data.date > q.to)
       continue;
@@ -412,7 +430,10 @@ export async function calculateWorkload(
   const ids = new Set(users.map((u) => String(u.id)));
   const visible = rows.filter(
     (r) =>
-      (!r.userId || ids.has(r.userId)) && (!q.userId || r.userId === q.userId),
+      (readsOthers(actor)
+        ? !r.userId || ids.has(r.userId)
+        : r.userId === actor.id) &&
+      (!q.userId || r.userId === q.userId),
   );
   const people = users
     .filter((u) => !q.userId || u.id === q.userId)

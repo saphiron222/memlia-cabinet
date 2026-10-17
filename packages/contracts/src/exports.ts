@@ -1,4 +1,5 @@
-import {ProductionExportSchema} from "./production.js";
+import { TimeExportSchema } from "./time.js";
+import { ProductionExportSchema } from "./production.js";
 import { WorkflowExportSchema } from "./workflows.js";
 import { FiscalTimelineEntrySchema } from "./fiscal.js";
 import { z } from "zod";
@@ -13,7 +14,8 @@ export const CabinetExportSchema = z.object({
     "objets autorisés actifs et archivés, avec leurs références documentaires",
   ),
   records: z.array(CabinetRecordSchema),
-  production:z.array(ProductionExportSchema).default([]),
+  time: z.array(TimeExportSchema).default([]),
+  production: z.array(ProductionExportSchema).default([]),
   workflows: z.array(WorkflowExportSchema).default([]),
   fiscalEvents: z.array(FiscalTimelineEntrySchema).default([]),
   customFields: z.array(CustomFieldSchema),
@@ -49,6 +51,7 @@ export const ExportCommandSchema = z
   .strict();
 
 export const ExportManifestSchema = CabinetExportSchema.omit({
+  time: true,
   production: true,
   workflows: true,
   fiscalEvents: true,

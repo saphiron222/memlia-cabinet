@@ -246,6 +246,8 @@ CREATE TABLE cabinet_time (id uuid PRIMARY KEY,kind text NOT NULL,content jsonb 
 CREATE TABLE cabinet_time_history (id uuid NOT NULL REFERENCES cabinet_time(id),version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
 CREATE UNIQUE INDEX cabinet_time_active_timer ON cabinet_time((content->'data'->>'userId')) WHERE kind='timer' AND content->'data'->>'stoppedAt' IS NULL;
 CREATE INDEX cabinet_time_kind ON cabinet_time(kind,id);
+CREATE TABLE cabinet_time_csv(id uuid PRIMARY KEY,actor_id uuid NOT NULL REFERENCES cabinet_users(id),job_id uuid NOT NULL REFERENCES cabinet_jobs(id),query jsonb NOT NULL);
+CREATE TABLE cabinet_time_csv_rows(export_id uuid NOT NULL REFERENCES cabinet_time_csv(id),id uuid NOT NULL,part integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(export_id,id));
 ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
 ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production','time'));
 INSERT INTO schema_migrations(version) VALUES(11);

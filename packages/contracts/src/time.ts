@@ -242,14 +242,88 @@ export const WorkloadSchema = z.object({
   unknownPlans: z.number().int(),
 });
 export const TimeOptionsSchema = z.object({
+  roles: z.array(z.object({ id: z.uuid(), name: z.string() })).max(200),
+  groups: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        name: z.string(),
+        kind: z.enum(["team", "site"]),
+      }),
+    )
+    .max(200),
   canManage: z.boolean(),
   canReadOthers: z.boolean(),
   canLock: z.boolean(),
   users: z.array(z.object({ id, name: z.string() })).max(200),
   natures: z.array(TimeEntitySchema).max(200),
 });
-export const TimeExportSchema = z.object({
-  id,
-  entity: z.enum(["current", "history"]),
-  data: TimeEntitySchema,
+export const TimeExportSchema = z.discriminatedUnion("entity", [
+  z.object({
+    id: z.uuid(),
+    entity: z.enum(["current", "history"]),
+    data: TimeEntitySchema,
+  }),
+  z.object({
+    id: z.uuid(),
+    entity: z.literal("csv"),
+    data: z.object({
+      id: z.uuid(),
+      actorId: z.uuid(),
+      jobId: z.uuid(),
+      query: TimeQuerySchema,
+    }),
+  }),
+  z.object({
+    id: z.uuid(),
+    entity: z.literal("csv_row"),
+    data: z.object({
+      exportId: z.uuid(),
+      part: z.number().int(),
+      entry: TimeEntitySchema,
+    }),
+  }),
+]);
+export const TimeReassignmentSchema = z
+  .object({
+    allocationId: z.uuid(),
+    expectedVersion: z.number().int().positive(),
+    from: CivilDateSchema,
+    to: CivilDateSchema,
+    weights: z
+      .array(
+        z.object({
+          userId: z.uuid(),
+          weight: z.number().int().min(1).max(10000),
+        }),
+      )
+      .min(1)
+      .max(100),
+    sourceVersions: z.record(z.string(), z.number().int()).optional(),
+    operationId: z.uuid().optional(),
+  })
+  .strict();
+export const TimeReassignmentPreviewSchema = z.object({
+  before: WorkloadSchema,
+  after: WorkloadSchema,
+  sourceVersions: z.record(z.string(), z.number().int()),
+});
+export const TimeTargetsSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      kind: z.enum(["record", "production"]),
+      label: z.string(),
+    }),
+  ),
+  hasMore: z.boolean(),
+});
+import { JobSchema } from "./jobs.js";
+export const TimeCsvCommandSchema = z
+  .object({ operationId: z.uuid(), query: TimeQuerySchema })
+  .strict();
+export const TimeCsvRunSchema = z.object({
+  id: z.uuid(),
+  job: JobSchema,
+  parts: z.number().int().default(0),
 });

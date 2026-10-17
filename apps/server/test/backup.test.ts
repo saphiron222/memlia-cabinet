@@ -472,6 +472,179 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         })
       ).json().preparation;
       expect(preparationBefore).toHaveLength(1);
+      const timeSave = async (
+        data: Record<string, unknown>,
+        prior?: { id: string; version: number },
+      ) => {
+        const r = await app!.inject({
+          method: "POST",
+          url: "/api/v1/time/entities",
+          headers: { origin, cookie },
+          payload: {
+            id: prior?.id ?? randomUUID(),
+            expectedVersion: prior?.version ?? 0,
+            operationId: randomUUID(),
+            data,
+          },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        return r.json();
+      };
+      const timeRoleResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/administration/roles",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          name: "Rôle temps sauvegardé",
+          order: 10,
+          permissions: [],
+        },
+      });
+      expect(timeRoleResponse.statusCode, timeRoleResponse.body).toBe(201);
+      const timeRole = timeRoleResponse.json();
+      const timeActor = setup.json().user.id,
+        timeNature = await timeSave({
+          kind: "nature",
+          name: "Nature restaurée",
+          active: true,
+        });
+      const timeSaved = [timeNature];
+      for (const data of [
+        {
+          kind: "plan",
+          level: "occurrence",
+          targetId: linked.id,
+          minutes: 120,
+          component: "variable",
+        },
+        {
+          kind: "capacity",
+          userId: null,
+          from: "2026-01-01",
+          to: null,
+          dailyMinutes: [420, 420, 420, 420, 420, 0, 0],
+        },
+        {
+          kind: "rate",
+          userId: null,
+          from: "2026-01-01",
+          to: null,
+          hourlyAmount: "99.99",
+          currency: "EUR",
+        },
+        {
+          kind: "forfait",
+          dossierId: record.id,
+          roleId: timeRole.id,
+          from: "2026-01-01",
+          to: null,
+          activityStart: "2026-01-01",
+          monthlyMinutes: 310,
+          amount: "1250.01",
+          currency: "EUR",
+          prorating: "calendar_days",
+          policyVersion: 1,
+        },
+        {
+          kind: "assignment",
+          dossierId: record.id,
+          roleId: timeRole.id,
+          userId: timeActor,
+          from: "2026-01-01",
+          to: null,
+          weight: 1,
+          policyVersion: 1,
+        },
+        {
+          kind: "allocation",
+          target: { kind: "record", id: linked.id },
+          from: "2026-01-01",
+          to: null,
+          weights: [{ userId: timeActor, weight: 1 }],
+          policyVersion: 1,
+        },
+        {
+          kind: "entry",
+          userId: timeActor,
+          date: "2026-10-17",
+          natureId: timeNature.id,
+          link: { kind: "record", id: linked.id },
+          seconds: 1234,
+          source: "manual",
+          timerId: null,
+          rate: null,
+        },
+        {
+          kind: "period",
+          from: "2025-01-01",
+          to: "2025-12-31",
+          closed: true,
+          reason: "Clôture fictive historique",
+        },
+      ])
+        timeSaved.push(await timeSave(data));
+      const timeTimer = await app.inject({
+        method: "POST",
+        url: "/api/v1/time/timers/start",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          date: "2026-10-17",
+          natureId: timeNature.id,
+          link: { kind: "record", id: linked.id },
+        },
+      });
+      expect(timeTimer.statusCode, timeTimer.body).toBe(200);
+      timeSaved.push(timeTimer.json());
+      const timeCsv = await app.inject({
+        method: "POST",
+        url: "/api/v1/time/exports",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          query: { from: "2026-10-01", to: "2026-10-31" },
+        },
+      });
+      expect(timeCsv.statusCode, timeCsv.body).toBe(202);
+      const timeCsvId = timeCsv.json().id;
+      for (let i = 0; i < 200; i++) {
+        const r = await app.inject({
+          url: "/api/v1/time/exports/" + timeCsvId,
+          headers: { cookie },
+        });
+        if (r.json().job?.state === "completed") break;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      const timeCsvBefore = await app.inject({
+        url: "/api/v1/time/exports/" + timeCsvId + "/parts/1",
+        headers: { cookie },
+      });
+      expect(timeCsvBefore.statusCode, timeCsvBefore.body).toBe(200);
+      timeSaved.push(
+        await timeSave(
+          { kind: "nature", name: "Nature restaurée", active: false },
+          timeNature,
+        ),
+      );
+      const timeBefore = [];
+      for (const e of timeSaved)
+        timeBefore.push(
+          (
+            await app.inject({
+              url: "/api/v1/time/" + e.id + "/history",
+              headers: { cookie },
+            })
+          ).json(),
+        );
+      const timeReportBefore = (
+        await app.inject({
+          url:
+            "/api/v1/time/report?from=2026-10-01&to=2026-10-31&recordId=" +
+            linked.id,
+          headers: { cookie },
+        })
+      ).json();
       const options = {
         dataDirectory: source.dataDirectory,
         configFile: join(root, "config.json"),
@@ -642,6 +815,30 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(logged.statusCode).toBe(200);
       cookie = String(logged.headers["set-cookie"]).split(";")[0]!;
+      const timeCsvAfter = await app.inject({
+        url: "/api/v1/time/exports/" + timeCsvId + "/parts/1",
+        headers: { cookie },
+      });
+      expect(timeCsvAfter.statusCode, timeCsvAfter.body).toBe(200);
+      expect(timeCsvAfter.body).toBe(timeCsvBefore.body);
+      for (let i = 0; i < timeSaved.length; i++) {
+        const r = await app.inject({
+          url: "/api/v1/time/" + timeSaved[i]!.id + "/history",
+          headers: { cookie },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        expect(r.json()).toEqual(timeBefore[i]);
+      }
+      expect(
+        (
+          await app.inject({
+            url:
+              "/api/v1/time/report?from=2026-10-01&to=2026-10-31&recordId=" +
+              linked.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(timeReportBefore);
       expect(
         (
           await app.inject({

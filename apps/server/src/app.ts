@@ -325,7 +325,7 @@ export async function createApplication(options: ApplicationOptions) {
   registerNotificationRoutes(app, { db, now, user }, reminders);
   registerProductionRoutes(app, { db, now, user }, jobs, civilDate);
   registerStageImportRoutes(app, { db, now, user }, importParser);
-  registerTimeRoutes(app, { db, now, user });
+  registerTimeRoutes(app, { db, now, user }, jobs);
   registerWorkflowRoutes(app, { db, now, user }, jobs, civilDate);
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });

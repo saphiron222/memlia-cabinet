@@ -1,3 +1,5 @@
+import { timeExportPage, assertTimeExport } from "../time/export.js";
+import { TimeExportSchema } from "@memlia/contracts";
 import {
   ProductionGridExport,
   GridExportCommandSchema,
@@ -52,6 +54,7 @@ const checkpointSchema = z.object({
     "fiscal",
     "workflows",
     "production",
+    "time",
     "documents",
     "complete",
   ]),
@@ -59,6 +62,7 @@ const checkpointSchema = z.object({
   bytes: z.number().int().nonnegative(),
   records: z.number().int().nonnegative(),
   documents: z.number().int().nonnegative(),
+  time: z.number().int().nonnegative().default(0),
   production: z.number().int().nonnegative().default(0),
   workflows: z.number().int().nonnegative().default(0),
   fiscal: z.number().int().nonnegative().default(0),
@@ -66,6 +70,7 @@ const checkpointSchema = z.object({
   partBytes: z.number().int().nonnegative(),
 });
 const headerSchema = CabinetExportSchema.omit({
+  time: true,
   production: true,
   workflows: true,
   fiscalEvents: true,
@@ -117,6 +122,7 @@ export class Exports {
         fiscal: 0,
         workflows: 0,
         production: 0,
+        time: 0,
         part: 1,
         partBytes: 2048,
       },
@@ -215,6 +221,8 @@ export class Exports {
                     )
                   ).map((r) => CabinetRecordSchema.parse(r.content));
                 }
+                if (prior.phase === "time")
+                  return timeExportPage(tx, actor, prior.after);
                 if (prior.phase === "production")
                   return productionExportPage(
                     tx,
@@ -310,7 +318,9 @@ export class Exports {
                       ? prior.workflows
                       : prior.phase === "production"
                         ? prior.production
-                        : prior.documents) +
+                        : prior.phase === "time"
+                          ? prior.time
+                          : prior.documents) +
                 index +
                 1,
               id: value.id,
@@ -323,7 +333,9 @@ export class Exports {
                       ? "workflow"
                       : prior.phase === "production"
                         ? "production"
-                        : "document",
+                        : prior.phase === "time"
+                          ? "time"
+                          : "document",
               content: value,
             }));
             for (const field of fields) {
@@ -386,6 +398,7 @@ export class Exports {
                 prior.fiscal +
                 prior.workflows +
                 prior.production +
+                prior.time +
                 page.length >
               400_000
             )
@@ -413,8 +426,11 @@ export class Exports {
                     : prior.phase === "workflows"
                       ? "production"
                       : prior.phase === "production"
-                        ? "documents"
-                        : "complete",
+                        ? "time"
+                        : prior.phase === "time"
+                          ? "documents"
+                          : "complete",
+              time: prior.time + (prior.phase === "time" ? page.length : 0),
               production:
                 prior.production +
                 (prior.phase === "production" ? page.length : 0),
@@ -432,7 +448,12 @@ export class Exports {
             // Durable pages remain small; the bounded journal records milestones,
             // including the extra production phase, rather than every 100-row page.
             const total = (c: typeof next) =>
-              c.records + c.documents + c.fiscal + c.workflows + c.production;
+              c.records +
+              c.documents +
+              c.fiscal +
+              c.workflows +
+              c.production +
+              c.time;
             await ctx.commit(
               next,
               next.phase !== prior.phase
@@ -556,6 +577,17 @@ export class Exports {
           ProductionExportSchema.parse(row.content),
         );
       afterProduction = String(page.at(-1)!.id);
+    }
+    let afterTime: string | null = null;
+    while (true) {
+      const page: Record<string, unknown>[] = await tx.query(
+        "SELECT id,content FROM cabinet_export_rows WHERE export_id=$1 AND kind='time' AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",
+        [id, afterTime],
+      );
+      if (!page.length) break;
+      for (const row of page)
+        await assertTimeExport(tx, actor, TimeExportSchema.parse(row.content));
+      afterTime = String(page.at(-1)!.id);
     }
     let afterDocument: string | null = null;
     while (true) {
@@ -975,6 +1007,7 @@ export class Exports {
       ...headerSchema.parse(stored.content),
       records,
       customFields,
+      time: rows.filter((r) => r.kind === "time").map((r) => r.content),
       production: rows
         .filter((r) => r.kind === "production")
         .map((r) => r.content),

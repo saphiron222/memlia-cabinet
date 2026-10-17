@@ -61,6 +61,7 @@ export async function entities(
   actor: SessionUser,
   kind?: string,
   action: "read" | "export" = "read",
+  dates?: { from: string; to: string },
 ) {
   const params: unknown[] = [],
     p = (v: unknown) => {
@@ -70,7 +71,7 @@ export async function entities(
   const cte = scopeCte(actor, p, action),
     filter = fullScope(actor, p, "t.content", action);
   const rows = await tx.query(
-    `${cte} SELECT t.content FROM cabinet_time t WHERE ${filter}${kind ? ` AND t.kind=${p(kind)}` : ""} ORDER BY t.id LIMIT 20001`,
+    `${cte} SELECT t.content FROM cabinet_time t WHERE ${filter}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT 20001`,
     params,
   );
   if (rows.length > 20000)
@@ -208,6 +209,12 @@ export async function save(
       400,
       "TIMER_COMMAND_REQUIRED",
       "Utilisez les commandes du chronomètre.",
+    );
+  if (old?.data.kind === "entry" && old.data.source === "timer")
+    fail(
+      409,
+      "TIMER_IMMUTABLE",
+      "Une saisie issue du chronomètre conserve sa mesure originale.",
     );
   if (i.data.kind === "period") requireGlobal(actor, "time_lock");
   else if (i.data.kind !== "entry") requireGlobal(actor, "time_manage");
@@ -428,8 +435,9 @@ export async function report(
   }
   if (q.dossierId) {
     await requireAccess(tx, actor, action, await loadRecord(tx, q.dossierId));
+    const dossier = p(q.dossierId);
     filters.push(
-      `(t.content->'data'->'link'->>'kind'='record' AND EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(t.content->'data'->'link'->>'id')::uuid AND (r.id=${p(q.dossierId)}::uuid OR r.content->>'dossierId'=${p(q.dossierId)})))`,
+      `(CASE t.content->'data'->'link'->>'kind' WHEN 'record' THEN EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(t.content->'data'->'link'->>'id')::uuid AND (r.id=${dossier}::uuid OR r.content->>'dossierId'=${dossier})) WHEN 'production' THEN EXISTS(SELECT 1 FROM cabinet_production_rows pr LEFT JOIN cabinet_records related ON related.id=pr.record_id WHERE pr.id=(t.content->'data'->'link'->>'id')::uuid AND ((pr.content->'target'->>'kind'='dossier' AND pr.content->'target'->>'id'=${dossier}) OR related.content->>'dossierId'=${dossier} OR pr.content->'scope'->>'id'=${dossier})) ELSE FALSE END)`,
     );
   }
   if (q.groupId)
@@ -457,5 +465,38 @@ export async function report(
     entries: rows.map((r) => TimeEntitySchema.parse(r.content)),
     total: Number(totals.total),
     hasMore: q.offset + rows.length < Number(totals.total),
+  };
+}
+export async function targets(
+  tx: Connection,
+  actor: SessionUser,
+  kind: string,
+  q: string,
+  offset: number,
+) {
+  const params: unknown[] = [],
+    p = (v: unknown) => {
+      params.push(v);
+      return "$" + params.length;
+    };
+  const cte = scopeCte(actor, p);
+  const pattern = p("%" + q.replace(/[\\%_]/g, "\\$&") + "%");
+  const rows =
+    kind === "production"
+      ? await tx.query(
+          `${cte} SELECT p.id,p.content->'target'->>'label' label FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND p.content->'target'->>'label' ILIKE ${pattern} ORDER BY p.id LIMIT 101 OFFSET ${p(offset)}`,
+          params,
+        )
+      : await tx.query(
+          `${cte} SELECT r.id,r.content->>'title' label FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND r.kind=${p(kind)} AND r.content->>'title' ILIKE ${pattern} ORDER BY r.id LIMIT 101 OFFSET ${p(offset)}`,
+          params,
+        );
+  return {
+    items: rows.slice(0, 100).map((r) => ({
+      id: r.id,
+      kind: kind === "production" ? "production" : "record",
+      label: r.label,
+    })),
+    hasMore: rows.length > 100,
   };
 }
