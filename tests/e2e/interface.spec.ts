@@ -273,6 +273,38 @@ test("interface : les grilles gardent filtres, droits, dates, retour et focus ; 
   await expect(page.getByPlaceholder("Rechercher le travail…")).toHaveValue(
     "Arpège",
   );
+  await expect(
+    page
+      .getByTestId("panel-card")
+      .getByRole("link", { name: "Réviser · Arpège Conseil", exact: true }),
+  ).toBeVisible();
+  await page.goto(
+    "/#calendrier?view=calendar&from=2026-01-01&to=2026-12-31&anchor=2026-10-17",
+  );
+  await expect(page.locator(".annual-month")).toHaveCount(12);
+  const october = page
+    .locator(".annual-month")
+    .filter({ hasText: "octobre 2026" });
+  const annual17 = october
+    .locator(".annual-day-button")
+    .filter({ hasText: /^17$/ });
+  await annual17.focus();
+  await annual17.press("ArrowRight");
+  await expect(october.locator(".annual-day-button:focus")).toHaveText("18");
+  await annual17.click();
+  await expect(
+    page.getByRole("heading", { name: "Échéances du 17/10/2026" }),
+  ).toBeVisible();
+  await page
+    .getByTestId("panel-card")
+    .getByRole("link", { name: "Réviser · Arpège Conseil", exact: true })
+    .click();
+  await page.getByRole("dialog").waitFor();
+  await expect(page).toHaveURL(/#calendrier\?.*view=calendar.*id=/);
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("tab", { name: "Année", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await page.goto("/#calendrier?view=month&anchor=2026-10-17");
   await page
     .getByRole("button", { name: "+2 événements", exact: true })

@@ -285,6 +285,16 @@
   ],
   "additionalLocalFiles": [
     {
+      "local": "apps/web/src/features/workflows/AnnualCalendar.tsx",
+      "sha256": "69fa45e3287bd70bb6239507afab8c161667f51781a5f2ec30331c97df228a8d",
+      "role": "Memlia annual composition of actual cal.diy Calendar/PanelCard and Plane KanbanCard; canonical page counts/date selection"
+    },
+    {
+      "local": "apps/web/src/features/workflows/Workflows.tsx",
+      "sha256": "7829544f622f61e6c8e21ea28dee4d9b75b066bcf2f7c2541d3fa90ed2f8e04d",
+      "role": "Canonical controller; task Weeks compose actual Cal PanelCard with Plane KanbanCard; annual uses AnnualCalendar"
+    },
+    {
       "local": "apps/web/src/upstream/twenty/table.css",
       "sha256": "067a5fb986d93a4f35a440edb9f99cc6ffd73529e8b515b1f854fc7531a30a12",
       "role": "Translated original Twenty table component style declarations"

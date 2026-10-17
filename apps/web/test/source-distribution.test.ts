@@ -72,6 +72,37 @@ test("corresponding source excludes private variants and verifies every archived
     "apps/web/public/test-results/private.png",
   ])
     write(path, "PRIVATE-CANARY");
+  for (const base of [
+    "apps/web/src",
+    "node_modules/@makeplane/propel",
+    "third-party/propel-0.7.3/editable-source",
+  ]) {
+    for (const path of [
+      ".env.production.local",
+      "credentials.json",
+      "cookies.json",
+      "storageState.json",
+      "database-url.txt",
+      "bootstrap-token.txt",
+      "secret.pem",
+      "debug.log",
+      "evidence/capture.txt",
+      "private/data.txt",
+      "secrets/value.txt",
+      "var/runtime.txt",
+      ".data/state.txt",
+      ".git/config",
+      "test-results/screen.png",
+      "playwright-report/index.html",
+      "node_modules/private.js",
+    ])
+      write(base + "/" + path, "PRIVATE-CANARY");
+  }
+  write(
+    "third-party/propel-0.7.3/editable-source/component.tsx",
+    "export const Edited = true;",
+  );
+  write("apps/web/vite.propel-source.config.ts", "export default {};");
   distributeSource(root, output);
   const archive = resolve(output, "source.tar.gz");
   const receipt = JSON.parse(
@@ -88,6 +119,13 @@ test("corresponding source excludes private variants and verifies every archived
     readFileSync(resolve(source, "source-manifest.json"), "utf8"),
   ) as { path: string; sha256: string }[];
   expect(manifest.length).toBe(receipt.files);
+  for (const required of [
+    "third-party/propel-0.7.3/LICENSE",
+    "third-party/propel-0.7.3/dist/component.js.map",
+    "third-party/propel-0.7.3/editable-source/component.tsx",
+    "apps/web/vite.propel-source.config.ts",
+  ])
+    expect(manifest.some((item) => item.path === required)).toBe(true);
   for (const item of manifest) {
     const data = readFileSync(resolve(source, item.path));
     expect(data.toString()).not.toContain("PRIVATE-CANARY");
@@ -110,6 +148,36 @@ test("corresponding source rejects symlinks before reading a file outside its ro
     resolve(root, "outside.txt"),
     resolve(root, "apps/web/src/linked.ts"),
   );
+  expect(() => distributeSource(root, output)).toThrow(
+    "Lien symbolique interdit",
+  );
+});
+
+for (const target of [
+  "node_modules/@makeplane/propel/linked.ts",
+  "third-party/propel-0.7.3/editable-source/linked.ts",
+  "apps/server/package.json",
+  "apps/web/vite.propel-source.config.ts",
+]) {
+  test("all source inputs refuse symlinks: " + target, () => {
+    const { root, output, write } = fixture();
+    write("outside.txt", "PRIVATE-CANARY");
+    write("third-party/propel-0.7.3/editable-source/component.tsx");
+    write("apps/web/vite.propel-source.config.ts");
+    mkdirSync(dirname(resolve(root, target)), { recursive: true });
+    rmSync(resolve(root, target), { force: true });
+    symlinkSync(resolve(root, "outside.txt"), resolve(root, target));
+    expect(() => distributeSource(root, output)).toThrow(
+      "Lien symbolique interdit",
+    );
+  });
+}
+
+test("source roots refuse symlink ancestors before following the server manifest", () => {
+  const { root, output, write } = fixture();
+  write("outside/package.json", "PRIVATE-CANARY");
+  rmSync(resolve(root, "apps/server"), { recursive: true });
+  symlinkSync(resolve(root, "outside"), resolve(root, "apps/server"));
   expect(() => distributeSource(root, output)).toThrow(
     "Lien symbolique interdit",
   );

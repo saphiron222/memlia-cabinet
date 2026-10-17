@@ -8,6 +8,8 @@ import {
 } from "../../upstream/twenty/Table";
 import { useInstallation } from "../administration/preferences";
 import { CalendarGrid } from "./CalendarGrid";
+import { AnnualCalendar } from "./AnnualCalendar";
+import { PanelCard } from "../../upstream/cal/PanelCard";
 import { Peek } from "../../interface/Peek";
 import { FiscalDetail } from "../fiscal/FiscalDetail";
 import { formatCivilDate } from "./civil";
@@ -273,7 +275,36 @@ export function Workflows({
       : Object.entries(stateLabels).map(([id, name]) => ({ id, name }));
   function event(r: CabinetRecord) {
     return (
-      <a className="work-event" aria-label={r.title} href={link(r)} key={r.id}>
+      <a
+        className="work-event"
+        data-state={
+          r.kind === "tache"
+            ? r.data.state
+            : r.kind === "obligation"
+              ? r.data.preparation
+              : undefined
+        }
+        aria-label={r.title}
+        href={link(r)}
+        key={r.id}
+        onClick={
+          calendar
+            ? (event) => {
+                if (
+                  event.button !== 0 ||
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                )
+                  return;
+                event.preventDefault();
+                setId(r.id);
+                setInspector(r);
+              }
+            : undefined
+        }
+      >
         <span className="work-date">{dateLabel(due(r))}</span>
         <span>{r.title}</span>
         <small>
@@ -684,7 +715,7 @@ export function Workflows({
               </div>
             )}
             {mode === "week" && (
-              <div className="work-week">
+              <div className="task-week-panels">
                 {[
                   ...new Set(
                     result.items.map((r) => {
@@ -700,12 +731,15 @@ export function Workflows({
                 ]
                   .sort()
                   .map((week) => (
-                    <section key={week}>
-                      <h3>
-                        {week === "Sans échéance"
+                    <PanelCard
+                      key={week}
+                      title={
+                        week === "Sans échéance"
                           ? week
-                          : "Semaine du " + dateLabel(week)}
-                      </h3>
+                          : "Semaine du " + dateLabel(week)
+                      }
+                      collapsible
+                    >
                       {result.items
                         .filter((r) => {
                           const d = due(r);
@@ -714,30 +748,21 @@ export function Workflows({
                           const value = new Date(d + "T00:00:00Z").getTime();
                           return value >= start && value < start + 7 * 86400000;
                         })
-                        .map(event)}
-                    </section>
+                        .map((r) => (
+                          <KanbanCard key={r.id}>{event(r)}</KanbanCard>
+                        ))}
+                    </PanelCard>
                   ))}
               </div>
             )}
             {mode === "calendar" && (
-              <div className="work-calendar" aria-label="Calendrier annuel">
-                {Array.from({ length: 12 }, (_, month) => (
-                  <section key={month}>
-                    <h3>
-                      {new Date(Number(year), month, 1).toLocaleString(
-                        "fr-FR",
-                        { month: "long" },
-                      )}
-                    </h3>
-                    {result.items
-                      .filter((r) => Number(due(r)?.slice(5, 7)) === month + 1)
-                      .map(event)}
-                    {!result.items.some(
-                      (r) => Number(due(r)?.slice(5, 7)) === month + 1,
-                    ) && <p className="muted">Aucune échéance</p>}
-                  </section>
-                ))}
-              </div>
+              <AnnualCalendar
+                key={year}
+                items={result.items}
+                year={year}
+                today={today}
+                renderEvent={event}
+              />
             )}
             <div className="pagination">
               <Button

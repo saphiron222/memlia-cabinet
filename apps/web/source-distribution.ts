@@ -41,73 +41,70 @@ export function distributeSource(root: string, output: string) {
     "docs/propel-source-rebuild.md",
   ];
   try {
-    for (const path of inputRoots) {
-      const target = resolve(destination, path);
-      mkdirSync(dirname(target), { recursive: true });
-      cpSync(resolve(root, path), target, {
-        recursive: true,
-        filter: (source) => {
-          if (lstatSync(source).isSymbolicLink())
-            throw new Error(
-              "Lien symbolique interdit dans le source distribué : " +
-                relative(root, source),
-            );
-          return !relative(root, source)
-            .split("/")
-            .some(
-              (part) =>
-                part.startsWith(".env") ||
-                /^(credentials|cookies|storageState|database-url|bootstrap-token)(\.|$)/i.test(
-                  part,
-                ) ||
-                /\.(pem|key|p12|pfx|log)$/i.test(part) ||
-                [
-                  "private",
-                  "secrets",
-                  "test-results",
-                  "playwright-report",
-                  "node_modules",
-                  "dist",
-                  ".data",
-                  "var",
-                  "evidence",
-                  ".git",
-                ].includes(part),
-            );
-        },
-      });
+    // Every input uses the same boundary, relative to that explicitly allowed root.
+    // dist is required only inside the published Propel package (not workspace build output).
+    function excluded(path: string, allowDist = false) {
+      return path
+        .split("/")
+        .some(
+          (part) =>
+            part.startsWith(".env") ||
+            /^(credentials|cookies|storageState|database-url|bootstrap-token)(\.|$)/i.test(
+              part,
+            ) ||
+            /\.(pem|key|p12|pfx|log)$/i.test(part) ||
+            [
+              "private",
+              "secrets",
+              "test-results",
+              "playwright-report",
+              "node_modules",
+              ...(!allowDist ? ["dist"] : []),
+              ".data",
+              "var",
+              "evidence",
+              ".git",
+            ].includes(part),
+        );
     }
-    // Keep the original workspace lock resolution, without distributing an unrelated backend.
-    mkdirSync(resolve(destination, "apps/server"), { recursive: true });
-    cpSync(
-      resolve(root, "apps/server/package.json"),
-      resolve(destination, "apps/server/package.json"),
-    );
-    const propel = resolve(root, "node_modules/@makeplane/propel");
-    const bundled = resolve(destination, "third-party/propel-0.7.3");
-    cpSync(propel, bundled, { recursive: true });
-    // An editable-source build must distribute those exact edited sources as well.
-    const editable = resolve(root, "third-party/propel-0.7.3/editable-source");
-    if (existsSync(editable)) {
-      cpSync(editable, resolve(bundled, "editable-source"), {
+    function copy(source: string, target: string, allowDist = false) {
+      // Refuse linked ancestors too: checking only the selected leaf could follow
+      // an apps/server or editable-source directory outside the allowed workspace.
+      let ancestor = source;
+      while (ancestor !== root && ancestor.startsWith(root + "/")) {
+        if (lstatSync(ancestor).isSymbolicLink())
+          throw new Error(
+            "Lien symbolique interdit dans le source distribué : " +
+              relative(root, ancestor),
+          );
+        ancestor = dirname(ancestor);
+      }
+      mkdirSync(dirname(target), { recursive: true });
+      cpSync(source, target, {
         recursive: true,
         filter: (path) => {
           if (lstatSync(path).isSymbolicLink())
             throw new Error(
-              "Lien symbolique interdit dans le source Propel édité",
+              "Lien symbolique interdit dans le source distribué : " +
+                relative(root, path),
             );
-          return !relative(editable, path)
-            .split("/")
-            .some(
-              (part) =>
-                part.startsWith(".env") ||
-                /^(private|secrets|credentials|cookies|storageState)(\.|$)/i.test(
-                  part,
-                ),
-            );
+          return !excluded(relative(source, path), allowDist);
         },
       });
-      cpSync(
+    }
+    for (const path of inputRoots)
+      copy(resolve(root, path), resolve(destination, path));
+    // Only this manifest preserves workspace resolution; no backend source is distributed.
+    copy(
+      resolve(root, "apps/server/package.json"),
+      resolve(destination, "apps/server/package.json"),
+    );
+    const bundled = resolve(destination, "third-party/propel-0.7.3");
+    copy(resolve(root, "node_modules/@makeplane/propel"), bundled, true);
+    const editable = resolve(root, "third-party/propel-0.7.3/editable-source");
+    if (existsSync(editable)) {
+      copy(editable, resolve(bundled, "editable-source"));
+      copy(
         resolve(root, "apps/web/vite.propel-source.config.ts"),
         resolve(destination, "apps/web/vite.propel-source.config.ts"),
       );
@@ -124,7 +121,12 @@ export function distributeSource(root: string, output: string) {
             const nameParts = String(name)
               .split("/")
               .filter((part) => part !== ".." && part !== ".");
-            if (typeof content !== "string" || !nameParts.length) continue;
+            if (
+              typeof content !== "string" ||
+              !nameParts.length ||
+              excluded(nameParts.join("/"))
+            )
+              continue;
             const target = resolve(bundled, "recovered-source", ...nameParts);
             if (!target.startsWith(resolve(bundled, "recovered-source") + "/"))
               throw new Error("Chemin source tiers invalide");
@@ -137,13 +139,15 @@ export function distributeSource(root: string, output: string) {
         }
       }
     }
-    recoverMaps(resolve(propel, "dist"));
+    recoverMaps(resolve(bundled, "dist"));
     const manifest: { path: string; sha256: string }[] = [];
     function inventory(directory: string) {
       for (const entry of readdirSync(directory, { withFileTypes: true }).sort(
         (a, b) => a.name.localeCompare(b.name),
       )) {
         const path = resolve(directory, entry.name);
+        if (entry.isSymbolicLink())
+          throw new Error("Lien symbolique interdit dans le source distribué");
         if (entry.isDirectory()) inventory(path);
         else
           manifest.push({

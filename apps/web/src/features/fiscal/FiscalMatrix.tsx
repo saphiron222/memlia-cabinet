@@ -15,7 +15,7 @@ import {
   type RecordListQuery,
   type CabinetRecord,
 } from "@memlia/contracts";
-import { request, queryString, message, useScope } from "../../api";
+import { request, queryString, message } from "../../api";
 import { Field, Select, ErrorSummary } from "../../forms";
 import { useInstallation } from "../administration/preferences";
 import { CsvExport } from "../records/CsvExport";
@@ -57,7 +57,14 @@ export function FiscalMatrixView({
 }) {
   const { info } = useInstallation();
   const tableScroll = useRef<HTMLDivElement>(null);
-  const signal = useScope();
+  const pageScope = useRef<{
+    key: string;
+    revision: number;
+    controller: AbortController;
+    pending: Set<string>;
+    cursors: Map<string, number>;
+  } | null>(null);
+  const [pendingRows, setPendingRows] = useState<Set<string>>(new Set());
   const params = new URLSearchParams(location.hash.split("?")[1]);
   const today = new Intl.DateTimeFormat("sv-SE", {
     timeZone: info?.cabinetTimeZone ?? "UTC",
@@ -108,13 +115,29 @@ export function FiscalMatrixView({
     return `#fiscal?${next}`;
   };
   useEffect(() => {
-    if (!query) return;
     const c = new AbortController();
+    const scope = {
+      key,
+      revision,
+      controller: c,
+      pending: new Set<string>(),
+      cursors: new Map<string, number>(),
+    };
+    pageScope.current = scope;
+    setPendingRows(new Set());
+    if (!query) return () => c.abort();
     setLoading(true);
     setError("");
     setResult(null);
     void request("/fiscal/matrix?" + key, FiscalMatrixSchema, c.signal)
-      .then(setResult)
+      .then((value) => {
+        if (!c.signal.aborted) {
+          value.rows.forEach((row) =>
+            scope.cursors.set(row.dossier.id, row.occurrences.length),
+          );
+          setResult(value);
+        }
+      })
       .catch((e) => {
         if (!c.signal.aborted) setError(message(e));
       })
@@ -124,45 +147,62 @@ export function FiscalMatrixView({
     return () => c.abort();
   }, [key, revision]);
   async function more(row: FiscalMatrix["rows"][number]) {
-    if (!query) return;
+    const scope = pageScope.current;
+    const id = row.dossier.id;
+    if (
+      !query ||
+      !scope ||
+      scope.key !== key ||
+      scope.revision !== revision ||
+      scope.controller.signal.aborted ||
+      scope.pending.has(id) ||
+      row.complete
+    )
+      return;
+    const offset = scope.cursors.get(id);
+    if (offset === undefined) return;
+    scope.pending.add(id); // Synchronous lock also covers two events before React commits.
+    setPendingRows(new Set(scope.pending));
+    const current = () =>
+      pageScope.current === scope && !scope.controller.signal.aborted;
     try {
       const next = await request(
         "/fiscal?" +
-          queryString({
-            ...query,
-            dossierId: row.dossier.id,
-            offset: row.occurrences.length,
-            limit: 200,
-          }),
+          queryString({ ...query, dossierId: id, offset, limit: 200 }),
         RecordListSchema,
-        signal,
+        scope.controller.signal,
       );
+      if (!current() || scope.cursors.get(id) !== offset) return;
+      // Cursor counts server rows consumed, independently of unique displayed identities.
+      scope.cursors.set(id, offset + next.items.length);
       setResult((old) =>
-        old
-          ? {
+        !old || !current()
+          ? old
+          : {
               ...old,
-              rows: old.rows.map((r) =>
-                r.dossier.id === row.dossier.id
-                  ? {
-                      ...r,
-                      occurrences: [
-                        ...r.occurrences,
-                        ...next.items.filter(
-                          (x): x is (typeof r.occurrences)[number] =>
-                            x.kind === "obligation",
-                        ),
-                      ],
-                      total: next.total,
-                      complete:
-                        r.occurrences.length + next.items.length >= next.total,
-                    }
-                  : r,
-              ),
-            }
-          : old,
+              rows: old.rows.map((r) => {
+                if (r.dossier.id !== id) return r;
+                const unique = new Map(
+                  r.occurrences.map((item) => [item.id, item]),
+                );
+                next.items.forEach((item) => {
+                  if (item.kind === "obligation") unique.set(item.id, item);
+                });
+                const occurrences = [...unique.values()];
+                return {
+                  ...r,
+                  occurrences,
+                  total: next.total,
+                  complete: occurrences.length >= next.total,
+                };
+              }),
+            },
       );
     } catch (e) {
-      setError(message(e));
+      if (current()) setError(message(e));
+    } finally {
+      scope.pending.delete(id);
+      if (current()) setPendingRows(new Set(scope.pending));
     }
   }
   const columns = dossierId
@@ -489,7 +529,12 @@ export function FiscalMatrixView({
                             </small>
                           )}
                           {!row.complete && (
-                            <Button size="sm" onClick={() => void more(row)}>
+                            <Button
+                              size="sm"
+                              disabled={pendingRows.has(row.dossier.id)}
+                              aria-busy={pendingRows.has(row.dossier.id)}
+                              onClick={() => void more(row)}
+                            >
                               Charger les occurrences suivantes (
                               {row.occurrences.length}/{row.total})
                             </Button>

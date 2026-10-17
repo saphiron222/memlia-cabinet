@@ -1478,15 +1478,15 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.calendar-event[data-state="terminee"],
-.calendar-event[data-state="preparee"] {
+:is(.calendar-event, .work-event)[data-state="terminee"],
+:is(.calendar-event, .work-event)[data-state="preparee"] {
   border-left-color: var(--m-green);
 }
-.calendar-event[data-state="en_cours"] {
+:is(.calendar-event, .work-event)[data-state="en_cours"] {
   border-left-color: var(--m-amber);
 }
-.calendar-event[data-state="a_faire"],
-.calendar-event[data-state="a_preparer"] {
+:is(.calendar-event, .work-event)[data-state="a_faire"],
+:is(.calendar-event, .work-event)[data-state="a_preparer"] {
   border-left-color: var(--m-secondary);
 }
 .calendar-more {
@@ -1544,4 +1544,67 @@ body {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
+}
+
+/* Annual/week compositions: actual Cal Calendar/PanelCard, Plane KanbanCard. */
+.annual-months {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.annual-month {
+  min-width: 0;
+  border: 1px solid var(--m-border);
+  border-radius: 6px;
+  padding: 10px;
+}
+.annual-month-grid {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.annual-week,
+.annual-weekdays {
+  display: table-row;
+}
+.annual-weekday {
+  text-align: center;
+  height: 28px;
+  font-size: 11px;
+  color: var(--m-secondary);
+}
+.annual-day {
+  position: relative;
+  text-align: center;
+  padding: 0;
+  height: 34px;
+}
+.annual-day-button {
+  width: 100%;
+  height: 34px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.annual-day-count {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  font-size: 9px;
+  color: var(--m-accent);
+  font-weight: 700;
+}
+.annual-day-button:focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: -2px;
+}
+.annual-calendar > [data-testid="panel-card"] {
+  margin-top: 16px;
+}
+.task-week-panels {
+  display: grid;
+  gap: 16px;
+}
+.task-week-panels .work-event {
+  margin: 0;
 }
