@@ -334,5 +334,85 @@
   "GET /api/v1/fiscal/responsibles": {
     "file": "apps/server/test/fiscal.test.ts",
     "test": "CVAE reference turnover, IS amounts and fiscal person filters survive list and CSV without invented calculations"
+  },
+  "POST /api/v1/workflows/preview": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "civil recurrence preserves nominal 31 through short months, leap years, DST and past starts"
+  },
+  "GET /api/v1/workflows/models/:id/job": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "POST /api/v1/workflows/generate": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "GET /api/v1/workflows/jobs/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "POST /api/v1/workflows/tasks/:id/move": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "typed stages retain stable references, exactly one final and checklist completion across generic and workflow writes"
+  },
+  "POST /api/v1/workflows/models": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "GET /api/v1/workflows/models": {
+    "file": "tests/e2e/workflows.spec.ts",
+    "test": "workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 gardent le travail après rechargement"
+  },
+  "GET /api/v1/workflows/targets/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "POST /api/v1/workflows/targets/:id/commands": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "GET /api/v1/workflows/calendar": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "shared calendar aggregates canonical task and fiscal IDs and obligation task creation is replay-safe"
+  },
+  "POST /api/v1/workflows/targets/:id/task": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "shared calendar aggregates canonical task and fiscal IDs and obligation task creation is replay-safe"
+  },
+  "GET /api/v1/workflows/targets/:id/people": {
+    "file": "tests/e2e/workflows.spec.ts",
+    "test": "workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 gardent le travail après rechargement"
+  },
+  "POST /api/v1/workflows/imports/preview": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist exchange previews mapping and unmapped columns, requires explicit validation and persists versioned models"
+  },
+  "POST /api/v1/workflows/imports/:id/commit": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist exchange previews mapping and unmapped columns, requires explicit validation and persists versioned models"
+  },
+  "GET /api/v1/notifications/runs": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "reminders use cabinet hour, recipient access and deterministic single in-app occurrence"
+  },
+  "POST /api/v1/notifications/process": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "reminders use cabinet hour, recipient access and deterministic single in-app occurrence"
+  },
+  "GET /api/v1/notifications": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "mentions and subscriptions recheck recipient rights, preserve internal audience and notification read state after restart"
+  },
+  "GET /api/v1/notifications/preferences": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "notification preferences persist after restart"
+  },
+  "POST /api/v1/notifications/preferences": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "notification preferences persist after restart"
+  },
+  "POST /api/v1/notifications/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "mentions and subscriptions recheck recipient rights, preserve internal audience and notification read state after restart"
   }
 }

@@ -7,7 +7,7 @@ Les douze natures `TVA`, `IS`, `CVAE`, `CFE_IFER`, `TF`, `DAS2`, `DSN`, `IRPP`, 
 - `createFiscal`, `commandFiscal`, `fiscalDetail` et `fiscalTimeline` dans `apps/server/src/fiscal/service.ts` utilisent une connexion transactionnelle, un utilisateur courant et un instant. Le writer commun garde versions, opération rejouée, historique et validation des droits ; le chemin générique de modification refuse les obligations fiscales. Les commandes portent `operationId` et `expectedVersion`. Les commandes métier ne doivent pas écrire directement les tables.
 - `deriveFiscalSituation(initialAmount, timeline)` sépare préparation, approbation cabinet, validation client IRPP, version de déclaration, tentative, retours, version acceptée applicable, montants, dette, apurement, règlement et candidat bancaire. La règle d’acceptation est explicitement `all-declared-recipients-accepted-no-platform-rejection/v1`. Une correction rejetée laisse l’ancienne version acceptée applicable. Les retours restent dans la chronologie, même contradictoires.
 - Les pièces utilisent `DocumentStore`. Les commandes `evidence`, `notice`, `client_validation`, tentatives et observations gardent les identités GED. Les liens au contact IRPP, aux RCM sources et aux tâches propagent les droits courants jusque dans recherche, historique, GED et export. Les anciennes références ne sont pas supprimées lors d’une révision.
-- Task3 doit intégrer son service commun checklist/commentaires dans `FiscalDetail` (onglet Vue d’ensemble / Historique), en conservant `detail.record.id`. La commande fiscale `link_task` relie une tâche existante du même dossier ; elle n’est pas un service de création de tâche. Réutiliser `detail.capabilities.actions`, les droits historiques et le writer commun ; aucune seconde identité ni file fiscale.
+- Task3 intègre son service commun checklist/commentaires dans `FiscalDetail` (onglet Travail interne), en conservant `detail.record.id`. La commande fiscale `link_task` relie une tâche existante du même dossier ; elle n’est pas un service de création de tâche. Réutiliser `detail.capabilities.actions`, les droits historiques et le writer commun ; aucune seconde identité ni file fiscale.
 - Task9 doit fournir le modèle de relance depuis le même contexte autorisé dossier/obligation/période/montant/destinataire. Aucune action email factice n’est présentée comme réalisée ici.
 - Task10 doit transformer uniquement des contrats acquis en événements canoniques et brancher le contrôle de capacité réel. `realTransmission` et `certifiedExport` sont actuellement toujours `false`. `verifiedSupplier` n’est jamais acquis par une saisie HTTP ou une simulation. Les chemins/colonnes/retours non acquis ne sont pas déduits du modèle local.
 
@@ -41,7 +41,7 @@ Les preuves locales sont les scénarios nommés de `apps/server/test/fiscal.test
 | --- | --- | --- |
 | F-TVA-AC-01 | Grille/filtres communs, profil/période, source et cadence ; CSV mêmes valeurs | Pilotes acquis Task10 ; qualification11/12 |
 | F-TVA-AC-02 | Préparation/approbation/tentative/retours indépendants ; rejet DGFiP/banque en attente | Retours acquis Task10 |
-| F-TVA-AC-03 | Identité stable, détail, pièces et liens de tâche | Checklist/commentaires Task3, relance modélisée Task9 |
+| F-TVA-AC-03 | Identité stable, détail, pièces, liens de tâche et checklist/commentaires communs persistés ; recette locale Task3 | Relance modélisée Task9 ; qualification Tasks11/12 |
 | F-IS-AC-01 | Exercice décalé et génération stable acomptes/solde | Qualification11/12 |
 | F-IS-AC-02 | Brut/net/estimation/inconnu, chaînes exactes en grille/détail/CSV | Sources acquises Task10 |
 | F-IS-AC-03 | Initiale acceptée/correctif rejeté, preuves et classement motivé | Retours acquis Task10 |
@@ -56,7 +56,7 @@ Les preuves locales sont les scénarios nommés de `apps/server/test/fiscal.test
 | F-FONCIER-AC-03 | Filtre année/bien → toutes suites, noms identiques sans collision | Qualification charge11/12 |
 | F-DAS2-AC-01 | Année/clôture/état/montant et provenance | Acquisition réelle Task10 |
 | F-DAS2-AC-02 | Mention puis annulation avec auteur/date/motif ; aucun reçu inventé | Qualification11/12 |
-| F-DAS2-AC-03 | Pièces et identité persistées | Checklist/commentaires Task3 |
+| F-DAS2-AC-03 | Pièces, checklist/commentaires communs et identité persistés ; recette locale Task3 après rechargement/vue/retrait de droits | Qualification Tasks11/12 ; docs/workflows.md |
 | F-DETTES-AC-01 | Photographies compte/impôt/période/référence, date source/collecte | Couverture tous impôts acquise Task10 |
 | F-DETTES-AC-02 | Dette/apurement/paiement/échéancier séparés | Qualification11/12 |
 | F-DETTES-AC-03 | Historique, apurement et zéro source explicite complet | Couverture réelle Task10 |
@@ -98,3 +98,7 @@ Pour CFE/TF, la grille et le lot TAR choisissent les dernières versions de chaq
 Un événement `payment` peut conserver `attemptId` et `declarationVersion`, tous deux nuls lorsque le rattachement est inconnu. Un rattachement renseigné doit désigner une tentative de la même obligation et sa propre version, y compris une version historique après correction. Les événements anciens sans ces champs se lisent avec des valeurs nulles. Le détail et l’historique restituent le lien ; l’interface affiche référence de dépôt, version de déclaration et date. Ce lien ne prouve ni acceptation ni débit et ne change pas les règles de calcul du paiement acquis.
 
 Réception locale du round 1, 17 octobre 2026 : suites fiscalité/export **23 PASS sur PGlite** et **23 PASS sur PostgreSQL17**, puis complément de génération et rôles **2 PASS sur chaque base** ; navigateur fiscal **3 PASS** ; contrôle et build réussis. Bundle actuel **590,99 kB** minifié / **168,84 kB** gzip (advisory existant conservé). Contre-revue et CI du candidat restent à effectuer par le contrôleur.
+
+## Travail commun Task3
+
+La fiche fiscale utilise `/workflows/targets/:id` sur son `detail.record.id`, avec checklist versionnée, commentaires internes et abonnement. TVA et DAS2 conservent leurs pièces GED et le même objet ; le navigateur vérifie rechargement, onglets, retrait de droits et notifications. Aucun payload fiscal approuvé n’est modifié. La relation « Ouvrir ou créer la tâche liée » est idempotente. Voir [Travail, calendrier et notifications](workflows.md) pour les critères et frontières Task5/Task9.

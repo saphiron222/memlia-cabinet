@@ -239,7 +239,8 @@
             "ci": "not-run-for-task2",
             "fieldValidation": "last-phase",
             "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
-            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier",
+            "task3Receipt": "Checklist/commentaires et preuves canoniques vérifiés localement après rechargement/changement de vue/retrait de droits. Email Task9 ; docs/workflows.md."
           }
         }
       ]
@@ -725,7 +726,8 @@
             "ci": "not-run-for-task2",
             "fieldValidation": "last-phase",
             "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
-            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier",
+            "task3Receipt": "Checklist/commentaires et preuves canoniques vérifiés localement après rechargement/changement de vue/retrait de droits. Email Task9 ; docs/workflows.md."
           }
         }
       ]
@@ -827,15 +829,78 @@
       "acceptanceCriteria": [
         {
           "id": "F-CALENDRIER-AC-01",
-          "expected": "Chaque échéance apparaît à sa date civile avec nature, dossier et état, y compris les tâches ou occurrences personnalisées sélectionnées."
+          "expected": "Chaque échéance apparaît à sa date civile avec nature, dossier et état, y compris les tâches ou occurrences personnalisées sélectionnées.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-CALENDRIER-AC-02",
-          "expected": "Les filtres de personne, type et période sont communs à la grille et à la liste des événements."
+          "expected": "Les filtres de personne, type et période sont communs à la grille et à la liste des événements.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-CALENDRIER-AC-03",
-          "expected": "L'ouverture d'un événement affiche le même objet ; une modification de date ou d'état se répercute après enregistrement sans double événement."
+          "expected": "L'ouverture d'un événement affiche le même objet ; une modification de date ou d'état se répercute après enregistrement sans double événement.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         }
       ]
     },
@@ -1265,15 +1330,78 @@
       "acceptanceCriteria": [
         {
           "id": "F-TACHES-AC-01",
-          "expected": "Créer, modifier, déplacer, clôturer ou rouvrir une tâche conserve sa date, ses relations et son état dans liste, Kanban, calendrier et export."
+          "expected": "Créer, modifier, déplacer, clôturer ou rouvrir une tâche conserve sa date, ses relations et son état dans liste, Kanban, calendrier et export.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-TACHES-AC-02",
-          "expected": "Les règles hebdomadaires, mensuelles, trimestrielles et annuelles produisent les mêmes dates que leur aperçu, sans doublon après reprise."
+          "expected": "Les règles hebdomadaires, mensuelles, trimestrielles et annuelles produisent les mêmes dates que leur aperçu, sans doublon après reprise.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-TACHES-AC-03",
-          "expected": "Abonnement et mention ne donnent aucun accès ; notifications et consultation respectent confidentialité et droits courants de chaque destinataire."
+          "expected": "Abonnement et mention ne donnent aucun accès ; notifications et consultation respectent confidentialité et droits courants de chaque destinataire.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         }
       ]
     },
@@ -1467,15 +1595,78 @@
       "acceptanceCriteria": [
         {
           "id": "F-ALERTS-AC-01",
-          "expected": "Une alerte conserve événement, fréquence, heure, période, périmètre et destinataires ; sa prochaine occurrence suit cette configuration."
+          "expected": "Une alerte conserve événement, fréquence, heure, période, périmètre et destinataires ; sa prochaine occurrence suit cette configuration.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-ALERTS-AC-02",
-          "expected": "Le message est préparé à partir des données encore accessibles au destinataire à l'heure du traitement."
+          "expected": "Le message est préparé à partir des données encore accessibles au destinataire à l'heure du traitement.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-ALERTS-AC-03",
-          "expected": "Une occurrence n'est envoyée qu'une fois ; un échec garde son résultat et une reprise identifiable sans doublon."
+          "expected": "Une occurrence n'est envoyée qu'une fois ; un échec garde son résultat et une reprise identifiable sans doublon.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         }
       ]
     },
@@ -1724,15 +1915,78 @@
       "acceptanceCriteria": [
         {
           "id": "F-CHECKLIST-AC-01",
-          "expected": "Un modèle conserve des éléments ordonnés et son type de cible ; une instance possède sa propre identité et ses valeurs."
+          "expected": "Un modèle conserve des éléments ordonnés et son type de cible ; une instance possède sa propre identité et ses valeurs.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-CHECKLIST-AC-02",
-          "expected": "Modifier le modèle ne réécrit pas les cases déjà traitées d'une instance ; la version utilisée reste identifiable."
+          "expected": "Modifier le modèle ne réécrit pas les cases déjà traitées d'une instance ; la version utilisée reste identifiable.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-CHECKLIST-AC-03",
-          "expected": "Deux modifications concurrentes ne perdent aucun changement silencieusement ; suppression, réordre et reprise produisent un résultat unique et traçable."
+          "expected": "Deux modifications concurrentes ne perdent aucun changement silencieusement ; suppression, réordre et reprise produisent un résultat unique et traçable.",
+          "implementation": {
+            "status": "implemented-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         }
       ]
     },
@@ -2762,15 +3016,78 @@
       "acceptanceCriteria": [
         {
           "id": "F-STATES-AC-01",
-          "expected": "Chaque page distingue chargement, vide constaté, refus, indisponibilité et erreur avec une action de reprise appropriée."
+          "expected": "Chaque page distingue chargement, vide constaté, refus, indisponibilité et erreur avec une action de reprise appropriée.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-STATES-AC-02",
-          "expected": "Les valeurs inconnue, non applicable, non publiée, non autorisée et zéro confirmé ont des représentations différentes."
+          "expected": "Les valeurs inconnue, non applicable, non publiée, non autorisée et zéro confirmé ont des représentations différentes.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         },
         {
           "id": "F-STATES-AC-03",
-          "expected": "Une reprise conserve le dernier résultat durable et la portée manquante ; aucun succès n'est annoncé avant confirmation d'enregistrement."
+          "expected": "Une reprise conserve le dernier résultat durable et la portée manquante ; aucun succès n'est annoncé avant confirmation d'enregistrement.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/workflows.ts",
+              "apps/server/src/workflows/service.ts",
+              "apps/server/src/workflows/generation.ts",
+              "apps/server/src/notifications/reminders.ts",
+              "apps/web/src/features/workflows/Workflows.tsx",
+              "apps/web/src/features/workflows/WorkPanel.tsx",
+              "docs/workflows.md"
+            ],
+            "tests": [
+              "apps/server/test/workflows.test.ts",
+              "apps/server/test/backup.test.ts",
+              "tests/e2e/workflows.spec.ts"
+            ],
+            "ci": "not-run-for-task3",
+            "fieldValidation": "last-phase",
+            "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+            "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
+          }
         }
       ]
     },
@@ -3555,17 +3872,27 @@
           "apps/server/src/administration/export.ts",
           "apps/web/src/features/fiscal/Fiscal.tsx",
           "apps/web/src/features/fiscal/FiscalDetail.tsx",
-          "docs/fiscalite.md"
+          "docs/fiscalite.md",
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
         ],
         "tests": [
           "apps/server/test/fiscal.test.ts",
           "tests/e2e/fiscal.spec.ts",
-          "apps/server/test/backup.test.ts"
+          "apps/server/test/backup.test.ts",
+          "apps/server/test/workflows.test.ts",
+          "tests/e2e/workflows.spec.ts"
         ],
         "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
         "remaining": "Checklist/commentaires et câblage Task3. Qualification complète Tasks11/12.",
-        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier",
+        "task3Receipt": "Travail commun TVA/DAS2 et pièces au même objet, rechargement et retrait de droits ; docs/workflows.md. Mail reste Task9."
       }
     },
     {
@@ -4167,17 +4494,27 @@
           "apps/server/src/administration/export.ts",
           "apps/web/src/features/fiscal/Fiscal.tsx",
           "apps/web/src/features/fiscal/FiscalDetail.tsx",
-          "docs/fiscalite.md"
+          "docs/fiscalite.md",
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
         ],
         "tests": [
           "apps/server/test/fiscal.test.ts",
           "tests/e2e/fiscal.spec.ts",
-          "apps/server/test/backup.test.ts"
+          "apps/server/test/backup.test.ts",
+          "apps/server/test/workflows.test.ts",
+          "tests/e2e/workflows.spec.ts"
         ],
         "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
         "remaining": "Checklist/commentaires et câblage Task3. Qualification complète Tasks11/12.",
-        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier",
+        "task3Receipt": "Travail commun TVA/DAS2 et pièces au même objet, rechargement et retrait de droits ; docs/workflows.md. Mail reste Task9."
       }
     },
     {
@@ -4392,10 +4729,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -4856,10 +5208,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -4884,10 +5251,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -5187,10 +5569,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -5575,10 +5972,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -5603,10 +6015,25 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -6983,10 +7410,25 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -7009,10 +7451,25 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -7803,10 +8260,25 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -7829,10 +8301,25 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -8459,10 +8946,25 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     },
     {
@@ -8830,10 +9332,25 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/workflows.ts",
+          "apps/server/src/workflows/service.ts",
+          "apps/server/src/workflows/generation.ts",
+          "apps/server/src/notifications/reminders.ts",
+          "apps/web/src/features/workflows/Workflows.tsx",
+          "apps/web/src/features/workflows/WorkPanel.tsx",
+          "docs/workflows.md"
+        ],
+        "tests": [
+          "apps/server/test/workflows.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/workflows.spec.ts"
+        ],
+        "ci": "not-run-for-task3",
+        "fieldValidation": "last-phase",
+        "criterionDetails": "docs/workflows.md#sortie-restauration-et-réception",
+        "remaining": "Temps réalisé/rapports Task5 ; client/mail Task9 ; qualification globale Tasks11/12 selon la matrice docs/workflows.md."
       }
     }
   ]
