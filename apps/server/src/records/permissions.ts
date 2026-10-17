@@ -29,7 +29,11 @@ export async function canAccess(
   user: SessionUser,
   action: Action,
   record: CabinetRecord,
+  visited = new Set<string>(),
 ): Promise<boolean> {
+  const key = record.id + "/" + record.version;
+  if (visited.has(key)) return true;
+  visited.add(key);
   const scope = record.kind === "dossier" ? record.id : record.dossierId;
   if (!(await scopedPermission(tx, user, action, record.kind, scope)))
     return false;
@@ -63,6 +67,53 @@ export async function canAccess(
     )
       return false;
   }
+  if (record.kind === "obligation" && record.data.fiscal?.contactId) {
+    const rows = await tx.query(
+      "SELECT content FROM cabinet_records WHERE id=$1 AND kind='contact'",
+      [record.data.fiscal.contactId],
+    );
+    if (
+      !rows[0] ||
+      !(await canAccess(
+        tx,
+        user,
+        "read",
+        rows[0].content as CabinetRecord,
+        visited,
+      ))
+    )
+      return false;
+  }
+  if (record.kind === "obligation" && record.data.fiscal)
+    for (const id of record.data.fiscal.relatedRecordIds) {
+      const rows = await tx.query(
+        "SELECT content FROM cabinet_records WHERE id=$1",
+        [id],
+      );
+      if (!rows[0]) return false;
+      const related = rows[0].content as CabinetRecord;
+      if (!(await canAccess(tx, user, "read", related, visited))) return false;
+    }
+  if (record.kind === "obligation" && record.data.fiscal)
+    for (const id of record.data.fiscal.documentIds) {
+      const rows = await tx.query(
+        "SELECT dossier_id,content->>'confidential' AS confidential FROM cabinet_documents WHERE id=$1",
+        [id],
+      );
+      if (
+        !rows[0] ||
+        rows[0].dossier_id !== record.dossierId ||
+        (rows[0].confidential === "true" &&
+          !(await scopedPermission(
+            tx,
+            user,
+            "confidential",
+            "dossier",
+            String(rows[0].dossier_id),
+          )))
+      )
+        return false;
+    }
   return true;
 }
 export async function requireAccess(

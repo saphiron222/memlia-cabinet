@@ -1,3 +1,4 @@
+import { Fiscal } from "./features/fiscal/Fiscal";
 import { Account } from "./features/administration/Account";
 import {
   useAccountSettings,
@@ -229,6 +230,7 @@ function Auth({
   );
 }
 type Page =
+  | "fiscal"
   | "compte"
   | "imports"
   | "administration"
@@ -237,6 +239,7 @@ type Page =
   | "collectes"
   | RecordKind;
 const icons = {
+  fiscal: IconCalendar,
   compte: IconUsers,
   imports: IconDownload,
   administration: IconUsers,
@@ -251,6 +254,7 @@ const icons = {
 function route(): Page {
   const hash = location.hash.slice(1).split("?")[0];
   return [
+    "fiscal",
     "dossier",
     "contact",
     "tache",
@@ -336,6 +340,7 @@ function Cabinet({
               "contact",
               "tache",
               "obligation",
+              "fiscal",
               "documents",
               "collectes",
               "compte",
@@ -345,19 +350,21 @@ function Cabinet({
           ).map((p) => {
             const Icon = icons[p];
             const title =
-              p === "compte"
-                ? "Mon compte"
-                : p === "imports"
-                  ? "Reprise"
-                  : p === "administration"
-                    ? "Administration"
-                    : p === "accueil"
-                      ? "Accueil"
-                      : p === "documents"
-                        ? "Documents"
-                        : p === "collectes"
-                          ? "Collectes"
-                          : labels[p];
+              p === "fiscal"
+                ? "Fiscalité"
+                : p === "compte"
+                  ? "Mon compte"
+                  : p === "imports"
+                    ? "Reprise"
+                    : p === "administration"
+                      ? "Administration"
+                      : p === "accueil"
+                        ? "Accueil"
+                        : p === "documents"
+                          ? "Documents"
+                          : p === "collectes"
+                            ? "Collectes"
+                            : labels[p];
             return (
               <a
                 key={p}
@@ -431,26 +438,32 @@ function Cabinet({
       <main id="main" className="main">
         <header className="app-header">
           <h1 ref={heading} tabIndex={-1}>
-            {page === "compte"
-              ? "Mon compte"
-              : page === "imports"
-                ? "Reprise"
-                : page === "administration"
-                  ? "Administration"
-                  : page === "accueil"
-                    ? "Accueil"
-                    : page === "documents"
-                      ? "Documents"
-                      : page === "collectes"
-                        ? "Collectes"
-                        : labels[page]}
+            {page === "fiscal"
+              ? "Fiscalité"
+              : page === "compte"
+                ? "Mon compte"
+                : page === "imports"
+                  ? "Reprise"
+                  : page === "administration"
+                    ? "Administration"
+                    : page === "accueil"
+                      ? "Accueil"
+                      : page === "documents"
+                        ? "Documents"
+                        : page === "collectes"
+                          ? "Collectes"
+                          : labels[page]}
           </h1>
           <span className="muted">
             {installation?.name ?? "Cabinet partagé"}
           </span>
         </header>
         <ErrorSummary message={fault || accountError || undefined} />
-        {page === "compte" ? (
+        {page === "fiscal" ? (
+          <div className="fiscal-workspace">
+            <Fiscal />
+          </div>
+        ) : page === "compte" ? (
           <Account />
         ) : page === "imports" ? (
           <Imports />

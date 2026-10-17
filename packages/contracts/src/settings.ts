@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { SessionUserSchema } from "./identity.js";
 export const ModuleIdSchema = z.enum([
+  "fiscal",
   "ged",
   "collectes",
   "imports",

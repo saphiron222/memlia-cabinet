@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FiscalProfileSchema, FiscalSourceEvidenceSchema } from "./fiscal.js";
 export const RecordKindSchema = z.enum([
   "dossier",
   "contact",
@@ -208,6 +209,8 @@ export const TaskDataSchema = z
 export const ObligationDataSchema = z
   .object({
     ...extensible,
+    sourceEvidence: FiscalSourceEvidenceSchema.nullable().default(null),
+    fiscal: FiscalProfileSchema.nullable().default(null),
     nature: z.string().trim().min(1).max(100),
     period: z.string().trim().min(1).max(50),
     dueDate: CivilDateSchema.nullable().default(null),
@@ -316,7 +319,11 @@ export const DashboardSchema = z.object({
   obligationSources: z.object({
     manual: z.number(),
     simulated: z.number(),
-    verified: z.literal(0),
+    verified: z.number().int().nonnegative(),
+    fresh: z.number().int().nonnegative().default(0),
+    stale: z.number().int().nonnegative().default(0),
+    unknown: z.number().int().nonnegative().default(0),
+    withoutVerifiedFresh: z.number().int().nonnegative().default(0),
     freshness: z.literal("unknown"),
   }),
   tasks: z.array(
@@ -332,6 +339,22 @@ export const DashboardSchema = z.object({
 export type Dashboard = z.infer<typeof DashboardSchema>;
 
 export const RecordColumnKeys = [
+  "fiscalGross",
+  "fiscalNet",
+  "fiscalEstimate",
+  "fiscalReferenceTurnover",
+  "fiscalCampaign",
+  "fiscalStart",
+  "fiscalEnd",
+  "fiscalSubtype",
+  "fiscalClassification",
+  "fiscalRegime",
+  "fiscalContact",
+  "fiscalResponsibles",
+  "freshnessState",
+  "sourceUpdatedAt",
+  "observedAt",
+  "cadenceVersion",
   "id",
   "kind",
   "title",
@@ -364,6 +387,22 @@ export const RecordColumnsSchema = z
   }, "Colonnes invalides");
 export const RecordListQuerySchema = z
   .object({
+    fiscalOnly: z.enum(["true", "false"]).optional(),
+    nature: z.string().max(100).optional(),
+    campaign: z.string().max(50).optional(),
+    year: z
+      .string()
+      .regex(/^\d{4}$/)
+      .optional(),
+    month: z
+      .string()
+      .regex(/^(0[1-9]|1[0-2])$/)
+      .optional(),
+    contactId: z.uuid().optional(),
+    property: z.string().max(300).optional(),
+    classification: z
+      .enum(["active", "archived", "hidden", "nil", "not_applicable"])
+      .optional(),
     kind: RecordKindSchema.optional(),
     q: z.string().max(300).optional(),
     dossierId: z.uuid().optional(),

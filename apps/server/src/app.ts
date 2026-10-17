@@ -1,3 +1,4 @@
+import { registerFiscalRoutes } from "./fiscal/routes.js";
 import { registerExportRoutes, Exports } from "./administration/export.js";
 import { registerScopeRoutes } from "./administration/scopes.js";
 import { registerViewRoutes } from "./administration/views.js";
@@ -308,10 +309,11 @@ export async function createApplication(options: ApplicationOptions) {
   registerCompanyRoutes(app, { db, now, user }, options.companySearchOrigin);
   const documents = new DocumentStore(options.dataDirectory);
   registerDocumentRoutes(app, { db, now, user }, documents);
+  registerFiscalRoutes(app, { db, now, user }, documents, civilDate);
   registerExportRoutes(
     app,
     { db, now, user },
-    new Exports(db, jobs, documents, now, options.exportPartBytes),
+    new Exports(db, jobs, documents, now, options.exportPartBytes, civilDate),
   );
   registerCollectionRoutes(
     app,

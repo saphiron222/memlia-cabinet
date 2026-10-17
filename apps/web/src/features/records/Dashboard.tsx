@@ -199,8 +199,10 @@ export function Dashboard() {
                 <>
                   <p>
                     Aucune source vérifiée pour ces {data.counts.obligation}{" "}
-                    obligations. Fraîcheur indéterminée : dates de source et
-                    couverture non établies pour ces fiches. Les dates de
+                    obligations. Évaluation selon les politiques opérationnelles
+                    configurées : {data.obligationSources.fresh} récentes,{" "}
+                    {data.obligationSources.stale} anciennes,{" "}
+                    {data.obligationSources.unknown} indéterminées. Les dates de
                     modification locale ne prouvent pas une actualité
                     fournisseur.
                   </p>

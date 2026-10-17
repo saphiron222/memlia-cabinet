@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 6)
+  if (version > 7)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -69,6 +69,12 @@ export async function migrate(connection: Connection): Promise<void> {
       after = String(rows.at(-1)!.id);
     }
   }
+  if (version < 7)
+    for (const statement of fiscalMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(statement);
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -170,4 +176,13 @@ CREATE TABLE cabinet_export_rows (export_id uuid NOT NULL REFERENCES cabinet_exp
 CREATE INDEX cabinet_export_parts ON cabinet_export_rows(export_id,part);
 CREATE TABLE cabinet_export_plan (export_id uuid NOT NULL REFERENCES cabinet_exports(id) ON DELETE CASCADE,id uuid NOT NULL,version integer NOT NULL,ordinal integer NOT NULL,PRIMARY KEY(export_id,ordinal));
 INSERT INTO schema_migrations(version) VALUES (6);
+`;
+
+const fiscalMigration = `
+CREATE UNIQUE INDEX cabinet_fiscal_occurrence ON cabinet_records((content->'data'->'fiscal'->>'occurrenceKey')) WHERE content->'data'->'fiscal'->>'occurrenceKey' IS NOT NULL;
+ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
+ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal'));
+CREATE TABLE cabinet_fiscal_events (id uuid PRIMARY KEY, obligation_id uuid NOT NULL REFERENCES cabinet_records(id), version integer NOT NULL, content jsonb NOT NULL, UNIQUE(obligation_id,version));
+CREATE INDEX cabinet_fiscal_events_obligation ON cabinet_fiscal_events(obligation_id,version);
+INSERT INTO schema_migrations(version) VALUES (7);
 `;

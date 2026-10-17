@@ -10,6 +10,7 @@ import {
   type CreateRecordInput,
   type UpdateRecordInput,
   type FieldOrigin,
+  type Action,
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
 import { fail } from "../errors.js";
@@ -50,13 +51,29 @@ export async function saveRecord(
   action: "created" | "updated" | "transitioned" = id ? "updated" : "created",
   command?: unknown,
   origin?: FieldOrigin,
+  fiscal?: {
+    action?: Action;
+    validate: (record: CabinetRecord) => Promise<void>;
+    commit: (record: CabinetRecord) => Promise<void>;
+  },
 ) {
   const previous = id ? await loadRecord(tx, id) : null;
+  if (
+    !fiscal &&
+    ((previous?.kind === "obligation" && previous.data.fiscal) ||
+      (input.record.kind === "obligation" &&
+        (input.record.data.fiscal || input.record.data.sourceEvidence)))
+  )
+    fail(
+      409,
+      "FISCAL_COMMAND_REQUIRED",
+      "Cette obligation se modifie depuis son parcours fiscal.",
+    );
   if (previous)
     await requireAccess(
       tx,
       user,
-      action === "transitioned" ? "transition" : "update",
+      fiscal?.action ?? (action === "transitioned" ? "transition" : "update"),
       previous,
     );
   else if (
@@ -111,17 +128,20 @@ export async function saveRecord(
       await requireAccess(
         tx,
         user,
-        previous
-          ? action === "transitioned"
-            ? "transition"
-            : "update"
-          : "create",
+        fiscal?.action ??
+          (previous
+            ? action === "transitioned"
+              ? "transition"
+              : "update"
+            : "create"),
         record,
       );
+      if (fiscal) await fiscal.validate(record);
       // Approval belongs to the reviewed content. A substantive edit always
       // invalidates it, including edits submitted by an approver; reapproval
       // requires a separate command on the resulting version.
       const approvalInvalidated =
+        !fiscal &&
         previous?.kind === "obligation" &&
         record.kind === "obligation" &&
         previous.data.validation === "validee_localement" &&
@@ -130,6 +150,7 @@ export async function saveRecord(
       if (approvalInvalidated && record.kind === "obligation")
         record.data.validation = "non_validee";
       if (
+        !fiscal &&
         record.kind === "obligation" &&
         !approvalInvalidated &&
         (previous?.kind === "obligation"
@@ -221,6 +242,7 @@ export async function saveRecord(
           JSON.stringify(event),
         ],
       );
+      if (fiscal) await fiscal.commit(record);
       return record;
     },
   );

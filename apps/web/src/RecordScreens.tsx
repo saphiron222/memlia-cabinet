@@ -1,3 +1,4 @@
+import { useInstallation } from "./features/administration/preferences";
 import { CsvExport } from "./features/records/CsvExport";
 import {
   useCustomFields,
@@ -41,6 +42,7 @@ export function Records({
   kind: RecordKind;
   user: SessionUser;
 }) {
+  const { info: installation } = useInstallation();
   const custom = useCustomFields(kind);
   const customFields = custom.fields;
   const signal = useScope();
@@ -219,7 +221,12 @@ export function Records({
                               <>
                                 <button
                                   className="record-link"
-                                  onClick={() => setEditor({ id: record.id })}
+                                  onClick={() =>
+                                    record.kind === "obligation" &&
+                                    record.data.fiscal
+                                      ? (location.hash = `fiscal?id=${record.id}`)
+                                      : setEditor({ id: record.id })
+                                  }
                                 >
                                   {record.title}
                                 </button>
@@ -228,7 +235,11 @@ export function Records({
                                 )}
                               </>
                             ) : (
-                              columnValue(record, key)
+                              columnValue(
+                                record,
+                                key,
+                                installation?.cabinetTimeZone,
+                              )
                             )}
                           </td>
                         ))}

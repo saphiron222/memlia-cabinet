@@ -1,3 +1,4 @@
+import { fiscalDocumentPredicate } from "../records/query.js";
 import { requireModule } from "../administration/settings.js";
 import { assignmentScope } from "../administration/access.js";
 import { randomUUID, createHash } from "node:crypto";
@@ -230,6 +231,17 @@ export class DocumentStore {
     document: DocumentReference,
   ) {
     const parent = await loadRecord(tx, document.dossierId);
+    const params: unknown[] = [document.id];
+    const predicate = fiscalDocumentPredicate(
+      actor,
+      (v) => {
+        params.push(v);
+        return "$" + params.length;
+      },
+      "$1::uuid",
+    );
+    if (!(await tx.query(`SELECT ${predicate} AS allowed`, params))[0]?.allowed)
+      return false;
     return (
       (await canAccess(tx, actor, "read", parent)) &&
       (!document.confidential ||
@@ -336,6 +348,7 @@ export class DocumentStore {
       return `(d.dossier_id = ANY(${parameter(dossierIds)}::uuid[]) OR ${assignmentScope(current.id, action, "dossier", "d.dossier_id", parameter)})`;
     };
     const where = [
+      fiscalDocumentPredicate(current, parameter, "d.id"),
       scope("read"),
       `(NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR (${scope("confidential")}))`,
     ];
@@ -410,7 +423,7 @@ export class DocumentStore {
       return `(d.dossier_id=ANY(${parameter(allowed)}::uuid[]) OR ${assignmentScope(current.id, action, "dossier", "d.dossier_id", parameter)})`;
     };
     const rows = await tx.query(
-      `SELECT count(*) AS n FROM cabinet_documents d JOIN cabinet_records r ON r.id=d.dossier_id AND r.kind='dossier' WHERE d.id=ANY($1::uuid[]) AND ${scope("read")} AND ${scope("export")} AND (NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR ${scope("confidential")})`,
+      `SELECT count(*) AS n FROM cabinet_documents d JOIN cabinet_records r ON r.id=d.dossier_id AND r.kind='dossier' WHERE d.id=ANY($1::uuid[]) AND ${fiscalDocumentPredicate(current, parameter, "d.id")} AND ${scope("read")} AND ${scope("export")} AND (NOT ((d.content->>'confidential')::boolean OR (r.content->>'confidential')::boolean) OR ${scope("confidential")})`,
       params,
     );
     if (Number(rows[0]!.n) !== ids.length)

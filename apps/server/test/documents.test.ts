@@ -599,6 +599,8 @@ it("upgrades a version-one database without losing cabinet records and reports a
     ).json();
     await f.maintainDatabase(async (db) => {
       await db.transaction(async (tx) => {
+        await tx.query("DROP TABLE cabinet_fiscal_events");
+        await tx.query("DROP INDEX cabinet_fiscal_occurrence");
         await tx.query(
           "DROP TABLE cabinet_export_plan, cabinet_export_rows, cabinet_exports",
         );
@@ -606,7 +608,9 @@ it("upgrades a version-one database without losing cabinet records and reports a
           "DROP TABLE cabinet_collection_snapshots, cabinet_collection_links, cabinet_collection_observations, cabinet_job_events, cabinet_jobs, cabinet_job_gate",
         );
         await tx.query("DROP TABLE cabinet_documents");
-        await tx.query("DROP TABLE cabinet_import_rows, cabinet_import_previews, cabinet_company_candidates, cabinet_detections, cabinet_saved_views, cabinet_preferences, cabinet_installation, cabinet_custom_fields, cabinet_assignment_versions, cabinet_assignments, cabinet_user_roles, cabinet_memberships, cabinet_groups, cabinet_roles");
+        await tx.query(
+          "DROP TABLE cabinet_import_rows, cabinet_import_previews, cabinet_company_candidates, cabinet_detections, cabinet_saved_views, cabinet_preferences, cabinet_installation, cabinet_custom_fields, cabinet_assignment_versions, cabinet_assignments, cabinet_user_roles, cabinet_memberships, cabinet_groups, cabinet_roles",
+        );
         await tx.query("ALTER TABLE cabinet_records DROP COLUMN search_title");
         await tx.query("DELETE FROM schema_migrations WHERE version>=2");
       });
@@ -881,6 +885,8 @@ it("backfills indexed search from schema two and keeps a shared extension outsid
         await tx.query(
           "ALTER TABLE cabinet_documents DROP COLUMN IF EXISTS search_text",
         );
+        await tx.query("DROP TABLE cabinet_fiscal_events");
+        await tx.query("DROP INDEX cabinet_fiscal_occurrence");
         await tx.query(
           "DROP TABLE cabinet_export_plan, cabinet_export_rows, cabinet_exports",
         );

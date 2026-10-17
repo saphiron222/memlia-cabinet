@@ -56,6 +56,12 @@ export function registerSettingsRoutes(
         modules: [
           ...[
             {
+              id: "fiscal",
+              label: "Suivi fiscal et social",
+              impact:
+                "La désactivation bloque les commandes et traitements fiscaux. Les données conservées restent consultables. Aucune émission réelle n’est activée.",
+            },
+            {
               id: "ged",
               label: "Documents du cabinet",
               impact:

@@ -16,7 +16,8 @@ export function authorizedPredicate(
   actor: SessionUser,
   action: "read" | "export" | "update",
   parameter: (v: unknown) => string,
-) {
+  followContact = true,
+): string {
   const grant = (verb: Action, kind: RecordKind, scope: string) => {
     if (hasPermission(actor, verb, kind)) return "TRUE";
     const ids = actor.permissions
@@ -39,7 +40,13 @@ export function authorizedPredicate(
     .join(" OR ");
   const parent = `(${grant("read", "dossier", "parent.id")} AND (NOT COALESCE((parent.content->>'confidential')::boolean,false) OR ${grant("confidential", "dossier", "parent.id")}))`;
   const links = `(CASE WHEN r.content->>'dossierId' IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(r.content->>'dossierId') END || CASE WHEN r.kind='contact' THEN COALESCE(r.content->'data'->'relatedDossierIds','[]'::jsonb) ELSE '[]'::jsonb END)`;
-  return `((${own}) AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(${links}) AS link(id) LEFT JOIN cabinet_records parent ON parent.id=link.id::uuid AND parent.kind='dossier' WHERE parent.id IS NULL OR NOT ${parent}))`;
+  const documents = ` AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(COALESCE(r.content->'data'->'fiscal'->'documentIds','[]'::jsonb)) AS fiscal_piece(id) LEFT JOIN cabinet_documents fiscal_document ON fiscal_document.id=fiscal_piece.id::uuid WHERE fiscal_document.id IS NULL OR ((fiscal_document.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "fiscal_document.dossier_id")}) IS NOT TRUE))`;
+  const fiscalLinks = (alias: string) =>
+    `(COALESCE(${alias}.content->'data'->'fiscal'->'relatedRecordIds','[]'::jsonb) || CASE WHEN ${alias}.content->'data'->'fiscal'->>'contactId' IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(${alias}.content->'data'->'fiscal'->>'contactId') END)`;
+  const related = followContact
+    ? ` AND NOT EXISTS(WITH RECURSIVE fiscal_reachable(id) AS (SELECT value::uuid FROM jsonb_array_elements_text(${fiscalLinks("r")}) UNION SELECT link.value::uuid FROM fiscal_reachable reached JOIN cabinet_records linked ON linked.id=reached.id CROSS JOIN LATERAL jsonb_array_elements_text(${fiscalLinks("linked")}) link(value)) SELECT 1 FROM fiscal_reachable reached LEFT JOIN cabinet_records fiscal_related ON fiscal_related.id=reached.id WHERE fiscal_related.id IS NULL OR (${authorizedPredicate(actor, "read", parameter, false).replaceAll(/\br\./g, "fiscal_related.")}) IS NOT TRUE)`
+    : "";
+  return `((${own}) AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(${links}) AS link(id) LEFT JOIN cabinet_records parent ON parent.id=link.id::uuid AND parent.kind='dossier' WHERE parent.id IS NULL OR (${parent}) IS NOT TRUE) AND CASE WHEN r.kind='obligation' AND jsonb_typeof(r.content->'data'->'fiscal')='object' THEN (TRUE ${related}${documents}) ELSE TRUE END)`;
 }
 export function recordFilter(
   actor: SessionUser,
@@ -57,6 +64,33 @@ export function recordFilter(
   ];
   if (query.from && query.to && query.from > query.to)
     fail(400, "INVALID_PERIOD", "La fin précède le début.");
+  for (const [key, path] of Object.entries({
+    nature: "r.content->'data'->>'nature'",
+    campaign: "r.content->'data'->'fiscal'->'period'->>'campaign'",
+    contactId: "r.content->'data'->'fiscal'->>'contactId'",
+    classification: "r.content->'data'->'fiscal'->>'classification'",
+  })) {
+    const value = query[key as keyof RecordListQuery];
+    if (value) where.push(`${path}=${parameter(value)}`);
+  }
+  if (query.fiscalOnly === "true")
+    where.push(
+      "r.kind='obligation' AND r.content->'data'->'fiscal' IS NOT NULL AND r.content->'data'->'fiscal' <> 'null'::jsonb",
+    );
+  if (query.year) {
+    const year = parameter(query.year);
+    where.push(
+      `(substring(r.content->'data'->'fiscal'->'period'->>'start',1,4)=${year} OR (r.content->'data'->'fiscal'->'noticeYears') @> jsonb_build_array((${year})::integer))`,
+    );
+  }
+  if (query.property)
+    where.push(
+      `(r.content->'data'->'fiscal'->'properties') ? ${parameter(query.property)}`,
+    );
+  if (query.month)
+    where.push(
+      `substring(r.content->'data'->'fiscal'->'period'->>'start',6,2)=${parameter(query.month)}`,
+    );
   if (query.kind) where.push(`r.kind=${parameter(query.kind)}`);
   if (query.dossierId) {
     const id = parameter(query.dossierId);
@@ -74,7 +108,7 @@ export function recordFilter(
     );
   if (query.assigneeId)
     where.push(
-      `r.kind='tache' AND (r.content->'data'->'assigneeIds') ? ${parameter(query.assigneeId)}`,
+      `((r.kind='tache' AND (r.content->'data'->'assigneeIds') ? ${parameter(query.assigneeId)}) OR (r.kind='obligation' AND (r.content->'data'->'fiscal'->'responsibleIds') ? ${parameter(query.assigneeId)}))`,
     );
   if (query.state)
     where.push(
@@ -132,4 +166,12 @@ export async function queryRecords(
     offset: query.offset,
     limit: query.limit,
   };
+}
+
+export function fiscalDocumentPredicate(
+  actor: SessionUser,
+  parameter: (v: unknown) => string,
+  documentId: string,
+) {
+  return `NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
 }

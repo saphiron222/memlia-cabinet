@@ -7,6 +7,7 @@ export const ActionSchema = z.enum([
   "transition",
   "assign",
   "approve",
+  "transmit",
   "export",
   "audit",
   "confidential",

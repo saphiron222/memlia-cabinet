@@ -24,6 +24,7 @@ export const adminPermissions = [
   "transition",
   "assign",
   "approve",
+  "transmit",
   "export",
   "audit",
   "confidential",

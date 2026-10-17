@@ -9,7 +9,13 @@ import {
 import { z } from "zod";
 import { ErrorSummary } from "../../forms";
 import { request, message, useScope } from "../../api";
-export function ExportData({ query }: { query?: RecordListQuery }) {
+export function ExportData({
+  query,
+  originals = false,
+}: {
+  query?: RecordListQuery;
+  originals?: boolean;
+}) {
   const signal = useScope(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -44,7 +50,11 @@ export function ExportData({ query }: { query?: RecordListQuery }) {
     try {
       await request("/administration/exports", ExportRunSchema, signal, {
         method: "POST",
-        body: JSON.stringify({ operationId: crypto.randomUUID(), query }),
+        body: JSON.stringify({
+          operationId: crypto.randomUUID(),
+          query,
+          originals,
+        }),
       });
       await load();
     } catch (e) {
@@ -89,11 +99,20 @@ export function ExportData({ query }: { query?: RecordListQuery }) {
   return (
     <section>
       <h3>
-        {query
-          ? "Préparation CSV de cette vue"
-          : "Sortie des données autorisées"}
+        {originals
+          ? "Lot d’originaux fiscaux (TAR)"
+          : query
+            ? "Préparation CSV de cette vue"
+            : "Sortie des données autorisées"}
       </h3>
-      {query ? (
+      {originals ? (
+        <p>
+          Archive TAR diffusée au téléchargement, contenant les originaux, leurs
+          versions et empreintes, ainsi que le rapport final des pièces absentes
+          ou corrompues. La sélection reprend les filtres de cette vue. Type :
+          application/x-tar ; nom : memlia-avis-originaux.tar.
+        </p>
+      ) : query ? (
         <p>
           La préparation conserve filtres, colonnes et tri de la vue entière. Le
           manifeste énumère les parties CSV à télécharger.
@@ -101,25 +120,29 @@ export function ExportData({ query }: { query?: RecordListQuery }) {
       ) : (
         <p>
           Manifeste et parties JSON de 8 Mio maximum : dossiers, contacts,
-          tâches et obligations actifs et archivés, valeurs personnalisées,
-          identité de l’installation et références de leurs pièces accessibles.
-          Chaque pièce indique sa disponibilité lors de la préparation et son
-          lien de téléchargement ; les originaux sont téléchargés séparément.
-          Les droits sont revérifiés avant restitution. Les cinq dernières
-          préparations sont conservées.
+          tâches, obligations et chronologies fiscales actifs et archivés,
+          valeurs personnalisées, identité de l’installation et références de
+          leurs pièces accessibles. Chaque pièce indique sa disponibilité lors
+          de la préparation et son lien de téléchargement ; les originaux sont
+          téléchargés séparément. Les droits sont revérifiés avant restitution.
+          Les cinq dernières préparations sont conservées.
         </p>
       )}
       <ErrorSummary message={error || undefined} />
       <Button loading={busy} disabled={pending} onClick={() => void start()}>
-        {query
-          ? "Préparer le CSV de cette vue"
-          : "Préparer la sortie complète en JSON"}
+        {originals
+          ? "Préparer les originaux filtrés"
+          : query
+            ? "Préparer le CSV de cette vue"
+            : "Préparer la sortie complète en JSON"}
       </Button>
       <Button disabled={busy} onClick={() => void load()}>
         Actualiser les sorties
       </Button>
       {runs
-        .filter((run) => !query || run.encoding === "csv")
+        .filter((run) =>
+          originals ? run.encoding === "tar" : !query || run.encoding === "csv",
+        )
         .map((run) => (
           <div key={run.id}>
             <p>
@@ -135,7 +158,16 @@ export function ExportData({ query }: { query?: RecordListQuery }) {
               · {run.encoding.toUpperCase()} · {run.records} objets ·{" "}
               {run.documents} références documentaires
             </p>
-            {run.job.state === "completed" && (
+            {run.job.state === "completed" && run.encoding === "tar" && (
+              <p>
+                <a
+                  href={`/api/v1/administration/exports/${run.id}/originals.tar`}
+                >
+                  Télécharger les originaux et le rapport final (TAR)
+                </a>
+              </p>
+            )}
+            {run.job.state === "completed" && run.encoding !== "tar" && (
               <Button disabled={busy} onClick={() => void download(run.id)}>
                 Télécharger le manifeste
               </Button>

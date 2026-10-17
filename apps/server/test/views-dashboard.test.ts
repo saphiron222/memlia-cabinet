@@ -339,7 +339,16 @@ test("synthèse des sources : manuelle et simulée restent sans fraîcheur véri
   const query = `from=2026-06-01&to=2026-06-30&dossierId=${d.id}`;
   expect(
     (await f.request("GET", "/dashboard?" + query)).json().obligationSources,
-  ).toEqual({ manual: 1, simulated: 1, verified: 0, freshness: "unknown" });
+  ).toEqual({
+    manual: 1,
+    simulated: 1,
+    verified: 0,
+    freshness: "unknown",
+    fresh: 0,
+    stale: 0,
+    unknown: 2,
+    withoutVerifiedFresh: 2,
+  });
   expect(
     (
       await f.request(

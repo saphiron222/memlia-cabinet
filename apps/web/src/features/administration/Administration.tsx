@@ -30,6 +30,7 @@ const actionLabels: Record<Permission["action"], string> = {
   update: "Modifier",
   transition: "Changer l’étape",
   assign: "Affecter",
+  transmit: "Constater une transmission",
   approve: "Approuver",
   export: "Exporter",
   audit: "Consulter l’historique",

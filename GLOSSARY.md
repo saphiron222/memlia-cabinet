@@ -59,3 +59,23 @@ _Avoid_ : suivi récurrent
 **Suivi récurrent** :
 Grille périodique dont les colonnes ont chacune une fréquence et un type de valeur.
 _Avoid_ : règle de tâches récurrentes
+
+**Version applicable acceptée** :
+Version d’une déclaration appuyée par les retours acceptés de ses destinataires attendus ; un correctif rejeté ne remplace pas l’initiale acceptée.
+_Avoid_ : dernière version préparée
+
+**Photographie de dette** :
+Constat daté d’une créance et de son solde, sur une portée explicitée ; il reste distinct des événements d’apurement.
+_Avoid_ : solde universel du dossier
+
+**Candidat de rapprochement** :
+Lien proposé entre une obligation et des éléments bancaires, avec motifs et confiance, qui ne prouve pas un débit.
+_Avoid_ : paiement confirmé
+
+**Préparation IFU** :
+Proposition annuelle par payeur, bénéficiaire et catégorie, reliée aux versions des données RCM et à la couverture des mois.
+_Avoid_ : somme des montants à payer des 2777
+
+**Cadence opérationnelle** :
+Politique datée d’appréciation de la fraîcheur d’une source, distincte d’une échéance fiscale ou d’un engagement du fournisseur.
+_Avoid_ : délai réglementaire

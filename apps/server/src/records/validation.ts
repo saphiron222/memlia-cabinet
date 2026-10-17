@@ -56,6 +56,74 @@ export async function validateReferentialContent(
       "DOSSIER_REQUIRED",
       "Une obligation doit être rattachée à un dossier.",
     );
+  if (record.kind === "obligation" && record.data.fiscal) {
+    const profile = record.data.fiscal;
+    if (profile.contactId) {
+      const rows = await tx.query(
+        "SELECT content FROM cabinet_records WHERE id=$1 AND kind='contact'",
+        [profile.contactId],
+      );
+      if (!rows[0]) fail(404, "NOT_FOUND", "Contact inaccessible.");
+      const contact = CabinetRecordSchema.parse(rows[0].content);
+      await requireAccess(tx, actor, "read", contact);
+      if (
+        contact.kind !== "contact" ||
+        (contact.dossierId !== record.dossierId &&
+          !contact.data.relatedDossierIds.includes(record.dossierId!))
+      )
+        fail(
+          400,
+          "INVALID_CONTACT",
+          "Le contact doit être lié au dossier de l’obligation.",
+        );
+    }
+    if (record.dossierId) {
+      const rows = await tx.query(
+        "SELECT content FROM cabinet_records WHERE id=$1 AND kind='dossier'",
+        [record.dossierId],
+      );
+      const parent = rows[0]
+        ? CabinetRecordSchema.parse(rows[0].content)
+        : null;
+      if (
+        profile.establishmentId &&
+        (parent?.kind !== "dossier" ||
+          !parent.data.establishments.some(
+            (e) => e.id === profile.establishmentId,
+          ))
+      )
+        fail(400, "INVALID_ESTABLISHMENT", "Établissement du dossier requis.");
+    }
+    if (
+      profile.responsibleIds.length &&
+      (
+        await tx.query(
+          "SELECT id FROM cabinet_users WHERE active=true AND id=ANY($1::uuid[])",
+          [profile.responsibleIds],
+        )
+      ).length !== new Set(profile.responsibleIds).size
+    )
+      fail(400, "INVALID_ASSIGNEE", "Responsable inconnu ou inactif.");
+    if (record.data.nature === "IRPP" && !profile.contactId)
+      fail(400, "CONTACT_REQUIRED", "Contact requis pour l’IRPP.");
+    if (record.data.nature === "DSN" && !profile.establishmentId)
+      fail(400, "ESTABLISHMENT_REQUIRED", "Établissement requis pour la DSN.");
+    if (
+      ["IRPP", "IFU_2561"].includes(record.data.nature) &&
+      (!profile.period.start.endsWith("-01-01") ||
+        profile.period.end !== profile.period.start.slice(0, 4) + "-12-31")
+    )
+      fail(400, "CIVIL_YEAR_REQUIRED", "Année civile des revenus requise.");
+    if (["DSN", "RCM_2777"].includes(record.data.nature)) {
+      const end = new Date(profile.period.start + "T00:00:00Z");
+      end.setUTCMonth(end.getUTCMonth() + 1, 0);
+      if (
+        !profile.period.start.endsWith("-01") ||
+        profile.period.end !== end.toISOString().slice(0, 10)
+      )
+        fail(400, "MONTH_REQUIRED", "Mois civil complet requis.");
+    }
+  }
   const ids = new Set([
     ...(record.dossierId ? [record.dossierId] : []),
     ...(record.kind === "contact" ? record.data.relatedDossierIds : []),

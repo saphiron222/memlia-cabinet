@@ -94,13 +94,16 @@
             "status": "implemented-local",
             "files": [
               "apps/server/src/records/query.ts",
-              "apps/web/src/features/records/Dashboard.tsx"
+              "apps/web/src/features/records/Dashboard.tsx",
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/records/csv.ts"
             ],
             "tests": [
               "apps/server/test/views-dashboard.test.ts",
-              "tests/e2e/administration.spec.ts"
+              "tests/e2e/administration.spec.ts",
+              "apps/server/test/fiscal.test.ts"
             ],
-            "ci": "not-run-for-task1",
+            "ci": "not-run-for-task2",
             "fieldValidation": "last-phase"
           }
         },
@@ -160,15 +163,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-TVA-AC-01",
-          "expected": "La grille présente chaque dossier et période attendus avec régime, source et fraîcheur ; une période non attendue ne devient pas un retard."
+          "expected": "La grille présente chaque dossier et période attendus avec régime, source et fraîcheur ; une période non attendue ne devient pas un retard.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-TVA-AC-02",
-          "expected": "Préparation, approbation, tentative, retour de chaque fournisseur et règlement restent distincts après rejet ou correction."
+          "expected": "Préparation, approbation, tentative, retour de chaque fournisseur et règlement restent distincts après rejet ou correction.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-TVA-AC-03",
-          "expected": "Le détail conserve checklist, échanges et pièces ; les actions email utilisent le dossier, la période et le destinataire de l'obligation sélectionnée."
+          "expected": "Le détail conserve checklist, échanges et pièces ; les actions email utilisent le dossier, la période et le destinataire de l'obligation sélectionnée.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -189,15 +261,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-IS-AC-01",
-          "expected": "Acomptes et solde sont rattachés au bon exercice et à la clôture, sans mélanger années civiles et exercices décalés."
+          "expected": "Acomptes et solde sont rattachés au bon exercice et à la clôture, sans mélanger années civiles et exercices décalés.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IS-AC-02",
-          "expected": "Brut, net à payer, estimation et montant inconnu restent identifiables ; un montant absent n'est pas converti en zéro."
+          "expected": "Brut, net à payer, estimation et montant inconnu restent identifiables ; un montant absent n'est pas converti en zéro.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IS-AC-03",
-          "expected": "Une télécorrection rejetée conserve l'initiale acceptée et les deux preuves ; le masquage ou le classement non applicable garde sa raison."
+          "expected": "Une télécorrection rejetée conserve l'initiale acceptée et les deux preuves ; le masquage ou le classement non applicable garde sa raison.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -215,15 +356,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-CVAE-AC-01",
-          "expected": "La grille distingue CA de référence, solde et acomptes avec campagne et provenance des valeurs."
+          "expected": "La grille distingue CA de référence, solde et acomptes avec campagne et provenance des valeurs.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-CVAE-AC-02",
-          "expected": "La saisie manuelle, la source collectée et le classement non applicable sont conservés sans écrasement silencieux."
+          "expected": "La saisie manuelle, la source collectée et le classement non applicable sont conservés sans écrasement silencieux.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-CVAE-AC-03",
-          "expected": "Tout calcul déterministe utilise une règle et une campagne versionnées avec exemples de référence ; sans règle applicable, le montant reste à déterminer."
+          "expected": "Tout calcul déterministe utilise une règle et une campagne versionnées avec exemples de référence ; sans règle applicable, le montant reste à déterminer.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ],
       "limits": [
@@ -246,15 +456,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-CFE-AC-01",
-          "expected": "Chaque avis conserve rôle, établissement, années, référence, montant, date limite et original ; plusieurs avis d'un même dossier restent distincts."
+          "expected": "Chaque avis conserve rôle, établissement, années, référence, montant, date limite et original ; plusieurs avis d'un même dossier restent distincts.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-CFE-AC-02",
-          "expected": "Activation du prélèvement, rapprochement proposé et paiement confirmé sont trois informations différentes ; les rapprochements ambigus exposent leurs raisons."
+          "expected": "Activation du prélèvement, rapprochement proposé et paiement confirmé sont trois informations différentes ; les rapprochements ambigus exposent leurs raisons.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-CFE-AC-03",
-          "expected": "L'export unitaire ou en lot contient exactement les avis sélectionnés et signale les pièces manquantes ou invalides."
+          "expected": "L'export unitaire ou en lot contient exactement les avis sélectionnés et signale les pièces manquantes ou invalides.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ],
       "limits": [
@@ -275,15 +554,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-FONCIER-AC-01",
-          "expected": "Chaque avis est rattaché à son année, sa référence et aux biens ou communes exposés par la source."
+          "expected": "Chaque avis est rattaché à son année, sa référence et aux biens ou communes exposés par la source.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-FONCIER-AC-02",
-          "expected": "Avis principal et suites sont conservés et liés ; une suite manquante rend l'acquisition partielle."
+          "expected": "Avis principal et suites sont conservés et liés ; une suite manquante rend l'acquisition partielle.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-FONCIER-AC-03",
-          "expected": "Un filtre d'année ou de bien s'applique au tableau et au lot téléchargé sans omettre une pièce liée à l'avis sélectionné."
+          "expected": "Un filtre d'année ou de bien s'applique au tableau et au lot téléchargé sans omettre une pièce liée à l'avis sélectionné.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -301,15 +649,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-DAS2-AC-01",
-          "expected": "L'obligation annuelle conserve clôture, origine manuelle ou fournisseur, statut et montant lorsque disponible."
+          "expected": "L'obligation annuelle conserve clôture, origine manuelle ou fournisseur, statut et montant lorsque disponible.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DAS2-AC-02",
-          "expected": "Marquer puis annuler une réalisation conserve auteur, date, raisons et versions, sans produire de preuve de dépôt fictive."
+          "expected": "Marquer puis annuler une réalisation conserve auteur, date, raisons et versions, sans produire de preuve de dépôt fictive.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DAS2-AC-03",
-          "expected": "Pièces, commentaires et checklist restent accessibles depuis le même objet après rechargement et changement de vue."
+          "expected": "Pièces, commentaires et checklist restent accessibles depuis le même objet après rechargement et changement de vue.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -565,15 +982,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-DETTES-AC-01",
-          "expected": "Une photographie conserve compte, dossier, impôt, période, références, montants et fraîcheur disponibles."
+          "expected": "Une photographie conserve compte, dossier, impôt, période, références, montants et fraîcheur disponibles.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DETTES-AC-02",
-          "expected": "Dette, apurement et paiement restent séparés ; remise, dégrèvement ou réimputation ne sont pas assimilés à un débit bancaire."
+          "expected": "Dette, apurement et paiement restent séparés ; remise, dégrèvement ou réimputation ne sont pas assimilés à un débit bancaire.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DETTES-AC-03",
-          "expected": "La vue historique conserve les photographies et les rapprochements ; elle ne confirme un solde nul que sur une portée complète et une preuve source explicite."
+          "expected": "La vue historique conserve les photographies et les rapprochements ; elle ne confirme un solde nul que sur une portée complète et une preuve source explicite.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ],
       "limits": [
@@ -623,15 +1109,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-ANOMALIES-AC-01",
-          "expected": "Une anomalie montre pour un même champ les valeurs concurrentes, leurs sources et dates, y compris source absente."
+          "expected": "Une anomalie montre pour un même champ les valeurs concurrentes, leurs sources et dates, y compris source absente.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-ANOMALIES-AC-02",
-          "expected": "La résolution conserve valeur retenue, motif et auteur, puis relance le contrôle sans effacer les observations d'origine."
+          "expected": "La résolution conserve valeur retenue, motif et auteur, puis relance le contrôle sans effacer les observations d'origine.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-ANOMALIES-AC-03",
-          "expected": "Une nouvelle contradiction réouvre ou crée une anomalie liée ; une résolution locale ne modifie pas le fournisseur sans commande dédiée."
+          "expected": "Une nouvelle contradiction réouvre ou crée une anomalie liée ; une résolution locale ne modifie pas le fournisseur sans commande dédiée.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -1929,15 +2484,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-PAYMENTS-AC-01",
-          "expected": "Chaque règlement conserve sa référence, source, date, montant et relation à la dette ou déclaration."
+          "expected": "Chaque règlement conserve sa référence, source, date, montant et relation à la dette ou déclaration.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-PAYMENTS-AC-02",
-          "expected": "Le reste dû tient compte des règlements acquis sans double comptage après une seconde collecte ; une relation ambiguë reste à résoudre."
+          "expected": "Le reste dû tient compte des règlements acquis sans double comptage après une seconde collecte ; une relation ambiguë reste à résoudre.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-PAYMENTS-AC-03",
-          "expected": "Ordre, validation de paiement, prélèvement présenté et débit confirmé conservent leurs preuves et ne deviennent pas le même état."
+          "expected": "Ordre, validation de paiement, prélèvement présenté et débit confirmé conservent leurs preuves et ne deviennent pas le même état.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -2164,15 +2788,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-SOCIAL-AC-01",
-          "expected": "Une obligation DSN conserve établissement, mois, tentative et références de production distinctes des retours jedeclare."
+          "expected": "Une obligation DSN conserve établissement, mois, tentative et références de production distinctes des retours jedeclare.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-SOCIAL-AC-02",
-          "expected": "Les accusés sont rattachés à la bonne tentative, période et destinataire, avec motifs et originaux."
+          "expected": "Les accusés sont rattachés à la bonne tentative, période et destinataire, avec motifs et originaux.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-SOCIAL-AC-03",
-          "expected": "Les natures DSN, DES, RCM et IFU gardent leurs règles et contrats propres ; aucune génération ou émission n'est déduite du suivi de statut."
+          "expected": "Les natures DSN, DES, RCM et IFU gardent leurs règles et contrats propres ; aucune génération ou émission n'est déduite du suivi de statut.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -2217,15 +2910,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-IRPP-AC-01",
-          "expected": "La déclaration est identifiée par contact et année et conserve étapes, échéance et intervenants."
+          "expected": "La déclaration est identifiée par contact et année et conserve étapes, échéance et intervenants.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IRPP-AC-02",
-          "expected": "Le fichier prérempli est une pièce versionnée liée à cette déclaration avec provenance et droits."
+          "expected": "Le fichier prérempli est une pièce versionnée liée à cette déclaration avec provenance et droits.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IRPP-AC-03",
-          "expected": "Préparation, validation du client, marquage local de dépôt et preuve externe restent distincts ; aucune émission ne découle d'un simple changement d'étape."
+          "expected": "Préparation, validation du client, marquage local de dépôt et preuve externe restent distincts ; aucune émission ne découle d'un simple changement d'étape.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -2242,15 +3004,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-RCM-AC-01",
-          "expected": "Chaque RCM 2777 conserve période, source manuelle ou fournisseur, version et montant disponible."
+          "expected": "Chaque RCM 2777 conserve période, source manuelle ou fournisseur, version et montant disponible.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-RCM-AC-02",
-          "expected": "Une contradiction entre source collectée et valeur manuelle ouvre une résolution sans effacer les deux origines."
+          "expected": "Une contradiction entre source collectée et valeur manuelle ouvre une résolution sans effacer les deux origines.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-RCM-AC-03",
-          "expected": "Dépôt, acceptation et paiement restent séparés et reliés à la tentative ; aucune règle de calcul TVA n'est réutilisée comme règle RCM."
+          "expected": "Dépôt, acceptation et paiement restent séparés et reliés à la tentative ; aucune règle de calcul TVA n'est réutilisée comme règle RCM.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ]
     },
@@ -2267,15 +3098,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-IFU-AC-01",
-          "expected": "Une proposition annuelle IFU 2561 identifie les RCM sources et leurs versions."
+          "expected": "Une proposition annuelle IFU 2561 identifie les RCM sources et leurs versions.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IFU-AC-02",
-          "expected": "La modification d'un RCM source marque la proposition à réviser sans modifier une version figée ou déclencher un dépôt."
+          "expected": "La modification d'un RCM source marque la proposition à réviser sans modifier une version figée ou déclencher un dépôt.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-IFU-AC-03",
-          "expected": "Validation, pièce générée et tentative de dépôt restent distinctes ; le montant proposé suit une règle d'agrégation explicitement versionnée."
+          "expected": "Validation, pièce générée et tentative de dépôt restent distinctes ; le montant proposé suit une règle d'agrégation explicitement versionnée.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ],
       "limits": [
@@ -2295,15 +3195,84 @@
       "acceptanceCriteria": [
         {
           "id": "F-DES-AC-01",
-          "expected": "Une obligation DES possède sa nature, entreprise, période, responsable, échéance et pièces sans héritage implicite du régime TVA."
+          "expected": "Une obligation DES possède sa nature, entreprise, période, responsable, échéance et pièces sans héritage implicite du régime TVA.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DES-AC-02",
-          "expected": "Le suivi sépare préparation, marquage local et résultat d'une transmission effectivement prouvée."
+          "expected": "Le suivi sépare préparation, marquage local et résultat d'une transmission effectivement prouvée.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         },
         {
           "id": "F-DES-AC-03",
-          "expected": "L'adaptateur réel reste désactivé sans démarche et contrat Douanes acquis ; la simulation conserve cette même frontière de capacité."
+          "expected": "L'adaptateur réel reste désactivé sans démarche et contrat Douanes acquis ; la simulation conserve cette même frontière de capacité.",
+          "implementation": {
+            "status": "partial-local",
+            "files": [
+              "packages/contracts/src/fiscal.ts",
+              "apps/server/src/fiscal/service.ts",
+              "apps/server/src/fiscal/situation.ts",
+              "apps/server/src/fiscal/batches.ts",
+              "apps/server/src/fiscal/ifu.ts",
+              "apps/server/src/administration/export.ts",
+              "apps/web/src/features/fiscal/Fiscal.tsx",
+              "apps/web/src/features/fiscal/FiscalDetail.tsx",
+              "docs/fiscalite.md"
+            ],
+            "tests": [
+              "apps/server/test/fiscal.test.ts",
+              "tests/e2e/fiscal.spec.ts",
+              "apps/server/test/backup.test.ts"
+            ],
+            "ci": "not-run-for-task2",
+            "fieldValidation": "last-phase",
+            "remaining": "Intégrations requises selon la ligne du critère dans docs/fiscalite.md ; qualification complète Tasks11/12.",
+            "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
+          }
         }
       ],
       "limits": [
@@ -2363,15 +3332,19 @@
         "files": [
           "apps/server/src/records/query.ts",
           "apps/web/src/features/records/Dashboard.tsx",
-          "docs/referentiel-reprise.md"
+          "docs/referentiel-reprise.md",
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/records/csv.ts",
+          "docs/fiscalite.md"
         ],
         "tests": [
           "apps/server/test/views-dashboard.test.ts",
-          "tests/e2e/administration.spec.ts"
+          "tests/e2e/administration.spec.ts",
+          "apps/server/test/fiscal.test.ts"
         ],
-        "ci": "not-run-for-task1",
+        "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
-        "remaining": "Fraîcheur temporelle versionnée : Task2/10 ; état non vérifié/manuelle/simulée explicite maintenant."
+        "remaining": "Attestation de provenance par pilotes acquis Task10 ; qualification complète Tasks11/12. Fraîcheur temporelle versionnée locale construite Task2."
       }
     },
     {
@@ -2435,10 +3408,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2465,10 +3455,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2493,10 +3500,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2521,10 +3545,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Checklist/commentaires et câblage Task3. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2550,10 +3591,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Relance email modélisée et câblée Task9 ; contexte fiscal canonique disponible. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2579,10 +3637,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2607,10 +3682,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2635,10 +3727,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2663,10 +3772,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2690,10 +3816,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2715,10 +3858,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2740,10 +3900,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2766,28 +3943,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "locally-tested",
+        "status": "partial-local",
         "files": [
-          "packages/contracts/src/collections.ts",
-          "packages/contracts/src/jobs.ts",
-          "apps/server/src/collections/service.ts",
-          "apps/server/src/jobs/runner.ts",
-          "apps/server/fixtures/collections.ts",
-          "apps/web/src/Collections.tsx",
-          "docs/collectes-simulees.md"
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
         ],
         "tests": [
-          "apps/server/test/collections.test.ts",
-          "apps/server/test/jobs.test.ts",
-          "tests/e2e/collections.spec.ts"
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
         ],
+        "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
-        "scope": "Acquisition CFE fictive et contrat avis : référence, montant, années, échéance, établissement, prélèvement distinct du paiement et original GED. Vue fiscale complète et compte réel non livrés dans ce lot.",
-        "verification": {
-          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
-          "ci": "not-run",
-          "cabinet": "not-run"
-        }
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2810,28 +3986,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "locally-tested",
+        "status": "implemented-local",
         "files": [
-          "packages/contracts/src/collections.ts",
-          "packages/contracts/src/jobs.ts",
-          "apps/server/src/collections/service.ts",
-          "apps/server/src/jobs/runner.ts",
-          "apps/server/fixtures/collections.ts",
-          "apps/web/src/Collections.tsx",
-          "docs/collectes-simulees.md"
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
         ],
         "tests": [
-          "apps/server/test/collections.test.ts",
-          "apps/server/test/jobs.test.ts",
-          "tests/e2e/collections.spec.ts"
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
         ],
+        "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
-        "scope": "Téléchargement unitaire des originaux fictifs et rapport de couverture ; export de lots multidossiers et collecte réelle non livrés.",
-        "verification": {
-          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
-          "ci": "not-run",
-          "cabinet": "not-run"
-        }
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2854,10 +4029,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2879,10 +4071,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2905,10 +4114,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -2931,10 +4157,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Checklist/commentaires et câblage Task3. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -3346,28 +4589,27 @@
         "robots/approfondissement-dgfip.json"
       ],
       "implementation": {
-        "status": "locally-tested",
+        "status": "partial-local",
         "files": [
-          "packages/contracts/src/collections.ts",
-          "packages/contracts/src/jobs.ts",
-          "apps/server/src/collections/service.ts",
-          "apps/server/src/jobs/runner.ts",
-          "apps/server/fixtures/collections.ts",
-          "apps/web/src/Collections.tsx",
-          "docs/collectes-simulees.md"
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
         ],
         "tests": [
-          "apps/server/test/collections.test.ts",
-          "apps/server/test/jobs.test.ts",
-          "tests/e2e/collections.spec.ts"
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
         ],
+        "ci": "not-run-for-task2",
         "fieldValidation": "last-phase",
-        "scope": "Contrats/simulations dette, apurement et paiement séparés ; remise sans règlement et couverture explicite. Vue métier de dette et historique fiscal réel à construire.",
-        "verification": {
-          "local": "Simulations fictives PGlite/PostgreSQL 17 et navigateur ; périmètre partiel détaillé dans scope",
-          "ci": "not-run",
-          "cabinet": "not-run"
-        }
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -3441,10 +4683,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -3468,10 +4727,27 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6273,10 +7549,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6299,10 +7592,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6324,10 +7634,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6349,10 +7676,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6374,10 +7718,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -6399,10 +7760,27 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7108,10 +8486,27 @@
         "robots/approfondissement-jedeclare.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7182,10 +8577,27 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7230,10 +8642,27 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7254,10 +8683,27 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7278,10 +8724,27 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {
@@ -7302,10 +8765,27 @@
         "report/complements-catalogue-interne.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partial-local",
+        "files": [
+          "packages/contracts/src/fiscal.ts",
+          "apps/server/src/fiscal/service.ts",
+          "apps/server/src/fiscal/situation.ts",
+          "apps/server/src/fiscal/batches.ts",
+          "apps/server/src/fiscal/ifu.ts",
+          "apps/server/src/administration/export.ts",
+          "apps/web/src/features/fiscal/Fiscal.tsx",
+          "apps/web/src/features/fiscal/FiscalDetail.tsx",
+          "docs/fiscalite.md"
+        ],
+        "tests": [
+          "apps/server/test/fiscal.test.ts",
+          "tests/e2e/fiscal.spec.ts",
+          "apps/server/test/backup.test.ts"
+        ],
+        "ci": "not-run-for-task2",
+        "fieldValidation": "last-phase",
+        "remaining": "Pilotes et preuves fournisseurs acquis Task10 ; observations locales et simulations explicites. Qualification complète Tasks11/12.",
+        "criterionDetails": "docs/fiscalite.md#matrice-de-réception-métier"
       }
     },
     {

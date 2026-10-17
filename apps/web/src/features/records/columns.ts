@@ -1,5 +1,26 @@
-import type { CabinetRecord, RecordKind } from "@memlia/contracts";
+import {
+  deriveSourceFreshness,
+  type CabinetRecord,
+  type RecordKind,
+} from "@memlia/contracts";
+import { moneyLabel, labelValue } from "../fiscal/labels";
 export const columnLabels: Record<string, string> = {
+  fiscalGross: "Montant brut",
+  fiscalNet: "Net à payer",
+  fiscalEstimate: "Estimation",
+  fiscalReferenceTurnover: "CA de référence",
+  fiscalCampaign: "Campagne",
+  fiscalStart: "Début de période",
+  fiscalEnd: "Fin de période",
+  fiscalSubtype: "Déclaration ou acompte",
+  fiscalClassification: "Classement",
+  fiscalRegime: "Régime fiscal",
+  fiscalContact: "Contact fiscal",
+  fiscalResponsibles: "Intervenants",
+  freshnessState: "Fraîcheur opérationnelle",
+  sourceUpdatedAt: "Mise à jour source",
+  observedAt: "Collecte",
+  cadenceVersion: "Version de cadence",
   id: "Identité",
   kind: "Type",
   title: "Titre",
@@ -62,12 +83,80 @@ export const defaultColumns = (kind: RecordKind) =>
     tache: "title,dueDate,state,version",
     obligation: "title,dueDate,validation,version",
   })[kind];
-export function columnValue(record: CabinetRecord, key: string) {
-  const value = key.startsWith("custom.")
-    ? record.data.customFields[key.slice(7)]
-    : key in record
-      ? (record as unknown as Record<string, unknown>)[key]
-      : (record.data as unknown as Record<string, unknown>)[key];
+export function columnValue(
+  record: CabinetRecord,
+  key: string,
+  cabinetTimeZone?: string,
+) {
+  if (
+    record.kind === "obligation" &&
+    [
+      "freshnessState",
+      "sourceUpdatedAt",
+      "observedAt",
+      "cadenceVersion",
+    ].includes(key)
+  ) {
+    const f = deriveSourceFreshness(
+      cabinetTimeZone ? record.data.sourceEvidence : null,
+      new Date(),
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: cabinetTimeZone ?? "UTC",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date()),
+    );
+    return key === "freshnessState"
+      ? {
+          fresh: "Récente selon politique",
+          stale: "Ancienne selon politique",
+          unknown: "Indéterminée",
+        }[f.state]
+      : key === "sourceUpdatedAt"
+        ? (f.sourceUpdatedAt ?? "Inconnue")
+        : key === "observedAt"
+          ? (f.observedAt ?? "Inconnue")
+          : (f.policyVersion ?? "Absente");
+  }
+  const profile = record.kind === "obligation" ? record.data.fiscal : null;
+  const fiscal: Record<string, unknown> = profile
+    ? {
+        fiscalGross: profile.observedValues.gross,
+        fiscalNet: profile.observedValues.net,
+        fiscalEstimate: profile.observedValues.estimate,
+        fiscalReferenceTurnover: profile.observedValues.referenceTurnover,
+        fiscalCampaign: profile.period.campaign,
+        fiscalStart: profile.period.start,
+        fiscalEnd: profile.period.end,
+        fiscalSubtype: profile.period.subtype,
+        fiscalClassification: profile.classification,
+        fiscalRegime: profile.regime,
+        fiscalContact: profile.contactId,
+        fiscalResponsibles: profile.responsibleIds,
+        financialYearEnd: profile.financialYearEnd,
+      }
+    : {};
+  const value =
+    key in fiscal
+      ? fiscal[key]
+      : key.startsWith("custom.")
+        ? record.data.customFields[key.slice(7)]
+        : key in record
+          ? (record as unknown as Record<string, unknown>)[key]
+          : (record.data as unknown as Record<string, unknown>)[key];
+  if (
+    profile &&
+    [
+      "amount",
+      "fiscalGross",
+      "fiscalNet",
+      "fiscalEstimate",
+      "fiscalReferenceTurnover",
+    ].includes(key)
+  )
+    return moneyLabel(typeof value === "string" ? value : null);
+  if (profile && key === "fiscalSubtype") return labelValue(String(value));
   if (value === null || value === undefined || value === "")
     return "Non renseigné";
   if (typeof value === "boolean") return value ? "Oui" : "Non";

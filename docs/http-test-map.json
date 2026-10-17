@@ -294,5 +294,45 @@
   "GET /api/v1/imports/:id/report.csv": {
     "file": "apps/server/test/imports.test.ts",
     "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/fiscal": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "TVA local approval keeps rejected recipient and pending recipient separate without a payment"
+  },
+  "GET /api/v1/fiscal/:id": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "accepted IS original survives rejected correction with both receipts and generic writes cannot bypass frozen fiscal content"
+  },
+  "POST /api/v1/fiscal/:id/commands": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "TVA local approval keeps rejected recipient and pending recipient separate without a payment"
+  },
+  "POST /api/v1/fiscal/generate": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal/bulk": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal/:id/preparation-document": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "IFU needs beneficiary allocation and month coverage; approved aggregate becomes stale after RCM revision"
+  },
+  "GET /api/v1/fiscal/:id/responsibles": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "fiscal approval, update, assignment and transmission are separate and module withdrawal rejects cached commands"
+  },
+  "GET /api/v1/administration/exports/:id/originals.tar": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "filtered TF original lot contains principal and every suite despite same filenames and reports newly missing originals"
+  },
+  "GET /api/v1/fiscal/responsibles": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "CVAE reference turnover, IS amounts and fiscal person filters survive list and CSV without invented calculations"
   }
 }

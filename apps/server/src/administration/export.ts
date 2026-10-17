@@ -1,8 +1,11 @@
+import { Readable } from "node:stream";
+import { tarFile, originalPath } from "../fiscal/tar.js";
 import { csvHeader, csvRow } from "../records/csv.js";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
+  FiscalTimelineEntrySchema,
   CabinetExportSchema,
   RecordListQuerySchema,
   ExportManifestSchema,
@@ -22,24 +25,32 @@ import { JobRunner } from "../jobs/runner.js";
 import { authorizedPredicate, recordFilter } from "../records/query.js";
 import { effectiveUser } from "../identity/service.js";
 import { availablePermissions } from "./access.js";
-import { installation } from "./settings.js";
+import { installation, requireModule } from "./settings.js";
 import { ApiFault, fail } from "../errors.js";
 const checkpointSchema = z.object({
-  phase: z.enum(["planning", "records", "documents", "complete"]),
+  phase: z.enum(["planning", "records", "fiscal", "documents", "complete"]),
   after: z.uuid().nullable(),
   bytes: z.number().int().nonnegative(),
   records: z.number().int().nonnegative(),
   documents: z.number().int().nonnegative(),
+  fiscal: z.number().int().nonnegative().default(0),
   part: z.number().int().positive(),
   partBytes: z.number().int().nonnegative(),
 });
 const headerSchema = CabinetExportSchema.omit({
+  fiscalEvents: true,
   records: true,
   documents: true,
   customFields: true,
   errors: true,
 });
 export class Exports {
+  private streams = new Set<Readable>();
+  stop() {
+    for (const stream of this.streams)
+      stream.destroy(new Error("Arrêt du cabinet"));
+  }
+
   private enqueue: ReturnType<JobRunner["register"]>["enqueue"];
   constructor(
     private db: Database,
@@ -47,6 +58,8 @@ export class Exports {
     private documents: DocumentStore,
     private now: () => Date,
     private partLimit = 8 * 1024 * 1024,
+    private civilDate: (instant: Date) => string = (instant) =>
+      instant.toISOString().slice(0, 10),
   ) {
     if (
       !Number.isInteger(partLimit) ||
@@ -59,6 +72,7 @@ export class Exports {
       input: z.object({
         exportId: z.uuid(),
         query: RecordListQuerySchema.optional(),
+        originals: z.boolean().default(false),
       }),
       checkpoint: checkpointSchema,
       result: z.object({ exportId: z.uuid() }),
@@ -68,12 +82,17 @@ export class Exports {
         bytes: 1024,
         records: 0,
         documents: 0,
+        fiscal: 0,
         part: 1,
         partBytes: 2048,
       },
       scope: (i) => ({ dossierId: null, resourceKey: "export:" + i.exportId }),
       authorize: async (tx, actor, i) => {
         await this.readable(tx, actor, i.exportId);
+        if (i.originals) {
+          await requireModule(tx, "fiscal");
+          await requireModule(tx, "ged");
+        }
       },
       execute: async (input, ctx) => {
         const started = performance.now();
@@ -157,6 +176,49 @@ export class Exports {
                   )
                 ).map((r) => CabinetRecordSchema.parse(r.content));
               }
+              if (prior.phase === "fiscal" && !input.originals)
+                return (
+                  await this.fiscalPage(
+                    tx,
+                    "SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer ORDER BY e.id LIMIT 1000",
+                    [input.exportId, prior.after],
+                  )
+                ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
+              if (prior.phase === "fiscal" && input.originals) {
+                const params: unknown[] = [input.exportId, prior.after];
+                const filters = ["e.content->'event'->>'kind'='notice'"];
+                if (input.query?.year) {
+                  params.push(Number(input.query.year));
+                  filters.push(
+                    `(e.content->'event'->>'year')::integer=$${params.length}`,
+                  );
+                }
+                if (input.query?.property) {
+                  params.push(input.query.property);
+                  filters.push(
+                    `(e.content->'event'->'properties') ? $${params.length}`,
+                  );
+                }
+                return (
+                  await this.fiscalPage(
+                    tx,
+                    `SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer AND ${filters.join(" AND ")} AND NOT EXISTS(SELECT 1 FROM cabinet_fiscal_events newer WHERE newer.obligation_id=e.obligation_id AND newer.content->'event'->>'kind'='notice' AND newer.content->'event'->>'id'=e.content->'event'->>'id' AND newer.version>e.version AND newer.version<=(r.content->>'version')::integer) ORDER BY e.id LIMIT 1000`,
+                    params,
+                  )
+                ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
+              }
+              if (input.originals) {
+                const selected = await tx.query(
+                  "SELECT d.id FROM cabinet_documents d WHERE ($2::uuid IS NULL OR d.id>$2::uuid) AND EXISTS(SELECT 1 FROM cabinet_export_rows e WHERE e.export_id=$1 AND e.kind='fiscal' AND (e.content->'event'->>'originalId'=d.id::text OR (e.content->'event'->'suiteIds') ? d.id::text)) ORDER BY d.id LIMIT 1000",
+                  [input.exportId, prior.after],
+                );
+                const documents = [];
+                for (const item of selected)
+                  documents.push(
+                    await this.documents.get(tx, actor, String(item.id)),
+                  );
+                return documents;
+              }
               const dossierIds = (
                 await tx.query(
                   "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='record' AND content->>'kind'='dossier' ORDER BY id",
@@ -189,11 +251,20 @@ export class Exports {
             });
             const entries = page.map((value, index) => ({
               ordinal:
-                (prior.phase === "records" ? prior.records : prior.documents) +
+                (prior.phase === "records"
+                  ? prior.records
+                  : prior.phase === "fiscal"
+                    ? prior.fiscal
+                    : prior.documents) +
                 index +
                 1,
               id: value.id,
-              kind: prior.phase === "records" ? "record" : "document",
+              kind:
+                prior.phase === "records"
+                  ? "record"
+                  : prior.phase === "fiscal"
+                    ? "fiscal"
+                    : "document",
               content: value,
             }));
             for (const field of fields) {
@@ -215,9 +286,10 @@ export class Exports {
                   content: field.content as never,
                 });
             }
-            const overhead = input.query
-              ? Math.max(2048, Buffer.byteLength(csvHeader(input.query)))
-              : 2048;
+            const overhead =
+              input.query && !input.originals
+                ? Math.max(2048, Buffer.byteLength(csvHeader(input.query)))
+                : 2048;
             let part = prior.part,
               partBytes = Math.max(prior.partBytes, overhead),
               bytes = prior.bytes;
@@ -226,7 +298,7 @@ export class Exports {
               const size = Math.max(
                 Buffer.byteLength(JSON.stringify(entry.content)) +
                   (entry.kind === "document" ? 512 : 2),
-                input.query
+                input.query && !input.originals
                   ? Buffer.byteLength(
                       csvRow(
                         CabinetRecordSchema.parse(entry.content),
@@ -249,7 +321,10 @@ export class Exports {
               bytes += size;
               return { ...entry, part, size };
             });
-            if (prior.records + prior.documents + page.length > 400_000)
+            if (
+              prior.records + prior.documents + prior.fiscal + page.length >
+              400_000
+            )
               fail(
                 413,
                 "EXPORT_COUNT_LIMIT",
@@ -264,10 +339,14 @@ export class Exports {
               phase: page.length
                 ? prior.phase
                 : prior.phase === "records"
-                  ? input.query
+                  ? input.query && !input.originals
                     ? "complete"
-                    : "documents"
-                  : "complete",
+                    : "fiscal"
+                  : prior.phase === "fiscal"
+                    ? "documents"
+                    : "complete",
+              fiscal:
+                prior.fiscal + (prior.phase === "fiscal" ? page.length : 0),
               records:
                 prior.records + (prior.phase === "records" ? page.length : 0),
               documents:
@@ -331,6 +410,12 @@ export class Exports {
     });
     this.enqueue = worker.enqueue as typeof this.enqueue;
   }
+  private fiscalPage(tx: Connection, sql: string, params: unknown[]) {
+    return tx.query(
+      `SELECT content FROM (SELECT id,content,sum(octet_length(content::text)) OVER(ORDER BY id) AS bytes,row_number() OVER(ORDER BY id) AS ordinal FROM (${sql}) page) bounded WHERE bytes<=2097152 OR ordinal=1 ORDER BY id`,
+      params,
+    );
+  }
   private permit(actor: SessionUser) {
     if (!availablePermissions(actor).some((p) => p.action === "export"))
       fail(403, "FORBIDDEN", "Export non autorisé.");
@@ -357,13 +442,20 @@ export class Exports {
         "EXPORT_SCOPE_CHANGED",
         "Les droits de cette sortie ont changé. Régénérer le fichier.",
       );
-    const ids = (
-      await tx.query(
-        "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='document'",
-        [id],
-      )
-    ).map((r) => String(r.id));
-    await this.documents.assertExportReferences(tx, actor, ids);
+    let afterDocument: string | null = null;
+    while (true) {
+      const page: Record<string, unknown>[] = await tx.query(
+        "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='document' AND ($2::uuid IS NULL OR id>$2::uuid) ORDER BY id LIMIT 1000",
+        [id, afterDocument],
+      );
+      if (!page.length) break;
+      await this.documents.assertExportReferences(
+        tx,
+        actor,
+        page.map((r) => String(r.id)),
+      );
+      afterDocument = String(page.at(-1)!.id);
+    }
     return rows[0];
   }
   async start(
@@ -372,11 +464,29 @@ export class Exports {
     command: z.infer<typeof ExportCommandSchema>,
   ) {
     this.permit(actor);
+    if (command.originals) {
+      await requireModule(tx, "fiscal");
+      await requireModule(tx, "ged");
+      if (
+        !command.query ||
+        command.query.kind !== "obligation" ||
+        !["TF", "CFE_IFER"].includes(command.query.nature ?? "")
+      )
+        fail(
+          400,
+          "INVALID_ORIGINAL_SCOPE",
+          "Sélection d’avis CFE/IFER ou taxe foncière requise.",
+        );
+    }
     const id = await idempotent(
       tx,
       actor,
       command.operationId,
-      { action: "export.start", query: command.query ?? null },
+      {
+        action: "export.start",
+        query: command.query ?? null,
+        originals: command.originals,
+      },
       async () => {
         await tx.query(
           "DELETE FROM cabinet_exports WHERE id IN (SELECT e.id FROM cabinet_exports e JOIN cabinet_jobs j ON j.id=e.job_id WHERE e.actor_id=$1 AND j.state IN ('completed','failed') ORDER BY e.created_at DESC OFFSET 4)",
@@ -407,12 +517,17 @@ export class Exports {
             id,
             actor.id,
             this.now(),
-            JSON.stringify({ ...header, query: command.query ?? null }),
+            JSON.stringify({
+              ...header,
+              query: command.query ?? null,
+              originals: command.originals,
+            }),
           ],
         );
         const job = await this.enqueue(tx, actor, randomUUID(), {
           exportId: id,
           query: command.query,
+          originals: command.originals,
         });
         await tx.query("UPDATE cabinet_exports SET job_id=$2 WHERE id=$1", [
           id,
@@ -433,8 +548,15 @@ export class Exports {
       job: job.job,
       records: progress.records,
       documents: progress.documents,
-      error: (stored.content as { failure?: string }).failure ?? null,
-      encoding: (stored.content as { query?: unknown }).query ? "csv" : "json",
+      error:
+        (stored.content as { failure?: string }).failure ??
+        (stored.content as { downloadFailure?: string }).downloadFailure ??
+        null,
+      encoding: (stored.content as { originals?: boolean }).originals
+        ? "tar"
+        : (stored.content as { query?: unknown }).query
+          ? "csv"
+          : "json",
       query: (stored.content as { query?: unknown }).query ?? null,
     });
   }
@@ -461,6 +583,204 @@ export class Exports {
     }
     return { items };
   }
+  async originals(tx: Connection, actor: SessionUser, id: string) {
+    const stored = await this.readable(tx, actor, id);
+    await requireModule(tx, "fiscal");
+    await requireModule(tx, "ged");
+    if (!(stored.content as { originals?: boolean }).originals)
+      fail(
+        400,
+        "INVALID_ORIGINAL_SCOPE",
+        "Cette préparation ne contient pas un lot d’originaux.",
+      );
+    if (
+      (await this.jobs.get(tx, String(stored.job_id))).job.state !== "completed"
+    )
+      fail(409, "EXPORT_NOT_READY", "Préparation non terminée.");
+    const owner = this;
+    const current = async (connection: Connection) => {
+      const users = await connection.query(
+        "SELECT * FROM cabinet_users WHERE id=$1 AND active=true",
+        [actor.id],
+      );
+      if (!users[0]) fail(403, "FORBIDDEN", "Sortie inaccessible.");
+      return effectiveUser(connection, users[0]);
+    };
+    let stream!: Readable;
+    stream = Readable.from(
+      (async function* () {
+        let completed = false,
+          reportNumber = 0,
+          downloaded = 0,
+          missing = 0,
+          after: string | null = null;
+        try {
+          // Each metadata page is bounded independently of the original byte size.
+          for (const kind of ["record", "fiscal"]) {
+            after = null;
+            let pageNumber = 0;
+            while (true) {
+              const rows = await owner.db.transaction(async (connection) => {
+                const user = await current(connection);
+                await owner.readable(connection, user, id);
+                await requireModule(connection, "fiscal");
+                return connection.query(
+                  "SELECT id,content FROM (SELECT id,content,sum(size) OVER(ORDER BY id) AS bytes,row_number() OVER(ORDER BY id) AS ordinal FROM cabinet_export_rows WHERE export_id=$1 AND kind=$2 AND ($3::uuid IS NULL OR id>$3::uuid) ORDER BY id LIMIT 100) bounded WHERE bytes<=2097152 OR ordinal=1 ORDER BY id",
+                  [id, kind, after],
+                );
+              });
+              if (!rows.length) break;
+              yield* tarFile(
+                `manifest/${kind}-${++pageNumber}.json`,
+                Buffer.from(JSON.stringify(rows.map((r) => r.content))),
+              );
+              if (kind === "fiscal")
+                for (const row of rows) {
+                  const e = FiscalTimelineEntrySchema.parse(row.content);
+                  if (e.event.kind !== "notice") continue;
+                  const notice = e.event;
+                  const errors = [
+                    ...(!notice.originalId ? ["MISSING_ORIGINAL"] : []),
+                    ...(notice.expectedSuites > notice.suiteIds.length
+                      ? ["MISSING_SUITE"]
+                      : []),
+                  ];
+                  if (errors.length) {
+                    missing += errors.length;
+                    yield* tarFile(
+                      `reports/${++reportNumber}.json`,
+                      Buffer.from(
+                        JSON.stringify({
+                          noticeId: notice.id,
+                          reference: notice.reference,
+                          errors,
+                          missingSuites:
+                            notice.expectedSuites - notice.suiteIds.length,
+                        }),
+                      ),
+                    );
+                  }
+                }
+              after = String(rows.at(-1)!.id);
+            }
+          }
+          after = null;
+          while (true) {
+            const rows = await owner.db.transaction(async (connection) => {
+              const user = await current(connection);
+              await owner.readable(connection, user, id);
+              await requireModule(connection, "fiscal");
+              await requireModule(connection, "ged");
+              return connection.query(
+                "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='document' AND ($2::uuid IS NULL OR id>$2::uuid) ORDER BY id LIMIT 100",
+                [id, after],
+              );
+            });
+            if (!rows.length) break;
+            for (const row of rows) {
+              const result = await owner.db.transaction(async (connection) => {
+                const user = await current(connection);
+                await owner.readable(connection, user, id);
+                await requireModule(connection, "fiscal");
+                await requireModule(connection, "ged");
+                try {
+                  return {
+                    download: await owner.documents.download(
+                      connection,
+                      user,
+                      String(row.id),
+                    ),
+                    error: null,
+                  };
+                } catch (error) {
+                  if (
+                    error instanceof ApiFault &&
+                    ["DOCUMENT_MISSING", "DOCUMENT_CORRUPT"].includes(
+                      error.code,
+                    )
+                  )
+                    return { download: null, error: error.code };
+                  throw error;
+                }
+              });
+              if (result.download) {
+                const { document, bytes } = result.download;
+                yield* tarFile(
+                  originalPath(document.id, document.filename),
+                  bytes,
+                );
+                downloaded++;
+                yield* tarFile(
+                  `reports/${++reportNumber}.json`,
+                  Buffer.from(
+                    JSON.stringify({
+                      documentId: document.id,
+                      version: document.version,
+                      sha256: document.sha256,
+                      path: originalPath(document.id, document.filename),
+                      status: "downloaded",
+                    }),
+                  ),
+                );
+              } else {
+                missing++;
+                yield* tarFile(
+                  `reports/${++reportNumber}.json`,
+                  Buffer.from(
+                    JSON.stringify({ documentId: row.id, error: result.error }),
+                  ),
+                );
+              }
+            }
+            after = String(rows.at(-1)!.id);
+          }
+          await owner.db.transaction(async (connection) => {
+            await owner.readable(connection, await current(connection), id);
+            await requireModule(connection, "fiscal");
+            await requireModule(connection, "ged");
+          });
+          yield* tarFile(
+            "reports/final.json",
+            Buffer.from(
+              JSON.stringify({
+                downloaded,
+                missing,
+                complete: missing === 0,
+                selectionComplete: true,
+                generatedAt: owner.now().toISOString(),
+              }),
+            ),
+          );
+          yield Buffer.alloc(1024);
+          completed = true;
+          await owner.db.transaction((connection) =>
+            connection.query(
+              "UPDATE cabinet_exports SET content=content - 'downloadFailure' WHERE id=$1",
+              [id],
+            ),
+          );
+        } finally {
+          owner.streams.delete(stream);
+          if (!completed)
+            await owner.db
+              .transaction((connection) =>
+                connection.query(
+                  "UPDATE cabinet_exports SET content=jsonb_set(content,'{downloadFailure}',to_jsonb($2::text)) WHERE id=$1",
+                  [
+                    id,
+                    "Restitution interrompue ; recommencer le téléchargement avec les droits actuels.",
+                  ],
+                ),
+              )
+              .catch(() => {});
+        }
+      })(),
+      { highWaterMark: 65536, objectMode: false },
+    );
+    this.streams.add(stream);
+    return stream;
+  }
+
   async download(
     tx: Connection,
     actor: SessionUser,
@@ -471,6 +791,9 @@ export class Exports {
       job = await this.jobs.get(tx, String(stored.job_id));
     if (job.job.state !== "completed")
       fail(409, "EXPORT_NOT_READY", "La sortie n’est pas terminée.");
+    const originals = Boolean(
+      (stored.content as { originals?: boolean }).originals,
+    );
     const query = RecordListQuerySchema.nullable().parse(
       (stored.content as { query?: unknown }).query ?? null,
     );
@@ -485,7 +808,7 @@ export class Exports {
       return ExportManifestSchema.parse({
         ...headerSchema.parse(stored.content),
         format: "memlia-cabinet-manifest-1",
-        encoding: query ? "csv" : "json",
+        encoding: originals ? "tar" : query ? "csv" : "json",
         query,
         parts: parts.map((p) => ({
           number: Number(p.part),
@@ -502,11 +825,20 @@ export class Exports {
       [id, part],
     );
     if (!rows.length) fail(404, "NOT_FOUND", "Partie inaccessible.");
-    if (query)
+    if (query && !originals)
       return (
         csvHeader(query) +
         rows
-          .map((r) => csvRow(CabinetRecordSchema.parse(r.content), query))
+          .map((r) =>
+            csvRow(
+              CabinetRecordSchema.parse(r.content),
+              query,
+              new Date(headerSchema.parse(stored.content).generatedAt),
+              this.civilDate(
+                new Date(headerSchema.parse(stored.content).generatedAt),
+              ),
+            ),
+          )
           .join("")
       );
     const records = rows
@@ -525,6 +857,9 @@ export class Exports {
       ...headerSchema.parse(stored.content),
       records,
       customFields,
+      fiscalEvents: rows
+        .filter((r) => r.kind === "fiscal")
+        .map((r) => r.content),
       documents,
       errors: documents
         .filter((d) => d.availability !== "available")
@@ -547,6 +882,7 @@ export function registerExportRoutes(
   { db, user }: RouteContext,
   exports: Exports,
 ) {
+  app.addHook("preClose", async () => exports.stop());
   const id = (params: unknown) => z.object({ id: z.uuid() }).parse(params).id;
   app.post("/api/v1/administration/exports", async (req, reply) => {
     const command = ExportCommandSchema.parse(req.body);
@@ -567,6 +903,22 @@ export function registerExportRoutes(
     db.transaction(async (tx) =>
       exports.get(tx, await user(tx, req), id(req.params)),
     ),
+  );
+  app.get(
+    "/api/v1/administration/exports/:id/originals.tar",
+    async (req, reply) => {
+      const stream = await db.transaction(async (tx) =>
+        exports.originals(tx, await user(tx, req), id(req.params)),
+      );
+      reply.raw.on("close", () => stream.destroy());
+      return reply
+        .header("content-type", "application/x-tar")
+        .header(
+          "content-disposition",
+          'attachment; filename="memlia-avis-originaux.tar"',
+        )
+        .send(stream);
+    },
   );
   app.get("/api/v1/administration/exports/:id/download", async (req, reply) => {
     const result = await db.transaction(async (tx) =>

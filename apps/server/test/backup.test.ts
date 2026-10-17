@@ -144,6 +144,44 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(upload.statusCode).toBe(201);
       const document = upload.json();
+      const fiscalCreated = await app.inject({
+        method: "POST",
+        url: "/api/v1/fiscal",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          dossierId: record.id,
+          title: "IS fiscal à restaurer",
+          nature: "IS",
+          period: {
+            start: "2025-07-01",
+            end: "2026-06-30",
+            campaign: "2026",
+            subtype: "solde",
+          },
+          amount: "100.00",
+        },
+      });
+      expect(fiscalCreated.statusCode, fiscalCreated.body).toBe(201);
+      const fiscal = fiscalCreated.json();
+      const fiscalChanged = await app.inject({
+        method: "POST",
+        url: `/api/v1/fiscal/${fiscal.record.id}/commands`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: fiscal.record.version,
+          event: {
+            kind: "evidence",
+            documentIds: [document.id],
+            purpose: "support",
+            reason: "Preuve fiscale fictive à restaurer",
+          },
+        },
+      });
+      expect(fiscalChanged.statusCode, fiscalChanged.body).toBe(200);
+      const fiscalBefore = fiscalChanged.json();
+
       const options = {
         dataDirectory: source.dataDirectory,
         configFile: join(root, "config.json"),
@@ -342,6 +380,15 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(download.statusCode).toBe(200);
       expect(download.rawPayload).toEqual(bytes);
+      const restoredFiscal = await app.inject({
+        url: `/api/v1/fiscal/${fiscal.record.id}`,
+        headers: { cookie },
+      });
+      expect(restoredFiscal.statusCode, restoredFiscal.body).toBe(200);
+      expect(restoredFiscal.json().timeline).toEqual(fiscalBefore.timeline);
+      expect(restoredFiscal.json().record).toEqual(fiscalBefore.record);
+      expect(restoredFiscal.json().situation.remaining).toBe("100.00");
+
       expect(
         (await app.inject("/api/v1/documents/" + document.id + "/download"))
           .statusCode,

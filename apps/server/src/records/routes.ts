@@ -4,6 +4,8 @@ import { availablePermissions } from "../administration/access.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import {
+  deriveSourceFreshness,
+  FiscalSourceEvidenceSchema,
   CabinetRecordSchema,
   RecordContentSchema,
   CreateRecordInputSchema,
@@ -15,6 +17,9 @@ import {
   HistorySchema,
   DashboardSchema,
   CatalogueSchema,
+  FiscalNatureSchema,
+  FiscalCreateSchema,
+  FiscalCommandSchema,
   type SessionUser,
   type Action,
 } from "@memlia/contracts";
@@ -41,6 +46,12 @@ export function registerRecordRoutes(
     db.transaction(async (tx) => {
       const actor = await user(tx, req);
       return CatalogueSchema.parse({
+        fiscal: {
+          natures: FiscalNatureSchema.options,
+          createSchema: z.toJSONSchema(FiscalCreateSchema, { io: "input" }),
+          commandSchema: z.toJSONSchema(FiscalCommandSchema, { io: "input" }),
+          realTransmission: false,
+        },
         resources: RecordKindSchema.options.map((kind, index) => ({
           kind,
           label: labels[kind],
@@ -50,7 +61,9 @@ export function registerRecordRoutes(
               "create",
               "update",
               ...(kind === "tache" ? ["transition", "assign"] : []),
-              ...(kind === "obligation" ? ["approve"] : []),
+              ...(kind === "obligation"
+                ? ["approve", "transmit", "assign"]
+                : []),
               "export",
               "audit",
             ] as Action[]
@@ -113,7 +126,8 @@ export function registerRecordRoutes(
       const records = (await queryRecords(tx, actor, query, "export", false))
         .items;
       const csv =
-        csvHeader(query) + records.map((r) => csvRow(r, query)).join("");
+        csvHeader(query) +
+        records.map((r) => csvRow(r, query, now(), civilDate(now()))).join("");
       if (Buffer.byteLength(csv) > 4 * 1024 * 1024)
         fail(
           413,
@@ -228,6 +242,19 @@ export function registerRecordRoutes(
         overdueTasks += Number(group.overdue);
         upcomingTasks += Number(group.upcoming);
       }
+      const sourceGroups = await tx.query(
+        `SELECT r.content->'data'->'sourceEvidence' AS evidence,count(*) AS n FROM cabinet_records r WHERE ${f.where} AND r.kind='obligation' GROUP BY r.content->'data'->'sourceEvidence'`,
+        f.params,
+      );
+      const freshnessCounts = { fresh: 0, stale: 0, unknown: 0 };
+      for (const row of sourceGroups)
+        freshnessCounts[
+          deriveSourceFreshness(
+            FiscalSourceEvidenceSchema.nullable().parse(row.evidence ?? null),
+            asOf,
+            today,
+          ).state
+        ] += Number(row.n);
       return DashboardSchema.parse({
         asOf: asOf.toISOString(),
         counts,
@@ -241,6 +268,8 @@ export function registerRecordRoutes(
           simulated: groups
             .filter((r) => r.kind === "obligation" && r.source === "simulee")
             .reduce((n, r) => n + Number(r.n), 0),
+          ...freshnessCounts,
+          withoutVerifiedFresh: counts.obligation,
           verified: 0,
           freshness: "unknown",
         },
