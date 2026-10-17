@@ -35,7 +35,7 @@
 
 ### Task 1: Référentiel complet, équipes, configuration et reprise
 
-Préparation technique : `docs/recherche-imports-referentiel.md` (contrat public de recherche d'entreprise, lecteurs CSV/XLSX, limites et contrôles à construire ; aucune preuve d'exécution acquise par cette recherche).
+Préparation technique : `docs/recherche-imports-referentiel.md` (contrat public de recherche d'entreprise, lecteurs CSV/XLSX, limites et contrôles à construire) et `docs/recherche-traitements-isoles.md` (isolation des traitements, alternatives et limites à qualifier). Ces recherches ne constituent aucune preuve d'exécution ou de confinement.
 
 **Files:** Extend `packages/contracts/src/records.ts`; create `packages/contracts/src/administration.ts`, `apps/server/src/administration/*`, `apps/server/src/imports/*`, `apps/web/src/features/administration/*`, `apps/web/src/features/imports/*`; tests `apps/server/test/administration.test.ts`, `apps/server/test/imports.test.ts`, `tests/e2e/administration.spec.ts`.
 
