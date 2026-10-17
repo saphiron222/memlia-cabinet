@@ -1,3 +1,6 @@
+import {ProductionGridExport,GridExportCommandSchema} from "../production/grid-export.js";
+import {productionExportPage,assertProductionExport} from "../production/export.js";
+import {ProductionExportSchema} from "@memlia/contracts";
 import {
   workflowExportPage,
   assertWorkflowExport,
@@ -42,6 +45,7 @@ const checkpointSchema = z.object({
     "records",
     "fiscal",
     "workflows",
+    "production",
     "documents",
     "complete",
   ]),
@@ -49,12 +53,14 @@ const checkpointSchema = z.object({
   bytes: z.number().int().nonnegative(),
   records: z.number().int().nonnegative(),
   documents: z.number().int().nonnegative(),
+  production:z.number().int().nonnegative().default(0),
   workflows: z.number().int().nonnegative().default(0),
   fiscal: z.number().int().nonnegative().default(0),
   part: z.number().int().positive(),
   partBytes: z.number().int().nonnegative(),
 });
 const headerSchema = CabinetExportSchema.omit({
+  production:true,
   workflows: true,
   fiscalEvents: true,
   records: true,
@@ -63,6 +69,7 @@ const headerSchema = CabinetExportSchema.omit({
   errors: true,
 });
 export class Exports {
+  readonly productionGrid:ProductionGridExport;
   private streams = new Set<Readable>();
   stop() {
     for (const stream of this.streams)
@@ -85,6 +92,7 @@ export class Exports {
       partLimit > 8 * 1024 * 1024
     )
       throw new Error("Taille de partie invalide.");
+    this.productionGrid=new ProductionGridExport(jobs,now);
     const worker = jobs.register({
       kind: "export",
       input: z.object({
@@ -102,6 +110,7 @@ export class Exports {
         documents: 0,
         fiscal: 0,
         workflows: 0,
+        production:0,
         part: 1,
         partBytes: 2048,
       },
@@ -195,6 +204,7 @@ export class Exports {
                   )
                 ).map((r) => CabinetRecordSchema.parse(r.content));
               }
+              if (prior.phase === "production") return productionExportPage(tx,input.exportId,actor,prior.after);
               if (prior.phase === "workflows")
                 return workflowExportPage(
                   tx,
@@ -279,6 +289,7 @@ export class Exports {
                     ? prior.fiscal
                     : prior.phase === "workflows"
                       ? prior.workflows
+                      : prior.phase === "production" ? prior.production
                       : prior.documents) +
                 index +
                 1,
@@ -290,6 +301,7 @@ export class Exports {
                     ? "fiscal"
                     : prior.phase === "workflows"
                       ? "workflow"
+                      : prior.phase === "production" ? "production"
                       : "document",
               content: value,
             }));
@@ -351,7 +363,7 @@ export class Exports {
               prior.records +
                 prior.documents +
                 prior.fiscal +
-                prior.workflows +
+                prior.workflows + prior.production +
                 page.length >
               400_000
             )
@@ -377,8 +389,10 @@ export class Exports {
                       ? "documents"
                       : "workflows"
                     : prior.phase === "workflows"
-                      ? "documents"
+                      ? "production"
+                      : prior.phase === "production" ? "documents"
                       : "complete",
+              production:prior.production+(prior.phase==="production"?page.length:0),
               workflows:
                 prior.workflows +
                 (prior.phase === "workflows" ? page.length : 0),
@@ -494,6 +508,8 @@ export class Exports {
         );
       afterWorkflow = String(page.at(-1)!.id);
     }
+    let afterProduction:string|null=null;
+    while(true){const page:Record<string,unknown>[]=await tx.query("SELECT id,content FROM cabinet_export_rows WHERE export_id=$1 AND kind='production' AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",[id,afterProduction]);if(!page.length)break;for(const row of page)await assertProductionExport(tx,actor,ProductionExportSchema.parse(row.content));afterProduction=String(page.at(-1)!.id);}
     let afterDocument: string | null = null;
     while (true) {
       const page: Record<string, unknown>[] = await tx.query(
@@ -912,6 +928,7 @@ export class Exports {
       ...headerSchema.parse(stored.content),
       records,
       customFields,
+      production:rows.filter(r=>r.kind==="production").map(r=>r.content),
       workflows: rows
         .filter((r) => r.kind === "workflow")
         .map((r) => r.content),
@@ -940,6 +957,9 @@ export function registerExportRoutes(
   { db, user }: RouteContext,
   exports: Exports,
 ) {
+  app.post('/api/v1/production/exports',async(req,reply)=>reply.code(202).send(await db.transaction(async tx=>exports.productionGrid.start(tx,await user(tx,req),GridExportCommandSchema.parse(req.body)))));
+  app.get('/api/v1/production/exports/:id',async req=>db.transaction(async tx=>exports.productionGrid.get(tx,await user(tx,req),id(req.params))));
+  app.get('/api/v1/production/exports/:id/parts/:part',async(req,reply)=>{const p=z.object({id:z.uuid(),part:z.coerce.number().int().positive()}).parse(req.params);const csv=await db.transaction(async tx=>exports.productionGrid.part(tx,await user(tx,req),p.id,p.part));return reply.type('text/csv; charset=utf-8').header('content-disposition','attachment; filename="memlia-production.csv"').send(csv);});
   app.addHook("preClose", async () => exports.stop());
   const id = (params: unknown) => z.object({ id: z.uuid() }).parse(params).id;
   app.post("/api/v1/administration/exports", async (req, reply) => {

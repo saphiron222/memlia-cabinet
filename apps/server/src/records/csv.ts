@@ -15,7 +15,7 @@ export function csvColumns(query: RecordListQuery) {
     ]
   );
 }
-function cell(value: unknown) {
+export function csvCell(value: unknown) {
   let s =
     value == null
       ? ""
@@ -26,7 +26,7 @@ function cell(value: unknown) {
   return `"${s.replaceAll('"', '""')}"`;
 }
 export function csvHeader(query: RecordListQuery) {
-  return "\uFEFF" + csvColumns(query).map(cell).join(";") + "\r\n";
+  return "\uFEFF" + csvColumns(query).map(csvCell).join(";") + "\r\n";
 }
 export function csvRow(
   record: CabinetRecord,
@@ -61,7 +61,7 @@ export function csvRow(
   return (
     csvColumns(query)
       .map((key) =>
-        cell(
+        csvCell(
           key in derived
             ? derived[key]
             : key.startsWith("custom.")

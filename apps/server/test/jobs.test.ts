@@ -300,3 +300,49 @@ it.each([
     }
   },
 );
+
+it("durable silent checkpoints exceed 500 units while coalesced progress stays within the existing journal bound", async () => {
+  const f = await fixture();
+  try {
+    const actor = await f.setup();
+    await f.maintainDatabase(async (db) => {
+      const jobs = new JobRunner(db);
+      const queue = jobs.register({
+        kind: "bounded-progress-fixture",
+        input: z.object({}),
+        checkpoint: z.object({ count: z.number().int() }),
+        initial: { count: 0 },
+        result: z.object({ count: z.number().int() }),
+        scope: () => ({
+          dossierId: null,
+          resourceKey: "bounded-progress-fixture",
+        }),
+        authorize: async () => {},
+        execute: async (_i, c) => {
+          for (let n = c.checkpoint.count + 1; n <= 510; n++)
+            await c.commit(
+              { count: n },
+              n % 100 === 0 || n === 510 ? "progress" : null,
+              "Progression durable.",
+              async () => {},
+            );
+          return { count: c.checkpoint.count };
+        },
+      });
+      const id = await db.transaction((tx) =>
+        queue.enqueue(tx, actor, operationId(), {}),
+      );
+      await jobs.tick();
+      const run = await db.transaction((tx) => jobs.get(tx, id));
+      expect(run.job.state).toBe("completed");
+      expect(run.checkpoint).toEqual({ count: 510 });
+      expect(run.result).toEqual({ count: 510 });
+      expect(run.job.events.filter((e) => e.code === "progress")).toHaveLength(
+        6,
+      );
+      await jobs.stop();
+    });
+  } finally {
+    await f.close();
+  }
+});

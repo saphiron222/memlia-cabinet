@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 9)
+  if (version > 10)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -87,6 +87,7 @@ export async function migrate(connection: Connection): Promise<void> {
     );
     await connection.query("INSERT INTO schema_migrations(version) VALUES(9)");
   }
+  if(version < 10) for(const sql of productionMigration.split(';').map(s=>s.trim()).filter(Boolean)) await connection.query(sql);
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -212,4 +213,19 @@ CREATE TABLE cabinet_workflow_imports(id uuid PRIMARY KEY,actor_id uuid NOT NULL
 ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
 ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow'));
 INSERT INTO schema_migrations(version) VALUES(8);
+`;
+
+const productionMigration = `
+CREATE TABLE cabinet_production_models(id uuid PRIMARY KEY,content jsonb NOT NULL);
+CREATE TABLE cabinet_production_model_versions(id uuid NOT NULL,version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
+CREATE TABLE cabinet_production_rows(id uuid PRIMARY KEY,model_id uuid NOT NULL REFERENCES cabinet_production_models(id),occurrence_key text NOT NULL UNIQUE,record_id uuid REFERENCES cabinet_records(id),content jsonb NOT NULL);
+CREATE INDEX cabinet_production_rows_model ON cabinet_production_rows(model_id,id);
+CREATE TABLE cabinet_production_row_versions(id uuid NOT NULL REFERENCES cabinet_production_rows(id),version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
+CREATE TABLE cabinet_production_generation_results(run_id uuid NOT NULL REFERENCES cabinet_jobs(id),ordinal integer NOT NULL,target_id uuid NOT NULL,content jsonb NOT NULL,PRIMARY KEY(run_id,ordinal));
+CREATE TABLE cabinet_production_exports(id uuid PRIMARY KEY,actor_id uuid NOT NULL REFERENCES cabinet_users(id),job_id uuid REFERENCES cabinet_jobs(id),content jsonb NOT NULL);
+CREATE TABLE cabinet_production_export_rows(export_id uuid NOT NULL REFERENCES cabinet_production_exports(id),id uuid NOT NULL,part integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(export_id,id));
+CREATE TABLE cabinet_production_imports(id uuid PRIMARY KEY,actor_id uuid NOT NULL REFERENCES cabinet_users(id),content jsonb NOT NULL);
+ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
+ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production'));
+INSERT INTO schema_migrations(version) VALUES(10);
 `;

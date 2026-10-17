@@ -17,7 +17,7 @@ export interface JobContext<C> {
   signal: AbortSignal;
   commit<T>(
     checkpoint: C,
-    code: string,
+    code: string | null,
     message: string,
     work: (tx: Connection, actor: SessionUser) => Promise<T>,
   ): Promise<T>;
@@ -119,7 +119,7 @@ export class JobRunner {
                   job.id,
                 ],
               );
-              await this.event(tx, job.id, code, message);
+              if(code!==null) await this.event(tx, job.id, code, message);
               return result;
             });
             context.checkpoint = parsed;
@@ -203,7 +203,7 @@ export class JobRunner {
   private async event(
     tx: Connection,
     id: string,
-    code: string,
+    code: string | null,
     message: string,
     onFull: "reject" | "omit" = "reject",
   ) {

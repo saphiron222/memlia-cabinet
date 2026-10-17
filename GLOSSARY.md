@@ -79,3 +79,11 @@ _Avoid_ : somme des montants à payer des 2777
 **Cadence opérationnelle** :
 Politique datée d’appréciation de la fraîcheur d’une source, distincte d’une échéance fiscale ou d’un engagement du fournisseur.
 _Avoid_ : délai réglementaire
+
+**Configuration annuelle de bilan** :
+Ensemble versionné des étapes, responsables, prévisions et forfait d’une famille pour un exercice.
+_Avoid_ : bilan réalisé, preuve de dépôt
+
+**Type d’étape** :
+Liste réutilisable de statuts ordonnés, chacun avec identité, couleur, icône et caractère final.
+_Avoid_ : validation humaine, reçu officiel

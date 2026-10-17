@@ -59,6 +59,7 @@ export async function saveRecord(
   },
 ) {
   const previous = id ? await loadRecord(tx, id) : null;
+  if(!fiscal && id && (await tx.query("SELECT id FROM cabinet_production_rows WHERE record_id=$1",[id])).length) fail(409,"PRODUCTION_COMMAND_REQUIRED","Ce travail se modifie depuis sa grille de production.");
   if (
     !fiscal &&
     ((previous?.kind === "obligation" && previous.data.fiscal) ||
