@@ -31,7 +31,12 @@ export async function request<T>(
     response = await fetch("/api/v1" + path, {
       ...options,
       signal,
-      headers: { "Content-Type": "application/json", ...options.headers },
+      headers: {
+        ...(options.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
+        ...options.headers,
+      },
     });
   } catch (error) {
     if (signal.aborted) throw error;
@@ -66,4 +71,32 @@ export function message(error: unknown) {
   return error instanceof Error
     ? error.message
     : "Une erreur empêche cette opération.";
+}
+
+export async function downloadDocument(
+  id: string,
+  filename: string,
+  signal: AbortSignal,
+) {
+  const response = await fetch("/api/v1/documents/" + id + "/download", {
+    signal,
+  });
+  if (!response.ok) {
+    const fault = ApiErrorSchema.parse(await response.json());
+    if (response.status === 401)
+      window.dispatchEvent(new Event("memlia-session-expired"));
+    throw new RequestError(
+      response.status,
+      fault.error.code,
+      fault.error.message,
+    );
+  }
+  const blob = await response.blob();
+  if (signal.aborted) return;
+  const url = URL.createObjectURL(blob),
+    link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

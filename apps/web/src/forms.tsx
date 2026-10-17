@@ -52,6 +52,8 @@ export function ErrorSummary({
   );
 }
 const fieldLabels: Record<string, string> = {
+  piece: "Fichier original",
+  filename: "Nom de fichier",
   title: "Titre",
   name: "Nom complet",
   email: "Adresse email",

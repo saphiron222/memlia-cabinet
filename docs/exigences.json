@@ -4492,10 +4492,25 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "packages/contracts/src/documents.ts",
+          "apps/server/src/documents/store.ts",
+          "apps/server/src/documents/content.ts",
+          "apps/server/src/documents/routes.ts",
+          "apps/web/src/Documents.tsx"
+        ],
+        "tests": [
+          "apps/server/test/documents.test.ts",
+          "tests/e2e/documents.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "GED locale : originaux immuables, versions explicites, recherche PDF/texte et droits courants. Original absent/altéré signalé, nouvelle version possible. Partage client et reprise fournisseur restent à construire.",
+        "verification": {
+          "local": "PGlite et PostgreSQL 17, parcours navigateur fictif",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {
@@ -5748,10 +5763,25 @@
         "research/rea-approfondissement.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "partially-implemented",
+        "files": [
+          "packages/contracts/src/documents.ts",
+          "apps/server/src/documents/store.ts",
+          "apps/server/src/documents/content.ts",
+          "apps/server/src/documents/routes.ts",
+          "apps/web/src/Documents.tsx"
+        ],
+        "tests": [
+          "apps/server/test/documents.test.ts",
+          "tests/e2e/documents.spec.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "GED locale : originaux immuables, versions explicites, recherche PDF/texte et droits courants. Original absent/altéré signalé, nouvelle version possible. Partage client et reprise fournisseur restent à construire.",
+        "verification": {
+          "local": "PGlite et PostgreSQL 17, parcours navigateur fictif",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {

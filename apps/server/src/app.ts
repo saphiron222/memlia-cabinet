@@ -1,3 +1,7 @@
+import multipart from "@fastify/multipart";
+import { registerDocumentRoutes } from "./documents/routes.js";
+import { DocumentStore } from "./documents/store.js";
+import { DOCUMENT_MAX_BYTES } from "@memlia/contracts";
 import { timingSafeEqual } from "node:crypto";
 import Fastify, { type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
@@ -45,6 +49,16 @@ export async function createApplication(options: ApplicationOptions) {
   const app = Fastify({ logger: false, bodyLimit: 1024 * 1024 });
   const now = options.clock ?? (() => new Date());
   await app.register(cookie);
+  await app.register(multipart, {
+    limits: {
+      fileSize: DOCUMENT_MAX_BYTES,
+      files: 1,
+      fields: 1,
+      parts: 2,
+      fieldSize: 8192,
+    },
+    preservePath: true,
+  });
   await app.register(rateLimit, {
     global: false,
     max: 10,
@@ -73,7 +87,32 @@ export async function createApplication(options: ApplicationOptions) {
           },
         }),
       );
-    const err = error as { statusCode?: number };
+    const err = error as {
+      statusCode?: number;
+      code?: string;
+      message?: string;
+    };
+    if (err.statusCode === 413)
+      return reply
+        .code(413)
+        .send({
+          error: {
+            code: "PAYLOAD_TOO_LARGE",
+            message: "La requête dépasse la taille autorisée (pièce : 10 Mio).",
+          },
+        });
+    if (
+      err.code === "ERR_STREAM_PREMATURE_CLOSE" ||
+      err.message?.includes("Unexpected end of")
+    )
+      return reply
+        .code(400)
+        .send({
+          error: {
+            code: "INTERRUPTED_UPLOAD",
+            message: "Transfert interrompu. Réessayez avec le fichier complet.",
+          },
+        });
     if (err.statusCode === 429)
       return reply.code(429).send({
         error: {
@@ -199,5 +238,10 @@ export async function createApplication(options: ApplicationOptions) {
   });
   registerRecordRoutes(app, { db, now, user });
   registerUserRoutes(app, { db, now, user });
+  registerDocumentRoutes(
+    app,
+    { db, now, user },
+    new DocumentStore(options.dataDirectory),
+  );
   return app;
 }

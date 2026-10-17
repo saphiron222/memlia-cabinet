@@ -510,3 +510,26 @@ textarea {
   text-align: left;
   margin-bottom: 8px;
 }
+
+.document-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--t-border-color-light);
+}
+.document-upload {
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: var(--t-border-radius-md);
+}
+.document-section .table-scroll {
+  overflow-x: auto;
+}
+.document-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+.document-upload .actions {
+  margin-top: 12px;
+}

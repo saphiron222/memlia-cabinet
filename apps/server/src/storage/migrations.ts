@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 1)
+  if (version > 2)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -29,4 +29,17 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((sql) => sql.trim())
       .filter(Boolean))
       await connection.query(statement);
+  if (version < 2)
+    for (const statement of documentMigration
+      .split(";")
+      .map((sql) => sql.trim())
+      .filter(Boolean))
+      await connection.query(statement);
 }
+
+// Additive migration: the published first migration above remains unchanged.
+const documentMigration = `
+CREATE TABLE cabinet_documents (id uuid PRIMARY KEY, dossier_id uuid NOT NULL REFERENCES cabinet_records(id), logical_id uuid NOT NULL, previous_id uuid UNIQUE REFERENCES cabinet_documents(id), version integer NOT NULL, content jsonb NOT NULL, extracted_text text NOT NULL, UNIQUE(logical_id,version));
+CREATE INDEX cabinet_documents_dossier ON cabinet_documents(dossier_id);
+INSERT INTO schema_migrations(version) VALUES (2);
+`;
