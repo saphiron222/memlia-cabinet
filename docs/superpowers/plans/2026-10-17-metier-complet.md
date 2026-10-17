@@ -115,7 +115,7 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 **Coverage:** F-TEMPS, F-CHARGE.
 
 - [ ] RED then GREEN: inheritance 120 minutes, dossier override 90, occurrence override 45, return-to-inheritance restores 90 with explanation; changing a parent doesn't rewrite explicit children.
-- [ ] Implement manual and timer time entry, week report, task/dossier links, lock/reopen periods, filtering and export; prevent two active timers for one user and double stop/replay.
+- [ ] Implement manual and timer time entry, week report, task/dossier links, lock/reopen periods, filtering and export; prevent two active timers for one user and double stop/replay. Wire realized time and planned-versus-realized reporting into the existing Task3 task detail/report through its canonical task identity (PUB-016-S2); Task3 links alone do not complete that reporting criterion.
 - [ ] RED then GREEN: forfait change mid-month, activity starts late, two collaborators on one role and extra task do not double-count; allocation weights and prorating basis are explicit versioned choices, never guessed fiscal rules.
 - [ ] Implement workload grid by user/team/site/period, capacity and overload, reassignment preview/commit, actual-versus-planned, dated forfait/rate editors; test unauthorized employee data and browser workflow, check/test/build, commit and report.
 
