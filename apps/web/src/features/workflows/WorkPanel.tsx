@@ -1,3 +1,5 @@
+import { NativeTextArea } from "../../upstream/plane/controls";
+import { TabButton } from "../../upstream/plane/controls";
 import { loadWorkflowModels } from "./models";
 import { tabKeys } from "./tabs";
 import { useEffect, useState } from "react";
@@ -17,16 +19,18 @@ import { useRecordCapabilities } from "../administration/capabilities";
 export function WorkPanel({
   targetId,
   enabled = true,
+  initialTab = "checklist",
 }: {
   targetId: string;
   enabled?: boolean;
+  initialTab?: string;
 }) {
   const signal = useScope(),
     rights = useRecordCapabilities([targetId]);
   const [work, setWork] = useState<WorkState | null>(null),
     [models, setModels] = useState<WorkflowModel[]>([]),
     [modelId, setModelId] = useState(""),
-    [tab, setTab] = useState("checklist"),
+    [tab, setTab] = useState(initialTab),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
@@ -177,7 +181,7 @@ export function WorkPanel({
                 ["checklist", "Checklist"],
                 ["comments", "Commentaires"],
               ].map(([key, name]) => (
-                <button
+                <TabButton
                   key={key}
                   role="tab"
                   aria-selected={tab === key}
@@ -187,7 +191,7 @@ export function WorkPanel({
                   {key === "checklist" && items.length
                     ? ` ${items.filter((i) => i.done).length}/${items.length}`
                     : ""}
-                </button>
+                </TabButton>
               ))}
             </div>
             {tab === "checklist" ? (
@@ -401,7 +405,7 @@ export function WorkPanel({
                 >
                   <label className="field">
                     Nouveau commentaire
-                    <textarea
+                    <NativeTextArea
                       value={text}
                       maxLength={5000}
                       rows={3}

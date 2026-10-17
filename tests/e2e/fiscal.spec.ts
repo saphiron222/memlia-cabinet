@@ -102,7 +102,7 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
   await expect(
     page.getByRole("heading", { name: "Dettes et apurements" }),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Vue d’ensemble" }).click();
+  await page.getByRole("tab", { name: "Détail" }).click();
   await page
     .getByRole("button", { name: "Ajouter une mention manuelle", exact: true })
     .click();
@@ -163,7 +163,7 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
   await expect(
     page.getByRole("heading", { name: /Divergence résolue/ }),
   ).toBeVisible();
-  await page.getByRole("tab", { name: "Vue d’ensemble" }).click();
+  await page.getByRole("tab", { name: "Détail" }).click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page
@@ -173,11 +173,12 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
   await expect(
     page.getByRole("button", { name: "Modifier le montant", exact: true }),
   ).toBeFocused();
-  await page.getByRole("tab", { name: "Vue d’ensemble" }).focus();
+  await page.getByRole("tab", { name: "Détail" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(
-    page.getByRole("tab", { name: "Dépôts et retours" }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Documents" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await page.getByRole("link", { name: "Revenir à la grille fiscale" }).click();
   await page.getByText("Filtres et colonnes", { exact: true }).click();
   await page.getByLabel("Filtrer par nature fiscale").selectOption("TVA");
@@ -318,9 +319,7 @@ test("review I4 UI links a payment to a historical deposit and exposes the link 
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     if (version === 1) {
-      await page
-        .getByRole("tab", { name: "Vue d’ensemble", exact: true })
-        .click();
+      await page.getByRole("tab", { name: "Détail", exact: true }).click();
       await page
         .getByRole("button", { name: "Modifier le montant", exact: true })
         .click();

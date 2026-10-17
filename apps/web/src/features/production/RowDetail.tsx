@@ -1,3 +1,4 @@
+import { TabButton } from "../../upstream/plane/controls";
 import { tabKeys } from "../workflows/tabs";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -231,7 +232,7 @@ export function RowDetail({
             ? [["deposit", "Comptes annuels"]]
             : []),
         ].map(([key, label]) => (
-          <button
+          <TabButton
             role="tab"
             aria-selected={tab === key}
             key={key}
@@ -241,7 +242,7 @@ export function RowDetail({
             }}
           >
             {label}
-          </button>
+          </TabButton>
         ))}
       </div>
       <ErrorSummary message={error || undefined} />

@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 const origin = "http://127.0.0.1:4187";
+const captureRun =
+  process.env.MEMLIA_CAPTURE_RUN ??
+  new Date().toISOString().replaceAll(":", "-");
 test.use({ baseURL: origin });
 test("production : dense bilan grid, typed detail, keyboard, concurrency, reload, model and independent IRPP followup", async ({
   page,
@@ -109,7 +112,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   ).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
-    path: "evidence/private/task4/production-grid-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-grid-desktop-light.png`,
     fullPage: true,
   });
   await page
@@ -134,13 +137,13 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
       .getByText("Saisie enregistrée", { exact: false }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task4/production-detail-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-detail-desktop-light.png`,
     fullPage: true,
   });
   await page.keyboard.press("Tab");
   await page.getByRole("tab", { name: "Propriétés", exact: true }).focus();
   await page.screenshot({
-    path: "evidence/private/task4/production-keyboard-focus.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-keyboard-focus.png`,
     fullPage: true,
   });
   await page.keyboard.press("ArrowRight");
@@ -153,18 +156,18 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   ).toBeVisible();
   await page.setViewportSize({ width: 900, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task4/production-detail-900-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-detail-900-light.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.screenshot({
-    path: "evidence/private/task4/production-detail-900-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-detail-900-dark.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task4/production-detail-desktop-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-detail-desktop-dark.png`,
     fullPage: true,
   });
   await page.getByRole("tab", { name: "Étapes", exact: true }).click();
@@ -186,7 +189,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   await page.getByRole("button", { name: "Enregistrer l’étape" }).click();
   await expect(page.getByRole("alert")).toContainText("Cette ligne a changé");
   await page.screenshot({
-    path: "evidence/private/task4/production-conflict.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-conflict.png`,
     fullPage: true,
   });
   await page
@@ -213,7 +216,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   await page.getByRole("tab", { name: "Étapes", exact: true }).click();
   await page.getByText("Révision", { exact: true }).last().click();
   await page.screenshot({
-    path: "evidence/private/task4/production-model-editor.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-model-editor.png`,
     fullPage: true,
   });
   await page.keyboard.press("Escape");
@@ -233,7 +236,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
     page.getByRole("columnheader", { name: "Charges / crédits" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task4/production-irpp-empty.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-irpp-empty.png`,
     fullPage: true,
   });
   await page.getByRole("tab", { name: "Bilans", exact: true }).click();
@@ -244,7 +247,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   await page.getByLabel("Rechercher dans la grille").fill("Horizon");
   await expect(page.getByText("Chargement de la production…")).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task4/production-loading.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-loading.png`,
     fullPage: true,
   });
   await expect(
@@ -254,7 +257,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
   await page.getByLabel("Rechercher dans la grille").fill("aucun résultat");
   await expect(page.getByText("Aucune ligne dans ce périmètre")).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task4/production-filter-empty.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/production-filter-empty.png`,
     fullPage: true,
   });
   const reader = await post("/users", {
@@ -272,6 +275,12 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
       data: { email: reader.email, password: "MotDePasseFictif123!" },
     });
     await p.goto("/#production");
+    await expect(
+      p.getByRole("button", { name: "Ajouter une ligne", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      p.getByRole("button", { name: "Exporter la grille", exact: true }),
+    ).toBeDisabled();
     await p
       .getByRole("button", { name: "Atelier Horizon fictif", exact: true })
       .click();
@@ -282,7 +291,7 @@ test("production : dense bilan grid, typed detail, keyboard, concurrency, reload
       p.getByRole("button", { name: "Configurer", exact: true }),
     ).toHaveCount(0);
     await p.screenshot({
-      path: "evidence/private/task4/production-readonly.png",
+      path: `evidence/private/task13/${captureRun}/regression-task4/production-readonly.png`,
       fullPage: true,
     });
   } finally {
@@ -361,7 +370,7 @@ test("round1 I4 ordinary year editing and invalid filter drafts retain the produ
   await expect(year).toBeFocused();
   await expect(year).toHaveAttribute("aria-invalid", "true");
   await page.screenshot({
-    path: "evidence/private/task4/round1-year-focus-preserved.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-year-focus-preserved.png`,
     fullPage: true,
   });
   await page.keyboard.type("027", { delay: 60 });
@@ -370,7 +379,7 @@ test("round1 I4 ordinary year editing and invalid filter drafts retain the produ
   await page.getByLabel("Rechercher dans la grille").fill("x".repeat(201));
   await expect(page.getByRole("alert")).toContainText("200 caractères");
   await page.screenshot({
-    path: "evidence/private/task4/round1-invalid-filter.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-invalid-filter.png`,
     fullPage: true,
   });
   await page.getByLabel("Rechercher dans la grille").fill("");
@@ -445,7 +454,7 @@ test("round1 I9 model dependencies distinguish loading denied unavailable and re
     page.getByRole("button", { name: "Enregistrer le modèle" }),
   ).toBeDisabled();
   await page.screenshot({
-    path: "evidence/private/task4/round1-dependencies-loading.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-dependencies-loading.png`,
     fullPage: true,
   });
   await expect(page.getByText(/Rôles : accès refusé/)).toBeVisible();
@@ -459,7 +468,7 @@ test("round1 I9 model dependencies distinguish loading denied unavailable and re
   await expect(page.getByLabel("Rôle supplémentaire")).toHaveValue(role.id);
   await expect(page.getByLabel("Rôle supplémentaire")).toBeDisabled();
   await page.screenshot({
-    path: "evidence/private/task4/round1-dependencies-denied-unavailable.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-dependencies-denied-unavailable.png`,
     fullPage: true,
   });
   await page.unroute("**/api/v1/administration/roles");
@@ -473,7 +482,7 @@ test("round1 I9 model dependencies distinguish loading denied unavailable and re
     page.getByRole("button", { name: "Enregistrer le modèle" }),
   ).toBeEnabled();
   await page.screenshot({
-    path: "evidence/private/task4/round1-dependencies-retry.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-dependencies-retry.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Enregistrer le modèle" }).click();
@@ -561,14 +570,14 @@ test("round1 I3 I6 I7 frozen populated models annual followup selection and manu
     await page.getByRole("button", { name: "Activer le thème clair" }).click();
   await expect(page.locator("html")).toHaveClass("light");
   await page.screenshot({
-    path: "evidence/private/task4/round1-frozen-model-desktop.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-frozen-model-desktop.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 900, height: 1000 });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.screenshot({
-    path: "evidence/private/task4/round1-frozen-model-900-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-frozen-model-900-dark.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Fermer la fiche" }).click();
@@ -620,7 +629,7 @@ test("round1 I3 I6 I7 frozen populated models annual followup selection and manu
     page.locator(".production-grid").getByText("30", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task4/round1-followup-year-month.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round1-followup-year-month.png`,
     fullPage: true,
   });
   for (const [frequency, period, due] of [
@@ -657,7 +666,7 @@ test("round1 I3 I6 I7 frozen populated models annual followup selection and manu
         page.getByLabel("Occurrence prévue").locator("option:checked"),
       ).toHaveText("Semaine du 29/12/2025 · 02/01/2026");
       await page.screenshot({
-        path: "evidence/private/task4/round1-manual-weekly.png",
+        path: `evidence/private/task13/${captureRun}/regression-task4/round1-manual-weekly.png`,
         fullPage: true,
       });
     }
@@ -715,6 +724,7 @@ test("round2 N1 calendar opens prior-year balance with its own frozen configurat
     1,
   );
   await page.goto("/#calendrier?natures=bilan");
+  await page.getByRole("tab", { name: "Année", exact: true }).click();
   await page.getByLabel("Année", { exact: true }).fill(year);
   const link = page.locator(`a[href="#production?id=${row.id}"]`);
   await expect(link).toBeVisible();
@@ -730,7 +740,7 @@ test("round2 N1 calendar opens prior-year balance with its own frozen configurat
   ).toHaveCount(0);
   await expect(detail).toContainText("configuration v1");
   await page.screenshot({
-    path: "evidence/private/task4/round2-calendar-frozen-detail.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round2-calendar-frozen-detail.png`,
     fullPage: true,
   });
 });
@@ -826,7 +836,7 @@ test("round2 N1 direct followup detail is independent of grid page and uses its 
   }
   await expect(page.locator("html")).toHaveClass(/dark/);
   await page.screenshot({
-    path: "evidence/private/task4/round2-offpage-annual-detail.png",
+    path: `evidence/private/task13/${captureRun}/regression-task4/round2-offpage-annual-detail.png`,
     fullPage: true,
   });
   // Resolving a link must not keep forcing its year after ordinary navigation.
@@ -843,4 +853,58 @@ test("round2 N1 direct followup detail is independent of grid page and uses its 
   await expect(page.getByLabel("Année", { exact: true })).toHaveValue(
     currentYear,
   );
+});
+
+test("interface : un résultat de génération ouvre sa ligne canonique et survit au rechargement", async ({
+  page,
+}) => {
+  const { post, model } = await roundSetup(page);
+  const dossier = await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: {
+      kind: "dossier",
+      title: "Cible résultat de génération fictive",
+      data: {},
+    },
+  });
+  const configured = await model({
+    kind: "custom",
+    name: "Résultat traçable 2026",
+    target: "dossier",
+    population: [dossier.id],
+    rule: {
+      frequency: "yearly",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      nominalDay: 15,
+      lastDay: false,
+      weekDay: 5,
+    },
+  });
+  await page.goto("/#production?kind=custom");
+  await page.getByLabel("Modèle", { exact: true }).selectOption(configured.id);
+  await page.getByLabel("Année", { exact: true }).fill("2026");
+  await page
+    .getByRole("button", { name: "Générer les occurrences", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirmer la génération", exact: true })
+    .click();
+  await page.getByText("Résultats par cible", { exact: true }).click();
+  const result = page.getByRole("link", {
+    name: "Ouvrir la ligne 1",
+    exact: true,
+  });
+  await result.waitFor();
+  const href = await result.getAttribute("href");
+  expect(href).toMatch(/^#production\?id=/);
+  await result.click();
+  await expect(page).toHaveURL(new RegExp(href!.replace("?", "\\?")));
+  await page
+    .getByRole("heading", { name: dossier.title, exact: true })
+    .waitFor();
+  await page.reload();
+  await page
+    .getByRole("heading", { name: dossier.title, exact: true })
+    .waitFor();
 });

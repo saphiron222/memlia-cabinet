@@ -1,3 +1,9 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
 import { columnLabels } from "../records/columns";
 import { DossierChoices, useDossierChoices } from "./DossierChoices";
 import { useModuleEnabled } from "../administration/preferences";
@@ -363,20 +369,20 @@ export function Companies({
               </option>
             ))}
           </Select>
-          <table>
+          <Table>
             <thead>
-              <tr>
-                <th>Champ</th>
-                <th>Valeur actuelle</th>
-                <th>Source proposée</th>
-                <th>Décision</th>
-              </tr>
+              <TableRow>
+                <TableHeader>Champ</TableHeader>
+                <TableHeader>Valeur actuelle</TableHeader>
+                <TableHeader>Source proposée</TableHeader>
+                <TableHeader>Décision</TableHeader>
+              </TableRow>
             </thead>
             <tbody>
               {Object.entries(preview.detection.values).map(([key, value]) => (
-                <tr key={key}>
-                  <td>{columnLabels[key] ?? key}</td>
-                  <td>
+                <TableRow key={key}>
+                  <TableCell>{columnLabels[key] ?? key}</TableCell>
+                  <TableCell>
                     {JSON.stringify(
                       key === "title"
                         ? preview.target?.title
@@ -386,13 +392,13 @@ export function Companies({
                               | undefined
                           )?.[key],
                     ) ?? "Inconnu"}
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {typeof value === "object"
                       ? JSON.stringify(value)
                       : String(value ?? "Inconnu")}
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     {preview.conflicts.includes(key) ? (
                       <Select
                         name={`resolve-${key}`}
@@ -414,11 +420,11 @@ export function Companies({
                     ) : (
                       "Compatible"
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
             </tbody>
-          </table>
+          </Table>
           <Button
             disabled={busy || preview.conflicts.some((key) => !choices[key])}
             onClick={() =>

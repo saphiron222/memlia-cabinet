@@ -1,3 +1,10 @@
+import { TabButton } from "../../upstream/plane/controls";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
 import { Overlay } from "./Overlay";
 import { tabKeys } from "../workflows/tabs";
 import { useEffect, useState, useRef } from "react";
@@ -36,7 +43,12 @@ const tabs = {
 };
 export function Production({ user }: { user: SessionUser }) {
   const signal = useScope(),
-    [kind, setKind] = useState<ProductionModel["model"]["kind"]>("balance"),
+    [kind, setKind] = useState<ProductionModel["model"]["kind"]>(() => {
+      const k = new URLSearchParams(location.hash.split("?")[1]).get("kind");
+      return k && k in tabs
+        ? (k as ProductionModel["model"]["kind"])
+        : "balance";
+    }),
     [models, setModels] = useState<ProductionModel[]>([]),
     [selected, setSelected] = useState(""),
     [rowModels, setRowModels] = useState<ProductionModel[]>([]),
@@ -72,8 +84,25 @@ export function Production({ user }: { user: SessionUser }) {
     ),
     model = models.find((m) => m.id === selected),
     date = `${year}-${month}-01`;
+  useEffect(() => {
+    const update = () => {
+      const k = new URLSearchParams(location.hash.split("?")[1]).get("kind");
+      if (k && k in tabs) setKind(k as ProductionModel["model"]["kind"]);
+    };
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
   const rowRequest = useRef(0);
   const openedLink = useRef<string | null>(null);
+  const [routeHash, setRouteHash] = useState(location.hash);
+  useEffect(() => {
+    const update = () => {
+      openedLink.current = null;
+      setRouteHash(location.hash);
+    };
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
   const parsedQuery = ProductionQuerySchema.safeParse({
     referenceDate: kind === "followup" ? date : null,
     q,
@@ -258,7 +287,7 @@ export function Production({ user }: { user: SessionUser }) {
     return () => {
       cancelled = true;
     };
-  }, [models, selected, loading, kind, year, month]);
+  }, [models, selected, loading, kind, year, month, routeHash]);
   useEffect(() => {
     if (!job || ["completed", "failed"].includes(job.state)) return;
     const timer = setTimeout(() => {
@@ -375,12 +404,13 @@ export function Production({ user }: { user: SessionUser }) {
           aria-label="Familles de production"
         >
           {Object.entries(tabs).map(([key, label]) => (
-            <button
+            <TabButton
               role="tab"
               aria-selected={kind === key}
               key={key}
               onClick={() => {
                 setKind(key as typeof kind);
+                location.hash = `production?kind=${key}`;
                 setSelected("");
                 setRow(null);
                 setEditing(null);
@@ -388,7 +418,7 @@ export function Production({ user }: { user: SessionUser }) {
               }}
             >
               {label}
-            </button>
+            </TabButton>
           ))}
         </div>
         <div className="actions">
@@ -483,10 +513,33 @@ export function Production({ user }: { user: SessionUser }) {
             )}
             {kind !== "stage_type" && (
               <>
-                <Button onClick={() => setAdding(true)}>
+                <Button
+                  disabled={
+                    ![...user.permissions, ...user.scopedPermissions].some(
+                      (p) =>
+                        p.action === "create" &&
+                        (p.kind === "*" ||
+                          p.kind ===
+                            (kind === "balance" || kind === "custom"
+                              ? "obligation"
+                              : model.model.kind !== "stage_type" &&
+                                  model.model.target === "contact"
+                                ? "contact"
+                                : "dossier")),
+                    )
+                  }
+                  onClick={() => setAdding(true)}
+                >
                   Ajouter une ligne
                 </Button>
-                <Button onClick={() => void exportGrid()}>
+                <Button
+                  disabled={
+                    ![...user.permissions, ...user.scopedPermissions].some(
+                      (p) => p.action === "export",
+                    )
+                  }
+                  onClick={() => void exportGrid()}
+                >
                   Exporter la grille
                 </Button>
               </>
@@ -666,15 +719,15 @@ export function Production({ user }: { user: SessionUser }) {
         <div className="production-content">
           <div className="production-grid-area">
             <div className="table-scroll">
-              <table className="work-grid production-grid">
+              <Table className="work-grid production-grid">
                 <thead>
-                  <tr>
-                    <th>Cible</th>
-                    <th>Période</th>
-                    <th>Échéance</th>
-                    <th>Avancement</th>
+                  <TableRow>
+                    <TableHeader>Cible</TableHeader>
+                    <TableHeader>Période</TableHeader>
+                    <TableHeader>Échéance</TableHeader>
+                    <TableHeader>Avancement</TableHeader>
                     {gridColumns.map(({ column: c, version }) => (
-                      <th key={`${version}:${c.id}`}>
+                      <TableHeader key={`${version}:${c.id}`}>
                         {c.name}
                         <small>
                           v{version} ·{" "}
@@ -682,16 +735,16 @@ export function Production({ user }: { user: SessionUser }) {
                             ? productionPeriod(c, date)
                             : frequencyLabel[c.frequency]}
                         </small>
-                      </th>
+                      </TableHeader>
                     ))}
                     {kind === "balance" && (
                       <>
-                        <th>Liasse</th>
-                        <th>Assemblée</th>
-                        <th>Dépôt</th>
+                        <TableHeader>Liasse</TableHeader>
+                        <TableHeader>Assemblée</TableHeader>
+                        <TableHeader>Dépôt</TableHeader>
                       </>
                     )}
-                  </tr>
+                  </TableRow>
                 </thead>
                 <tbody>
                   {rows.map((r) => {
@@ -732,8 +785,8 @@ export function Production({ user }: { user: SessionUser }) {
                         )
                         .reduce((sum, c) => sum + c.plannedMinutes, 0);
                     return (
-                      <tr key={r.id} aria-selected={row?.id === r.id}>
-                        <td>
+                      <TableRow key={r.id} aria-selected={row?.id === r.id}>
+                        <TableCell>
                           <button
                             className="production-row-title"
                             onClick={() => setRow(r)}
@@ -742,20 +795,22 @@ export function Production({ user }: { user: SessionUser }) {
                             {r.target.active === false ? " · Inactif" : ""}
                           </button>
                           <small>Configuration v{r.modelVersion}</small>
-                        </td>
-                        <td>{periodLabel(r.period)}</td>
-                        <td>{r.dueDate ? formatCivilDate(r.dueDate) : "—"}</td>
-                        <td>
+                        </TableCell>
+                        <TableCell>{periodLabel(r.period)}</TableCell>
+                        <TableCell>
+                          {r.dueDate ? formatCivilDate(r.dueDate) : "—"}
+                        </TableCell>
+                        <TableCell>
                           <span>
                             {done}/{columns.length}
                           </span>
                           <small>{remaining} min restantes</small>
-                        </td>
+                        </TableCell>
                         {gridColumns.map(({ column: c, version }) =>
                           version !== r.modelVersion ? (
-                            <td key={`${version}:${c.id}`}>—</td>
+                            <TableCell key={`${version}:${c.id}`}>—</TableCell>
                           ) : (
-                            <td key={`${version}:${c.id}`}>
+                            <TableCell key={`${version}:${c.id}`}>
                               <button
                                 className="production-cell"
                                 aria-label={`${c.name} — ${r.target.label}`}
@@ -774,22 +829,22 @@ export function Production({ user }: { user: SessionUser }) {
                                   models={models}
                                 />
                               </button>
-                            </td>
+                            </TableCell>
                           ),
                         )}
                         {kind === "balance" && (
                           <>
-                            <td>
+                            <TableCell>
                               {r.deposit.liasseDate
                                 ? formatCivilDate(r.deposit.liasseDate)
                                 : "—"}
-                            </td>
-                            <td>
+                            </TableCell>
+                            <TableCell>
                               {r.deposit.assemblyDate
                                 ? formatCivilDate(r.deposit.assemblyDate)
                                 : "—"}
-                            </td>
-                            <td>
+                            </TableCell>
+                            <TableCell>
                               {!r.deposit.applicable
                                 ? "Non applicable"
                                 : r.deposit.attempts.at(-1)?.state ===
@@ -801,14 +856,14 @@ export function Production({ user }: { user: SessionUser }) {
                                     : r.deposit.attempts.length
                                       ? "En attente"
                                       : "Sans tentative"}
-                            </td>
+                            </TableCell>
                           </>
                         )}
-                      </tr>
+                      </TableRow>
                     );
                   })}
                 </tbody>
-              </table>
+              </Table>
             </div>
             {!rows.length && (
               <div className="work-empty">
@@ -956,6 +1011,7 @@ function GenerationResults({ id }: { id: string }) {
     [result, setResult] = useState<{
       items: {
         ordinal: number;
+        rowId?: string | null;
         state: string;
         period?: string;
         code?: string | null;
@@ -970,6 +1026,7 @@ function GenerationResults({ id }: { id: string }) {
         items: z.array(
           z.object({
             ordinal: z.number(),
+            rowId: z.uuid().nullable().optional(),
             state: z.string(),
             period: z.string().optional(),
             code: z.string().nullable().optional(),
@@ -988,7 +1045,14 @@ function GenerationResults({ id }: { id: string }) {
       <ErrorSummary message={error || undefined} />
       {result?.items.map((x) => (
         <p key={x.ordinal}>
-          Ligne {x.ordinal + 1} · {x.period} ·{" "}
+          {x.rowId ? (
+            <a href={`#production?id=${x.rowId}`}>
+              Ouvrir la ligne {x.ordinal + 1}
+            </a>
+          ) : (
+            `Ligne ${x.ordinal + 1}`
+          )}{" "}
+          · {x.period} ·{" "}
           {{
             created: "Créée",
             existing: "Déjà présente",

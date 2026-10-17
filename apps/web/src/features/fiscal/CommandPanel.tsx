@@ -1,3 +1,4 @@
+import { NativeDialog } from "../../upstream/plane/controls";
 import { useEffect, useRef } from "react";
 import { Button } from "@memlia/ui";
 import type { FiscalDetail, FiscalEvent } from "@memlia/contracts";
@@ -31,7 +32,7 @@ export function CommandPanel({
     };
   }, []);
   return (
-    <dialog
+    <NativeDialog
       ref={ref}
       className="record-panel fiscal-command-panel"
       aria-labelledby="fiscal-command-title"
@@ -57,6 +58,6 @@ export function CommandPanel({
           if (await onCommand(event)) onClose();
         }}
       />
-    </dialog>
+    </NativeDialog>
   );
 }

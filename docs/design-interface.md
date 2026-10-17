@@ -1,6 +1,6 @@
 # Interface Memlia — Plane, Twenty et cal.diy
 
-Direction demandée par Kevin le 17 octobre 2026, après rejet du rendu intermédiaire. Le produit est une application web auto-hébergée au cabinet, utilisée dans un navigateur. Le périmètre fonctionnel Teradion reste celui du cahier des charges. La refonte est à construire et à recevoir ; les captures antérieures ne valent pas acceptation de cette direction.
+Direction demandée par Kevin le 17 octobre 2026, après rejet du rendu intermédiaire. Le produit est une application web auto-hébergée au cabinet, utilisée dans un navigateur. Le périmètre fonctionnel Teradion reste celui du cahier des charges. Le candidat Task13 refond les surfaces actuellement montées ; sa réception indépendante et la CI exacte restent distinctes de la construction locale. Les captures antérieures ne valent pas acceptation de cette direction.
 
 ## Une référence principale, des rôles précis
 
@@ -26,6 +26,10 @@ Les dépôts officiels complets sont conservés comme références figées, pas 
 Pour chaque reprise, conserver chemin, révision ou intégrité du paquet, licence, empreinte et adaptations. Les fichiers applicatifs ne sont pas supposés MIT parce qu’un autre paquet du dépôt l’est. Les marques des références ne deviennent pas la marque Memlia. Les archives et inventaires volumineux restent dans les références locales ignorées ; les notices des fichiers effectivement distribués accompagnent le produit.
 
 Le frontend complet d’une référence dépend de son routage, de ses stores, de son authentification et de son API. Il est conservé intégralement ; les surfaces retenues sont étudiées puis adaptées aux contrats Memlia. Copier les trois applications et conserver leurs serveurs créerait des modèles métier concurrents. Les dossiers, permissions, pièces, historiques et opérations Memlia gardent leurs identités canoniques.
+
+La demande humaine de reprise directe s’applique à chaque famille de composants, pas seulement à la navigation. Les composants convenant au besoin conservent leur structure, rendu et interactions ; les adaptations métier partent de leur vraie source et sont explicitées. La [carte exhaustive des surfaces construites](interface-source-map.md) relie chaque page et ses sous-écrans aux templates effectivement intégrés et aux fournisseurs canoniques. Le [manifeste de reprise](design-interface-provenance.json) distingue copies inchangées, extraits et ports structurels, avec empreintes originales et adaptées.
+
+La distribution compatible AGPL du frontend combiné et de son code propre intégré est autorisée. Son [périmètre concret et l’accès au source correspondant](frontend-licensing.md) accompagnent chaque build ; aucune licence globale du backend n’est déduite de l’intégration frontend. Les notices MIT/OFL et la permission additionnelle Twenty restent intactes.
 
 Le sous-ensemble Twenty existant reste tracé dans [sa provenance](design-twenty.md). Sa présence ne prouve pas une ressemblance de l’application entière. Les modalités de reprise des sources Plane et cal.diy doivent suivre le relevé des fichiers et licences acquis, sans les réétiqueter sous une autre licence.
 
@@ -64,3 +68,9 @@ Comparer les références et Memlia dans un environnement documenté : même nav
 Inspecter les écrans réellement remplis, en clair et sombre, au format bureau et à 900 px, ainsi que les débordements, menus, panneaux et commandes. Tester les parcours existants et la persistance après modification. Vérifier clavier, focus conservé pendant la saisie, noms accessibles, contraste, zoom et réduction des animations. Les images sont conservées en privé avec leur provenance ; les seules empreintes de sources ou un build réussi ne clôturent pas cette réception.
 
 L’identifiant historique `AUD-008` et la famille `F-TWENTY` sont conservés pour la traçabilité, avec leurs critères actualisés vers cette direction. Aucune exigence fonctionnelle n’est supprimée.
+
+## Candidat construit Task13
+
+Les surfaces actuellement montées sont reliées aux vrais templates dans la carte de reprise. Les contrôles locaux couvrent navigation/repli CSS0/header44, filtres et pagination fiscale, références de dates et CSV, panneaux et focus, calendrier canonique, permissions/lecture seule, génération et liens persistants. Les27tests du fournisseur changé passent sur PGlite et PostgreSQL17. La réception navigateur est composite :38cas du passage couvrant sont verts ; le scénario interface corrigé pour ouvrir les événements supplémentaires est revérifié, puis la finition de défilement/reflow est vérifiée dans le même scénario. Cela ne constitue pas un passage whole39 déclaré vert.
+
+F-TWENTY-AC-01 : code repris, ressources/notices et raccordements construits, revue indépendante en attente. AC-02 : références originales réellement rendues et captures Memlia remplies comparables disponibles ; leur portée reste celle des fixtures de navigation/primitives et des pages publiées observées, sans runtime complet Plane/cal exact revendiqué. AC-03 : clavier/focus/retour/états,900px et réduction du mouvement exercés ; qualification globale d’accessibilité/contraste/zoom de toutes les futures pages reste Task12. CI exacte de ce candidat et validation cabinet ne sont pas acquises par ces reçus locaux. La taille du bundle reste une réserve mesurée pour Tasks11/12.

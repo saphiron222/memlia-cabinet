@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 const origin = "http://127.0.0.1:4185";
+const captureRun =
+  process.env.MEMLIA_CAPTURE_RUN ??
+  new Date().toISOString().replaceAll(":", "-");
 test.use({ baseURL: origin });
 test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 gardent le travail après rechargement", async ({
   page,
@@ -67,23 +70,23 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
   await expect(page.getByText("Contrôle interne fictif terminé")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
-    path: "evidence/private/task3/task-detail-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-detail-desktop-light.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 900, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task3/task-detail-900-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-detail-900-light.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.screenshot({
-    path: "evidence/private/task3/task-detail-900-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-detail-900-dark.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task3/task-detail-desktop-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-detail-desktop-dark.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Activer le thème clair" }).click();
@@ -101,30 +104,30 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     if (name === "Kanban" || name === "Semaine")
       await page.screenshot({
         path:
-          "evidence/private/task3/" +
+          `evidence/private/task13/${captureRun}/regression-task3/` +
           (name === "Kanban" ? "kanban" : "week") +
           "-desktop-light.png",
         fullPage: true,
       });
   }
   await page.screenshot({
-    path: "evidence/private/task3/task-grid-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-grid-desktop-light.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 900, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task3/task-grid-900-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-grid-900-light.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.screenshot({
-    path: "evidence/private/task3/task-grid-900-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-grid-900-dark.png`,
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task3/task-grid-desktop-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/task-grid-desktop-dark.png`,
     fullPage: true,
   });
   await page.getByRole("button", { name: "Activer le thème clair" }).click();
@@ -181,7 +184,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     page.getByText("Génération : terminée", { exact: false }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task3/recurrence-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/recurrence-desktop-light.png`,
     fullPage: true,
   });
   await page
@@ -202,7 +205,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     .click();
   await expect(page.getByText("Modèle enregistré · version 1")).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task3/models-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/models-desktop-light.png`,
     fullPage: true,
   });
   await page
@@ -228,7 +231,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     page.getByText("Aucune occurrence traitée pour ce modèle."),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task3/reminder-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/reminder-desktop-light.png`,
     fullPage: true,
   });
   await page
@@ -255,7 +258,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     page.getByRole("button", { name: "Enregistrer les modèles validés" }),
   ).toBeDisabled();
   await page.screenshot({
-    path: "evidence/private/task3/r1-import-invalid.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/r1-import-invalid.png`,
     fullPage: true,
   });
   const csv =
@@ -275,7 +278,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     .getByRole("checkbox", { name: /Valider « Reprise fictive »/ })
     .check();
   await page.screenshot({
-    path: "evidence/private/task3/checklist-reprise-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/checklist-reprise-desktop-light.png`,
     fullPage: true,
   });
   await page
@@ -413,9 +416,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
       .fill(nature + " commentaire fictif");
     await page.getByRole("button", { name: "Publier le commentaire" }).click();
     await expect(page.getByLabel("Nouveau commentaire")).toHaveValue("");
-    await page
-      .getByRole("tab", { name: "Pièces et tâches", exact: true })
-      .click();
+    await page.getByRole("tab", { name: "Documents", exact: true }).click();
     await expect(
       page.getByRole("link", { name: "Pièce liée 1", exact: true }),
     ).toHaveAttribute("href", "/api/v1/documents/" + document.id + "/download");
@@ -431,7 +432,10 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
       page.getByText(nature + " commentaire fictif", { exact: true }),
     ).toBeVisible();
     await page.screenshot({
-      path: "evidence/private/task3/" + nature + "-shared-desktop-light.png",
+      path:
+        `evidence/private/task13/${captureRun}/regression-task3/` +
+        nature +
+        "-shared-desktop-light.png",
       fullPage: true,
     });
     await readerPage.goto("/#fiscal?id=" + f.record.id);
@@ -459,6 +463,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     });
   }
   await page.goto("/#calendrier");
+  await page.getByRole("tab", { name: "Année", exact: true }).click();
   await expect(page.getByLabel("Calendrier annuel")).toBeVisible();
   await expect(
     page.locator(".work-calendar .work-event .work-date"),
@@ -467,7 +472,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     page.getByText("TVA · À préparer", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task3/calendar-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/calendar-desktop-light.png`,
     fullPage: true,
   });
   await readerPage.goto("/#notifications");
@@ -502,7 +507,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     readerPage.getByRole("checkbox", { name: "Mentions", exact: true }),
   ).not.toBeChecked();
   await readerPage.screenshot({
-    path: "evidence/private/task3/notifications-desktop-light.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/notifications-desktop-light.png`,
     fullPage: true,
   });
   await readerPage.setViewportSize({ width: 900, height: 1000 });
@@ -511,7 +516,7 @@ test("workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 g
     .click();
   await expect(readerPage.locator("html")).toHaveClass("dark");
   await readerPage.screenshot({
-    path: "evidence/private/task3/notifications-900-dark.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/notifications-900-dark.png`,
     fullPage: true,
   });
   const currentReader = (
@@ -621,7 +626,7 @@ for (const zone of ["Europe/Paris", "Pacific/Auckland"]) {
     );
     await page.getByRole("button", { name: "Annuler", exact: true }).click();
     await page.screenshot({
-      path: `evidence/private/task3/r1-date-${zone.split("/")[1]}-detail.png`,
+      path: `evidence/private/task13/${captureRun}/regression-task3/r1-date-${zone.split("/")[1]}-detail.png`,
       fullPage: true,
     });
     await page.getByRole("link", { name: "Revenir aux tâches" }).click();
@@ -637,7 +642,7 @@ for (const zone of ["Europe/Paris", "Pacific/Auckland"]) {
       );
     }
     await page.screenshot({
-      path: `evidence/private/task3/r1-date-${zone.split("/")[1]}-calendar.png`,
+      path: `evidence/private/task13/${captureRun}/regression-task3/r1-date-${zone.split("/")[1]}-calendar.png`,
       fullPage: true,
     });
     const download = page.waitForEvent("download");
@@ -748,20 +753,20 @@ test("rappel : rechercher au-delà de 200 objets et conserver la sélection entr
     .click();
   await expect(page.getByText(/À préparer à partir du/)).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task3/r1-reminder-selection.png",
+    path: `evidence/private/task13/${captureRun}/regression-task3/r1-reminder-selection.png`,
     fullPage: true,
   });
   await page
     .locator(".work-model-editor")
-    .screenshot({ path: "evidence/private/task3/r1-reminder-editor.png" });
+    .screenshot({
+      path: `evidence/private/task13/${captureRun}/regression-task3/r1-reminder-editor.png`,
+    });
   await page.setViewportSize({ width: 900, height: 1000 });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
-  await page
-    .locator(".work-model-editor")
-    .screenshot({
-      path: "evidence/private/task3/r1-reminder-editor-900-dark.png",
-    });
+  await page.locator(".work-model-editor").screenshot({
+    path: `evidence/private/task13/${captureRun}/regression-task3/r1-reminder-editor-900-dark.png`,
+  });
   await page.reload();
   await page.getByRole("button", { name: "Modèles et récurrences" }).click();
   await page.getByRole("button", { name: /Périmètre paginé/ }).click();

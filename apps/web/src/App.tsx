@@ -1,3 +1,5 @@
+import AuthContainer from "./upstream/cal/AuthContainer";
+import { AppHeader as PlaneAppHeader } from "./upstream/plane/app-header";
 import { Navigation, pageContext } from "./interface/Navigation";
 import { Production } from "./features/production/Production";
 import { Workflows } from "./features/workflows/Workflows";
@@ -71,7 +73,7 @@ export function App() {
   }, []);
   if (!ready)
     return (
-      <main className="auth">
+      <AuthContainer>
         <h1>Memlia Cabinet</h1>
         {fault ? (
           <>
@@ -83,7 +85,7 @@ export function App() {
             <Loader /> Chargement du cabinet…
           </div>
         )}
-      </main>
+      </AuthContainer>
     );
   if (!user)
     return (
@@ -167,7 +169,7 @@ function Auth({
     }
   }
   return (
-    <main className="auth">
+    <AuthContainer>
       <div className="brand-mark">m</div>
       <h1>
         {setup.needsSetup ? "Installer Memlia Cabinet" : "Connexion au cabinet"}
@@ -230,7 +232,7 @@ function Auth({
           {setup.needsSetup ? "Créer le cabinet" : "Se connecter"}
         </Button>
       </form>
-    </main>
+    </AuthContainer>
   );
 }
 type Page =
@@ -298,6 +300,7 @@ function Cabinet({
   const { info: installation } = useInstallation();
   const [page, setPage] = useState<Page>(route),
     [hash, setHash] = useState(location.hash),
+    [sidebarWidth, setSidebarWidth] = useState(250),
     [systemDark, setSystemDark] = useState(
       () => matchMedia("(prefers-color-scheme: dark)").matches,
     ),
@@ -311,7 +314,10 @@ function Cabinet({
   const collapsed = account?.preferences.sidebarCollapsed ?? false;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    const change = () => { setPage(route()); setHash(location.hash); };
+    const change = () => {
+      setPage(route());
+      setHash(location.hash);
+    };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
@@ -323,6 +329,7 @@ function Cabinet({
   }, []);
   useEffect(() => {
     document.documentElement.className = theme;
+    document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.density =
       account?.preferences.density ?? "normal";
   }, [theme, account?.preferences.density]);
@@ -330,7 +337,12 @@ function Cabinet({
     heading.current?.focus();
   }, [page]);
   return (
-    <div className={"shell" + (collapsed ? " collapsed" : "")}>
+    <div
+      className={"shell plane-shell" + (collapsed ? " collapsed" : "")}
+      style={{
+        gridTemplateColumns: `${collapsed ? 0 : sidebarWidth}px minmax(0,1fr)`,
+      }}
+    >
       <a
         href="#main"
         className="skip"
@@ -341,99 +353,114 @@ function Cabinet({
       >
         Aller au contenu
       </a>
-      <aside className="sidebar">
-        <div className="workspace">
-          <span className="brand-mark">m</span>
-          {!collapsed && <strong>Memlia Cabinet</strong>}
-        </div>
-        <Navigation hash={hash} collapsed={collapsed} />
-        <div className="sidebar-bottom">
-          {!collapsed && (
-            <div className="user-name" title={user.email}>
-              {account?.profile.name ?? user.name}
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={
-              collapsed ? "Déplier la navigation" : "Replier la navigation"
-            }
-            aria-expanded={!collapsed}
-            disabled={settingsBusy || !account}
-            onClick={() => void saveSettings({ sidebarCollapsed: !collapsed })}
-          >
-            {collapsed ? (
-              <IconLayoutSidebarLeftExpand size={16} />
-            ) : (
-              <IconLayoutSidebarLeftCollapse size={16} />
+      <Navigation
+        hash={hash}
+        collapsed={collapsed}
+        toggle={() => void saveSettings({ sidebarCollapsed: !collapsed })}
+        disabled={settingsBusy || !account}
+        onWidthChange={setSidebarWidth}
+        footer={
+          <div className="plane-sidebar-footer">
+            {!collapsed && (
+              <div className="user-name" title={user.email}>
+                {account?.profile.name ?? user.name}
+              </div>
             )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={
-              theme === "light"
-                ? "Activer le thème sombre"
-                : "Activer le thème clair"
-            }
-            disabled={settingsBusy || !account}
-            onClick={() =>
-              void saveSettings({ theme: theme === "light" ? "dark" : "light" })
-            }
-          >
-            {theme === "light" ? <IconMoon size={16} /> : <IconSun size={16} />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Se déconnecter"
-            onClick={async () => {
-              try {
-                await request("/logout", SessionSchema, signal, {
-                  method: "POST",
-                  body: "{}",
-                });
-                onLogout();
-              } catch (e) {
-                if (!signal.aborted) setFault(message(e));
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={
+                theme === "light"
+                  ? "Activer le thème sombre"
+                  : "Activer le thème clair"
               }
-            }}
-          >
-            <IconLogout size={16} />
-          </Button>
-        </div>
-      </aside>
+              disabled={settingsBusy || !account}
+              onClick={() =>
+                void saveSettings({
+                  theme: theme === "light" ? "dark" : "light",
+                })
+              }
+            >
+              {theme === "light" ? (
+                <IconMoon size={16} />
+              ) : (
+                <IconSun size={16} />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Se déconnecter"
+              onClick={async () => {
+                try {
+                  await request("/logout", SessionSchema, signal, {
+                    method: "POST",
+                    body: "{}",
+                  });
+                  onLogout();
+                } catch (e) {
+                  if (!signal.aborted) setFault(message(e));
+                }
+              }}
+            >
+              <IconLogout size={16} />
+            </Button>
+            <a href="/licenses/source.tar.gz" className="source-link">
+              Code source · licences
+            </a>
+          </div>
+        }
+      />
       <main id="main" className="main">
-        <header className="app-header">
-          <span className="breadcrumb-context">{pageContext(page)} <span aria-hidden> / </span></span>
-          <h1 ref={heading} tabIndex={-1}>
-            {page === "production"
-              ? "Production"
-              : page === "calendrier"
-                ? "Calendrier"
-                : page === "notifications"
-                  ? "Notifications"
-                  : page === "fiscal"
-                    ? "Fiscalité"
-                    : page === "compte"
-                      ? "Mon compte"
-                      : page === "imports"
-                        ? "Reprise"
-                        : page === "administration"
-                          ? "Administration"
-                          : page === "accueil"
-                            ? "Accueil"
-                            : page === "documents"
-                              ? "Documents"
-                              : page === "collectes"
-                                ? "Collectes"
-                                : labels[page]}
-          </h1>
-          <span className="muted">
-            {installation?.name ?? "Cabinet partagé"}
-          </span>
-        </header>
+        <PlaneAppHeader
+          className="plane-header"
+          sidebarCollapsed={collapsed}
+          toggleSidebar={() =>
+            void saveSettings({ sidebarCollapsed: !collapsed })
+          }
+          header={
+            <header className="app-header">
+              {collapsed && (
+                <a
+                  href="/licenses/source.tar.gz"
+                  className="source-link"
+                  aria-label="Code source et licences"
+                >
+                  Code source · licences
+                </a>
+              )}
+              <span className="breadcrumb-context">
+                {pageContext(page)} <span aria-hidden> / </span>
+              </span>
+              <h1 ref={heading} tabIndex={-1}>
+                {page === "production"
+                  ? "Production"
+                  : page === "calendrier"
+                    ? "Calendrier"
+                    : page === "notifications"
+                      ? "Notifications"
+                      : page === "fiscal"
+                        ? "Fiscalité"
+                        : page === "compte"
+                          ? "Mon compte"
+                          : page === "imports"
+                            ? "Reprise"
+                            : page === "administration"
+                              ? "Administration"
+                              : page === "accueil"
+                                ? "Accueil"
+                                : page === "documents"
+                                  ? "Documents"
+                                  : page === "collectes"
+                                    ? "Collectes"
+                                    : labels[page]}
+              </h1>
+              <span className="muted">
+                {installation?.name ?? "Cabinet partagé"}
+              </span>
+            </header>
+          }
+        />
         <ErrorSummary message={fault || accountError || undefined} />
         {page === "production" ? (
           <Production user={user} />

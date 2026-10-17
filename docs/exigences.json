@@ -9434,10 +9434,30 @@
         "design-interface.md"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "locally-tested",
+        "files": [
+          "apps/web/src/interface/Navigation.tsx",
+          "apps/web/src/interface/interface.css",
+          "apps/web/src/features/fiscal/FiscalMatrix.tsx",
+          "apps/web/src/features/workflows/CalendarGrid.tsx",
+          "docs/interface-source-map.md",
+          "docs/design-interface-provenance.json",
+          "docs/frontend-licensing.md"
+        ],
+        "tests": [
+          "tests/e2e/interface.spec.ts",
+          "tests/e2e/cabinet.spec.ts",
+          "tests/e2e/production.spec.ts",
+          "apps/server/test/fiscal-matrix.test.ts",
+          "apps/web/test/source-distribution.test.ts"
+        ],
+        "fieldValidation": "last-phase",
+        "scope": "Task13 : toutes les routes actuellement montées, composants sources repris et adaptations déclarées. Comparaisons exactes limitées aux références réellement rendues ; revue indépendante/CI de ce candidat et réception consolidée Task12 en attente. Aucun produit complet ni validation cabinet revendiqués.",
+        "verification": {
+          "local": "Fournisseur matrice27/27 PGlite et PostgreSQL17 ; 38 parcours du passage couvrant, scénario interface corrigé puis revérifié1/1 ; contrôles/build/distribution/reconstruction distincts consignés dans le reçu Task13.",
+          "ci": "not-run",
+          "cabinet": "not-run"
+        }
       }
     },
     {

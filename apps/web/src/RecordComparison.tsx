@@ -1,3 +1,9 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "./upstream/twenty/Table";
 import { z } from "zod";
 import {
   RecordContentSchema,
@@ -94,25 +100,27 @@ export function RecordComparison({
     local = rows(draft);
   return (
     <div className="comparison">
-      <table>
+      <Table>
         <caption>Comparez les valeurs avant de résoudre le conflit</caption>
         <thead>
-          <tr>
-            <th>Champ</th>
-            <th>Enregistré</th>
-            <th>Ma saisie</th>
-          </tr>
+          <TableRow>
+            <TableHeader>Champ</TableHeader>
+            <TableHeader>Enregistré</TableHeader>
+            <TableHeader>Ma saisie</TableHeader>
+          </TableRow>
         </thead>
         <tbody>
           {Object.entries(remote).map(([key, v]) => (
-            <tr key={key}>
-              <th scope="row">{names[key] ?? key}</th>
-              <td>{value(key, v)}</td>
-              <td>{value(key, local[key as keyof typeof local])}</td>
-            </tr>
+            <TableRow key={key}>
+              <TableHeader scope="row">{names[key] ?? key}</TableHeader>
+              <TableCell>{value(key, v)}</TableCell>
+              <TableCell>
+                {value(key, local[key as keyof typeof local])}
+              </TableCell>
+            </TableRow>
           ))}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }

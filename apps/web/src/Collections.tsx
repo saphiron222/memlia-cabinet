@@ -1,4 +1,13 @@
-import { DossierChoices, useDossierChoices } from "./features/referential/DossierChoices";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "./upstream/twenty/Table";
+import {
+  DossierChoices,
+  useDossierChoices,
+} from "./features/referential/DossierChoices";
 import { useModuleEnabled } from "./features/administration/preferences";
 import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useState, useRef } from "react";
@@ -156,14 +165,16 @@ export function Collections({ user }: { user: SessionUser }) {
     );
   const choices = useDossierChoices();
   const dossiers = choices.items;
-  const rights = useRecordCapabilities([...dossiers.map(d=>d.id),...(dossierId ? [dossierId] : [])]);
+  const rights = useRecordCapabilities([
+    ...dossiers.map((d) => d.id),
+    ...(dossierId ? [dossierId] : []),
+  ]);
   useEffect(() => {
     void request("/collections/catalogue", CollectionCatalogueSchema, signal)
       .then(setCatalogue)
       .catch((e) => {
         if (!signal.aborted) setError(message(e));
       });
-
   }, [signal, revision]);
   useEffect(() => {
     if (!runId) return;
@@ -199,8 +210,16 @@ export function Collections({ user }: { user: SessionUser }) {
     setErrors({});
     let selected = dossiers.find((d) => d.id === dossierId);
     if (!selected && dossierId) {
-      try { selected = await request("/records/"+dossierId,CabinetRecordSchema,signal); }
-      catch(e) { if(!signal.aborted)setError(message(e)); return; }
+      try {
+        selected = await request(
+          "/records/" + dossierId,
+          CabinetRecordSchema,
+          signal,
+        );
+      } catch (e) {
+        if (!signal.aborted) setError(message(e));
+        return;
+      }
     }
     const parsed = CollectionInputSchema.safeParse({
       operationId: operationId.current,
@@ -249,6 +268,15 @@ export function Collections({ user }: { user: SessionUser }) {
   const running = run && ["queued", "running"].includes(run.job.state);
   return (
     <section className="records collections" aria-label="Collectes simulées">
+      <header className="section-heading">
+        <div>
+          <h2>Collectes et couverture</h2>
+          <p>Choisissez une source et suivez ses observations et ses pièces.</p>
+        </div>
+        <span className="semantic-status" data-state="pending">
+          Simulation locale
+        </span>
+      </header>
       <p>
         <strong>Simulation — pièces fictives, sans valeur fiscale.</strong> Les
         connexions réelles sont désactivées.
@@ -280,7 +308,7 @@ export function Collections({ user }: { user: SessionUser }) {
         <p role="status">Chargement des collecteurs…</p>
       ) : (
         <form
-          className="document-upload"
+          className="document-upload collection-configuration"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
@@ -301,7 +329,7 @@ export function Collections({ user }: { user: SessionUser }) {
               ))}
             </>
           </Select>
-          <DossierChoices choices={choices}/>
+          <DossierChoices choices={choices} />
           <Select
             name="dossierId"
             label="Dossier de la collecte"
@@ -310,7 +338,9 @@ export function Collections({ user }: { user: SessionUser }) {
             errors={errors}
           >
             <option value="">Choisir un dossier</option>
-            {dossierId && !dossiers.some(d=>d.id===dossierId) && <option value={dossierId}>Dossier actuellement choisi</option>}
+            {dossierId && !dossiers.some((d) => d.id === dossierId) && (
+              <option value={dossierId}>Dossier actuellement choisi</option>
+            )}
             {dossiers
               .filter((d) => rights.grants[d.id]?.includes("update"))
               .map((d) => (
@@ -421,28 +451,28 @@ export function Collections({ user }: { user: SessionUser }) {
                 </ul>
               )}
               <div className="table-scroll">
-                <table>
+                <Table>
                   <thead>
-                    <tr>
-                      <th>Référence</th>
-                      <th>Observation source</th>
-                      <th>Valeurs observées</th>
-                      <th>Provenance</th>
-                    </tr>
+                    <TableRow>
+                      <TableHeader>Référence</TableHeader>
+                      <TableHeader>Observation source</TableHeader>
+                      <TableHeader>Valeurs observées</TableHeader>
+                      <TableHeader>Provenance</TableHeader>
+                    </TableRow>
                   </thead>
                   <tbody>
                     {run.result.records.map((r) => (
-                      <tr key={r.id}>
-                        <td>{r.reference}</td>
-                        <td>{observationLabels[r.data.kind]}</td>
-                        <td title={observationSummary(r.data)}>
+                      <TableRow key={r.id}>
+                        <TableCell>{r.reference}</TableCell>
+                        <TableCell>{observationLabels[r.data.kind]}</TableCell>
+                        <TableCell title={observationSummary(r.data)}>
                           {observationSummary(r.data)}
-                        </td>
-                        <td>Simulation · version {r.version}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell>Simulation · version {r.version}</TableCell>
+                      </TableRow>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               </div>
               <h3>Originaux fictifs conservés</h3>
               {run.result.artifacts.length === 0 ? (

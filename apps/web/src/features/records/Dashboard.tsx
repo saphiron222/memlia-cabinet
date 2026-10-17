@@ -67,8 +67,13 @@ export function Dashboard() {
     ].some((p) => p.action === "export" && (p.kind === kind || p.kind === "*"));
   return (
     <section className="home">
-      <h2>Le travail du cabinet</h2>
-      <p className="muted">Vos dossiers, contacts et échéances autorisés.</p>
+      <header className="section-heading">
+        <div>
+          <h2>Le travail du cabinet</h2>
+          <p>Vos dossiers, contacts et échéances autorisés.</p>
+        </div>
+        <a href="#calendrier">Ouvrir le calendrier</a>
+      </header>
       <ScopeFilters
         query={filters}
         onChange={(patch) => setFilters({ ...filters, ...patch, offset: 0 })}

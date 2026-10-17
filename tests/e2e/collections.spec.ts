@@ -70,16 +70,22 @@ test("Collectes : validation clavier, progression, preuves fictives, couverture 
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   // Theme changes animate Button backgrounds for 100ms; inspect stable colors.
-  const buttons = page
-    .getByRole("button")
-    .filter({
-      hasText: /^(Lancer la simulation|Télécharger avis-cfe-fictif.pdf)$/,
-    });
+  const buttons = page.getByRole("button").filter({
+    hasText: /^(Lancer la simulation|Télécharger avis-cfe-fictif.pdf)$/,
+  });
   const inspect = () =>
     buttons.evaluateAll((elements) =>
       elements.map((element) => {
         const button = element as HTMLButtonElement,
           style = getComputedStyle(button);
+        const normalizeColor = (value: string) => {
+          const probe = document.createElement("span");
+          probe.style.color = value;
+          button.append(probe);
+          const result = getComputedStyle(probe).color;
+          probe.remove();
+          return result;
+        };
         return {
           label: button.textContent,
           disabled: button.disabled,
@@ -87,10 +93,12 @@ test("Collectes : validation clavier, progression, preuves fictives, couverture 
           background: style.backgroundColor,
           color: style.color,
           opacity: style.opacity,
-          targetBackground: style
-            .getPropertyValue("--tw-button-background")
-            .trim(),
-          targetColor: style.getPropertyValue("--tw-button-color").trim(),
+          targetBackground: normalizeColor(
+            style.getPropertyValue("--tw-button-background").trim(),
+          ),
+          targetColor: normalizeColor(
+            style.getPropertyValue("--tw-button-color").trim(),
+          ),
           transition: style.transition,
         };
       }),
@@ -115,12 +123,10 @@ test("Collectes : validation clavier, progression, preuves fictives, couverture 
     expect(button.background).toBe(button.targetBackground);
     expect(button.color).toBe(button.targetColor);
   }
-  await test
-    .info()
-    .attach("dark-buttons-computed", {
-      body: JSON.stringify({ immediate, settled }, null, 2),
-      contentType: "application/json",
-    });
+  await test.info().attach("dark-buttons-computed", {
+    body: JSON.stringify({ immediate, settled }, null, 2),
+    contentType: "application/json",
+  });
   await page.screenshot({
     path: "test-results/task4-collections-dark.png",
     fullPage: true,

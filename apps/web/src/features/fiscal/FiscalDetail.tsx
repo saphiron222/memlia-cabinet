@@ -1,3 +1,11 @@
+import { TabButton } from "../../upstream/plane/controls";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
+import { formatCivilDate } from "../workflows/civil";
 import { WorkPanel } from "../workflows/WorkPanel";
 import { CabinetRecordSchema } from "@memlia/contracts";
 import { useEffect, useState } from "react";
@@ -25,7 +33,7 @@ const tabActions: Record<
   { label: string; button: string; kinds: FiscalEvent["kind"][] }
 > = {
   overview: {
-    label: "Vue d’ensemble",
+    label: "Détail",
     button: "Modifier le suivi",
     kinds: [
       "revision",
@@ -52,7 +60,7 @@ const tabActions: Record<
     kinds: ["observation", "resolution", "source_freshness"],
   },
   documents: {
-    label: "Pièces et tâches",
+    label: "Documents",
     button: "Lier une pièce ou une tâche",
     kinds: ["evidence", "notice", "link_task"],
   },
@@ -61,15 +69,21 @@ const tabActions: Record<
     button: "Préparer les revenus",
     kinds: ["income", "ifu_prepare"],
   },
+  checklist: { label: "Checklist", button: "", kinds: [] },
+  comments: { label: "Commentaires internes", button: "", kinds: [] },
   work: { label: "Travail interne", button: "", kinds: [] },
   history: { label: "Historique", button: "", kinds: [] },
 };
 export function FiscalDetail({
   id,
   onChange,
+  returnHref = "#fiscal",
+  onReturn,
 }: {
   id: string;
   onChange: () => void;
+  returnHref?: string;
+  onReturn?: () => void;
 }) {
   const [tab, setTab] = useState("overview"),
     [commandKind, setCommandKind] = useState<FiscalEvent["kind"] | null>(null);
@@ -139,7 +153,19 @@ export function FiscalDetail({
       enabled && detail.capabilities.actions.includes(action) && !busy;
   return (
     <section>
-      <a href="#fiscal">Revenir à la grille fiscale</a>
+      <a
+        href={returnHref}
+        onClick={
+          onReturn
+            ? (e) => {
+                e.preventDefault();
+                onReturn();
+              }
+            : undefined
+        }
+      >
+        Revenir à la grille fiscale
+      </a>
       <header className="fiscal-record-header">
         <div>
           <h2>{detail.record.title}</h2>
@@ -147,7 +173,8 @@ export function FiscalDetail({
             {natureLabels[detail.record.data.nature]}
           </span>{" "}
           <span className="muted">
-            Campagne {p.period.campaign} · version {detail.record.version}
+            Campagne {p.period.campaign} · version de fiche{" "}
+            {detail.record.version}
           </span>
         </div>
         <div className="actions">
@@ -223,14 +250,26 @@ export function FiscalDetail({
         aria-label="Rubriques de l’obligation"
       >
         {Object.entries(tabActions)
+          .sort(([a], [b]) => {
+            const order = ["overview", "documents", "checklist", "comments"];
+            return (
+              (order.includes(a) ? order.indexOf(a) : 10) -
+              (order.includes(b) ? order.indexOf(b) : 10)
+            );
+          })
           .filter(
             ([key]) =>
               key !== "incomes" ||
               ["RCM_2777", "IFU_2561"].includes(detail.record.data.nature),
           )
           .map(([key, entry]) => (
-            <button
+            <TabButton
               key={key}
+              className={
+                ["overview", "documents", "checklist", "comments"].includes(key)
+                  ? "fiscal-primary-tab"
+                  : "fiscal-secondary-tab"
+              }
               type="button"
               role="tab"
               id={`fiscal-tab-${key}`}
@@ -266,7 +305,7 @@ export function FiscalDetail({
               }}
             >
               {entry.label}
-            </button>
+            </TabButton>
           ))}
       </div>
       {tabActions[tab]!.kinds.length > 1 && (
@@ -278,6 +317,7 @@ export function FiscalDetail({
             <Button
               key={kind}
               size="sm"
+              variant="ghost"
               disabled={!enabled || busy}
               onClick={() => setCommandKind(kind)}
             >
@@ -292,9 +332,14 @@ export function FiscalDetail({
         aria-labelledby={`fiscal-tab-${tab}`}
         className="fiscal-tab-content"
       >
-        {tab === "work" && (
+        {(tab === "work" || tab === "checklist" || tab === "comments") && (
           <>
-            <WorkPanel targetId={detail.record.id} enabled={enabled} />
+            <WorkPanel
+              key={tab}
+              targetId={detail.record.id}
+              enabled={enabled}
+              initialTab={tab === "comments" ? "comments" : "checklist"}
+            />
             <Button
               disabled={!can("update")}
               onClick={() => {
@@ -322,7 +367,8 @@ export function FiscalDetail({
             <div>
               <dt>Période</dt>
               <dd>
-                {p.period.start} au {p.period.end}
+                {formatCivilDate(p.period.start)} au{" "}
+                {formatCivilDate(p.period.end)}
               </dd>
             </div>
             <div>
@@ -335,7 +381,11 @@ export function FiscalDetail({
             </div>
             <div>
               <dt>Clôture</dt>
-              <dd>{p.financialYearEnd ?? "Non renseignée"}</dd>
+              <dd>
+                {p.financialYearEnd
+                  ? formatCivilDate(p.financialYearEnd)
+                  : "Non renseignée"}
+              </dd>
             </div>
             <div>
               <dt>Classement</dt>
@@ -376,8 +426,11 @@ export function FiscalDetail({
               )}
           </ul>
           <p>
-            Clôture : {p.financialYearEnd ?? "inconnue"} · Régime :{" "}
-            {p.regime ? labelValue(p.regime) : "inconnu"}
+            Clôture :{" "}
+            {p.financialYearEnd
+              ? formatCivilDate(p.financialYearEnd)
+              : "inconnue"}{" "}
+            · Régime : {p.regime ? labelValue(p.regime) : "inconnu"}
           </p>
         </section>
         <section hidden={tab !== "sources"}>
@@ -397,9 +450,18 @@ export function FiscalDetail({
           <section hidden={tab !== "overview"}>
             <h3>Dates distinctes</h3>
             <p>
-              Échéance observée : {p.deadlines.observed ?? "inconnue"} ·
-              Campagne : {p.deadlines.campaignDate ?? "inconnue"} · Cible
-              interne : {p.deadlines.internalTarget ?? "non fixée"}
+              Échéance observée :{" "}
+              {p.deadlines.observed
+                ? formatCivilDate(p.deadlines.observed)
+                : "inconnue"}{" "}
+              · Campagne :{" "}
+              {p.deadlines.campaignDate
+                ? formatCivilDate(p.deadlines.campaignDate)
+                : "inconnue"}{" "}
+              · Cible interne :{" "}
+              {p.deadlines.internalTarget
+                ? formatCivilDate(p.deadlines.internalTarget)
+                : "non fixée"}
             </p>
           </section>
         )}
@@ -516,21 +578,21 @@ export function FiscalDetail({
           <section hidden={tab !== "debts"}>
             <h3>Dettes et apurements</h3>
             <div className="table-scroll">
-              <table>
+              <Table>
                 <thead>
-                  <tr>
-                    <th>Dette</th>
-                    <th>Montant</th>
-                    <th>Payé</th>
-                    <th>Autres apurements</th>
-                    <th>Reste</th>
-                    <th>Solde source</th>
-                  </tr>
+                  <TableRow>
+                    <TableHeader>Dette</TableHeader>
+                    <TableHeader>Montant</TableHeader>
+                    <TableHeader>Payé</TableHeader>
+                    <TableHeader>Autres apurements</TableHeader>
+                    <TableHeader>Reste</TableHeader>
+                    <TableHeader>Solde source</TableHeader>
+                  </TableRow>
                 </thead>
                 <tbody>
                   {s.debts.map((d) => (
-                    <tr key={d.id}>
-                      <td>
+                    <TableRow key={d.id}>
+                      <TableCell>
                         {(
                           detail.timeline.findLast(
                             (e) =>
@@ -539,21 +601,21 @@ export function FiscalDetail({
                             | Extract<FiscalEvent, { kind: "debt" }>
                             | undefined
                         )?.reference ?? d.id}
-                      </td>
-                      <td>{moneyLabel(d.amount)}</td>
-                      <td>{moneyLabel(d.paid)}</td>
-                      <td>{moneyLabel(d.otherApurements)}</td>
-                      <td>{moneyLabel(d.remaining)}</td>
-                      <td>
+                      </TableCell>
+                      <TableCell>{moneyLabel(d.amount)}</TableCell>
+                      <TableCell>{moneyLabel(d.paid)}</TableCell>
+                      <TableCell>{moneyLabel(d.otherApurements)}</TableCell>
+                      <TableCell>{moneyLabel(d.remaining)}</TableCell>
+                      <TableCell>
                         {moneyLabel(d.sourceBalance)}
                         {d.conflict && " · Divergence"}
                         {d.sourceConfirmedZero &&
                           " · Zéro confirmé par la source déclarée"}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
           </section>
         )}

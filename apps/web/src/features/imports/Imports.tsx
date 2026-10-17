@@ -1,3 +1,9 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
 import { columnLabels } from "../records/columns";
 import { useModuleEnabled } from "../administration/preferences";
 import { useEffect, useRef, useState } from "react";
@@ -162,7 +168,18 @@ export function Imports() {
   }
   return (
     <section className="imports">
-      <h2>Reprise des données</h2>
+      <header className="section-heading">
+        <div>
+          <h2>Reprise des données</h2>
+          <p>Importer, contrôler puis enregistrer les lignes validées.</p>
+        </div>
+        <span
+          className="semantic-status"
+          data-state={preview?.state === "completed" ? "done" : "pending"}
+        >
+          {preview ? "Aperçu disponible" : "Choix du fichier"}
+        </span>
+      </header>
       <p>
         Fichiers locaux CSV UTF-8 ou Excel XLSX. Un aperçu contrôle les données
         avant toute écriture. Les cellules vides d’une mise à jour conservent
@@ -359,14 +376,14 @@ export function Imports() {
             </form>
           )}
           <div className="table-wrap">
-            <table aria-label="Lignes de reprise">
+            <Table aria-label="Lignes de reprise">
               <thead>
-                <tr>
-                  <th>Ligne</th>
-                  <th>Données et différences</th>
-                  <th>Contrôles</th>
-                  <th>Décision</th>
-                </tr>
+                <TableRow>
+                  <TableHeader>Ligne</TableHeader>
+                  <TableHeader>Données et différences</TableHeader>
+                  <TableHeader>Contrôles</TableHeader>
+                  <TableHeader>Décision</TableHeader>
+                </TableRow>
               </thead>
               <tbody>
                 {rows.map((line) => (
@@ -380,7 +397,7 @@ export function Imports() {
                   />
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
           <div className="pagination">
             <Button
@@ -480,9 +497,9 @@ function ImportRow({
   const [target, setTarget] = useState(line.targetId ?? ""),
     [overwrite, setOverwrite] = useState(line.overwriteFields);
   return (
-    <tr>
-      <td>{line.number}</td>
-      <td>
+    <TableRow>
+      <TableCell>{line.number}</TableCell>
+      <TableCell>
         {line.cells.map((c, i) => (
           <span key={i}>
             {String(c.value ?? "").slice(0, 300)}
@@ -507,8 +524,8 @@ function ImportRow({
             {JSON.stringify(c.before)} → {JSON.stringify(c.after)}
           </label>
         ))}
-      </td>
-      <td>
+      </TableCell>
+      <TableCell>
         {line.errors.map((e, i) => (
           <p key={i}>{e}</p>
         ))}
@@ -537,8 +554,8 @@ function ImportRow({
         {!line.errors.length && !line.candidates.length && (
           <p>Nouvelle donnée proposée.</p>
         )}
-      </td>
-      <td>
+      </TableCell>
+      <TableCell>
         {statusLabels[line.status]}
         {line.accepted && <p>Retenue</p>}
         <Button
@@ -547,7 +564,7 @@ function ImportRow({
         >
           {line.accepted ? "Écarter" : "Retenir"} ligne {line.number}
         </Button>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }

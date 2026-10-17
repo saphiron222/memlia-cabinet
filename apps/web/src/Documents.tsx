@@ -1,4 +1,13 @@
-import { DossierChoices, useDossierChoices } from "./features/referential/DossierChoices";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "./upstream/twenty/Table";
+import {
+  DossierChoices,
+  useDossierChoices,
+} from "./features/referential/DossierChoices";
 import { useModuleEnabled } from "./features/administration/preferences";
 import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useRef, useState } from "react";
@@ -99,7 +108,16 @@ export function Documents({
       className={dossier ? "document-section" : "records"}
       aria-label="Pièces du cabinet"
     >
-      {dossier && <h3>Pièces du dossier</h3>}
+      <header className="section-heading">
+        <div>
+          {dossier ? (
+            <h3>Pièces du dossier</h3>
+          ) : (
+            <h2>Bibliothèque documentaire</h2>
+          )}
+          <p>Originaux, versions et provenance des pièces autorisées.</p>
+        </div>
+      </header>
       <div className="toolbar">
         <label>
           Rechercher dans les pièces
@@ -112,7 +130,11 @@ export function Documents({
             }}
           />
         </label>
-        {canUpload && <Button onClick={() => open()}>Ajouter une pièce</Button>}
+        {canUpload && (
+          <Button variant="solid" onClick={() => open()}>
+            Ajouter une pièce
+          </Button>
+        )}
       </div>
       <ErrorSummary message={error || rights.error || undefined} />
       {error && (
@@ -138,40 +160,42 @@ export function Documents({
       ) : (
         items && (
           <div className="table-scroll">
-            <table>
+            <Table>
               <thead>
-                <tr>
-                  <th>Pièce</th>
-                  <th>Version</th>
-                  <th>Contenu</th>
-                  <th>Provenance</th>
-                  <th>Actions</th>
-                </tr>
+                <TableRow>
+                  <TableHeader>Pièce</TableHeader>
+                  <TableHeader>Version</TableHeader>
+                  <TableHeader>Contenu</TableHeader>
+                  <TableHeader>Provenance</TableHeader>
+                  <TableHeader>Actions</TableHeader>
+                </TableRow>
               </thead>
               <tbody>
                 {items.map((doc) => (
-                  <tr key={doc.id}>
-                    <td
+                  <TableRow key={doc.id}>
+                    <TableCell
                       title={`${doc.size.toLocaleString("fr-FR")} octets · SHA-256 ${doc.sha256}`}
                     >
                       {doc.filename}
                       {doc.confidential && " · Confidentiel"}
-                    </td>
-                    <td title={new Date(doc.createdAt).toLocaleString("fr-FR")}>
+                    </TableCell>
+                    <TableCell
+                      title={new Date(doc.createdAt).toLocaleString("fr-FR")}
+                    >
                       {doc.version}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {doc.availability === "available"
                         ? extractionLabels[doc.extraction.status]
                         : availabilityLabels[doc.availability]}
-                    </td>
-                    <td title={doc.source.reference}>
+                    </TableCell>
+                    <TableCell title={doc.source.reference}>
                       {doc.source.kind === "manual"
                         ? "Ajout manuel"
                         : doc.source.kind}{" "}
                       · v{doc.source.version}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       <div className="document-actions">
                         {rights.grants[doc.dossierId]?.includes("export") && (
                           <Button
@@ -203,11 +227,11 @@ export function Documents({
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )
       )}
@@ -266,7 +290,6 @@ function UploadForm({
   ]);
   useEffect(() => {
     form.current?.querySelector<HTMLElement>("select,input")?.focus();
-
   }, []);
   async function submit() {
     setErrors({});
@@ -365,25 +388,29 @@ function UploadForm({
         <p>Rattachée au même dossier, version {previous.version + 1}.</p>
       ) : dossier ? (
         <p>{dossier.title}</p>
-      ) : (<>
-        <DossierChoices choices={choices}/>
-        <Select
-          name="dossierId"
-          label="Dossier de la pièce"
-          value={dossierId}
-          onChange={setDossierId}
-          errors={errors}
-        >
-          <option value="">Choisir un dossier</option>
-          {dossierId && !dossiers.some(d=>d.id===dossierId) && <option value={dossierId}>Dossier actuellement choisi</option>}
-          {dossiers
-            .filter((d) => rights.grants[d.id]?.includes("update"))
-            .map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.title}
-              </option>
-            ))}
-        </Select></>
+      ) : (
+        <>
+          <DossierChoices choices={choices} />
+          <Select
+            name="dossierId"
+            label="Dossier de la pièce"
+            value={dossierId}
+            onChange={setDossierId}
+            errors={errors}
+          >
+            <option value="">Choisir un dossier</option>
+            {dossierId && !dossiers.some((d) => d.id === dossierId) && (
+              <option value={dossierId}>Dossier actuellement choisi</option>
+            )}
+            {dossiers
+              .filter((d) => rights.grants[d.id]?.includes("update"))
+              .map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
+          </Select>
+        </>
       )}
       <div className="field">
         <label htmlFor="piece">Fichier original</label>
@@ -422,7 +449,8 @@ function UploadForm({
           variant="solid"
           loading={busy}
           disabled={
-            !moduleEnabled || (!!dossierId && !rights.grants[dossierId]?.includes("update"))
+            !moduleEnabled ||
+            (!!dossierId && !rights.grants[dossierId]?.includes("update"))
           }
         >
           Conserver la pièce

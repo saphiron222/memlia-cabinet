@@ -77,6 +77,9 @@ export function ViewControls({
       <summary>Filtres, colonnes et vues enregistrées</summary>
       <ErrorSummary message={error || undefined} />
       {!fieldsReady && <p>Colonnes personnalisées non chargées.</p>}
+      {fieldsReady && !custom.length && (
+        <p>Aucun champ personnalisé pour ce type de fiche.</p>
+      )}
       <ScopeFilters query={query} onChange={patch} />
       <div className="admin-inline">
         <Select

@@ -1,3 +1,4 @@
+import { TabButton } from "../../upstream/plane/controls";
 import { formatCivilDate } from "./civil";
 import { tabKeys } from "./tabs";
 import { useEffect, useState } from "react";
@@ -22,10 +23,14 @@ export function TaskDetail({
   id,
   models,
   user,
+  returnHref = "#tache",
+  onReturn,
 }: {
   id: string;
   models: WorkflowModel[];
   user: SessionUser;
+  returnHref?: string;
+  onReturn?: () => void;
 }) {
   const signal = useScope(),
     rights = useRecordCapabilities([id]);
@@ -166,7 +171,19 @@ export function TaskDetail({
     steps = model?.model.kind === "task_type" ? model.model.steps : [];
   return (
     <section className="work-detail">
-      <a href="#tache">Revenir aux tâches</a>
+      <a
+        href={returnHref}
+        onClick={
+          onReturn
+            ? (e) => {
+                e.preventDefault();
+                onReturn();
+              }
+            : undefined
+        }
+      >
+        Revenir aux tâches
+      </a>
       <ErrorSummary message={error || undefined} />
       {!record ? (
         error ? (
@@ -324,7 +341,7 @@ export function TaskDetail({
                   ["time", "Temps"],
                   ["history", "Historique"],
                 ].map(([key, name]) => (
-                  <button
+                  <TabButton
                     key={key}
                     role="tab"
                     aria-selected={tab === key}
@@ -341,7 +358,7 @@ export function TaskDetail({
                     }}
                   >
                     {name}
-                  </button>
+                  </TabButton>
                 ))}
               </div>
               {tab === "work" && (

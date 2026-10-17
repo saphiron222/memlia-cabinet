@@ -6,10 +6,20 @@ import {
   writeFileSync,
 } from "node:fs";
 import { resolve } from "node:path";
+import { distributeSource } from "./source-distribution.ts";
 const root = resolve(import.meta.dirname, "../..");
 export function distributeNotices() {
   const output = resolve(import.meta.dirname, "dist/licenses");
   mkdirSync(output, { recursive: true });
+  for (const source of ["plane", "cal", "twenty"])
+    copyFileSync(
+      resolve(root, "apps/web/src/upstream", source, "LICENSE"),
+      resolve(output, source + ".txt"),
+    );
+  copyFileSync(
+    resolve(root, "docs/frontend-licensing.md"),
+    resolve(output, "frontend-licensing.md"),
+  );
   copyFileSync(
     resolve(root, "packages/ui/LICENSE.twenty-ui"),
     resolve(output, "twenty-ui.txt"),
@@ -18,6 +28,19 @@ export function distributeNotices() {
     resolve(root, "packages/ui/PROVENANCE.json"),
     resolve(output, "twenty-provenance.json"),
   );
+  copyFileSync(
+    resolve(root, "docs/design-interface-provenance.json"),
+    resolve(output, "interface-provenance.json"),
+  );
+  for (const file of [
+    "inter-OFL.txt",
+    "ibm-plex-mono-OFL.txt",
+    "provenance.json",
+  ])
+    copyFileSync(
+      resolve(root, "apps/web/public/fonts", file),
+      resolve(output, "fonts-" + file),
+    );
   const seen = new Set<string>();
   const notices: {
     name: string;
@@ -52,4 +75,5 @@ export function distributeNotices() {
     resolve(output, "index.json"),
     JSON.stringify(notices, null, 2) + "\n",
   );
+  distributeSource(root, output);
 }

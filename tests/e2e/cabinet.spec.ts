@@ -127,7 +127,7 @@ async function login(
   ).toBeVisible();
 }
 
-test("erreurs reliées aux champs, clavier, thèmes et mesures Twenty", async ({
+test("erreurs reliées aux champs, clavier, thèmes et mesures Plane/Twenty", async ({
   page,
 }) => {
   await login(page);
@@ -159,31 +159,33 @@ test("erreurs reliées aux champs, clavier, thèmes et mesures Twenty", async ({
       .locator("tbody tr")
       .first()
       .evaluate((e) => e.getBoundingClientRect().height),
-  ).toBe(32);
+  ).toBe(36);
   expect(
     await page
-      .locator("aside")
+      .locator(".plane-sidebar-host")
       .evaluate((e) => e.getBoundingClientRect().width),
-  ).toBe(220);
+  ).toBe(250);
   expect(
     await page
-      .locator(".app-header")
+      .locator(".plane-header")
       .evaluate((e) => e.getBoundingClientRect().height),
-  ).toBe(48);
+  ).toBe(44);
   expect(
     await page.locator("html").evaluate((e) => getComputedStyle(e).fontSize),
-  ).toBe("13px");
-  expect(await page.evaluate(() => document.fonts.check("13px Inter"))).toBe(
-    true,
-  );
+  ).toBe("16px");
+  expect(
+    await page.evaluate(() => document.fonts.check('13px "Inter Variable"')),
+  ).toBe(true);
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveClass("dark");
   await page.getByRole("button", { name: "Replier la navigation" }).click();
   await expect
     .poll(() =>
-      page.locator("aside").evaluate((e) => e.getBoundingClientRect().width),
+      page
+        .locator(".plane-sidebar-host")
+        .evaluate((e) => e.getBoundingClientRect().width),
     )
-    .toBe(48);
+    .toBe(0);
   await page.screenshot({
     path: "test-results/task2-dark.png",
     fullPage: true,
@@ -199,7 +201,7 @@ test("erreurs reliées aux champs, clavier, thèmes et mesures Twenty", async ({
     await page
       .getByRole("dialog")
       .evaluate((e) => e.getBoundingClientRect().width),
-  ).toBe(400);
+  ).toBe(760);
   await page.screenshot({
     path: "test-results/task2-panel.png",
     fullPage: true,

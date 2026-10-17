@@ -97,7 +97,7 @@ export function Notifications() {
         <h2>
           Boîte de réception{" "}
           {list && (
-            <span className="badge">
+            <span className="semantic-status">
               {list.unread} {list.unread === 1 ? "non lue" : "non lues"}
             </span>
           )}

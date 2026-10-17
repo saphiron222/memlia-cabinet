@@ -1,3 +1,9 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
 import { Installation } from "./Installation";
 import { CustomFieldAdministration } from "./CustomFieldAdministration";
 import { useEffect, useState } from "react";
@@ -188,355 +194,433 @@ export function Administration({ user }: { user: SessionUser }) {
       {notice && <p role="status">{notice}</p>}
       {manager ? (
         <>
-          <div className="toolbar" aria-label="Administration">
-            {(
-              [
-                ["roles", "Rôles"],
-                ["fields", "Champs personnalisés"],
-                ["installation", "Installation et capacités"],
-                ["groups", "Équipes et sites"],
-                ["users", "Utilisateurs"],
-                ["assignments", "Affectations"],
-              ] as const
-            ).map(([key, label]) => (
-              <Button
-                key={key}
-                variant={tab === key ? "solid" : "ghost"}
-                onClick={() => {
-                  setTab(key);
-                  setNotice("");
-                  setError("");
-                }}
-              >
-                {label}
+          <div className="settings-layout">
+            <nav className="settings-navigation" aria-label="Administration">
+              {(
+                [
+                  ["roles", "Rôles"],
+                  ["fields", "Champs personnalisés"],
+                  ["installation", "Installation et capacités"],
+                  ["groups", "Équipes et sites"],
+                  ["users", "Utilisateurs"],
+                  ["assignments", "Affectations"],
+                ] as const
+              ).map(([key, label]) => (
+                <Button
+                  key={key}
+                  variant={tab === key ? "solid" : "ghost"}
+                  onClick={() => {
+                    setTab(key);
+                    setNotice("");
+                    setError("");
+                  }}
+                >
+                  {label}
+                </Button>
+              ))}
+              <Button onClick={() => setRevision((v) => v + 1)}>
+                Recharger
               </Button>
-            ))}
-            <Button onClick={() => setRevision((v) => v + 1)}>Recharger</Button>
-          </div>
-          {loading ? (
-            <div role="status">
-              <Loader /> Chargement de l’administration…
-            </div>
-          ) : (
-            <>
-              {tab === "fields" && <CustomFieldAdministration />}
-              {tab === "installation" && <Installation />}
-              {tab === "roles" && (
-                <div className="admin-layout">
-                  <div>
-                    <h2>Rôles ordonnés</h2>
-                    {!roles.length && <p>Aucun rôle enregistré.</p>}
-                    {roles.map((r) => (
-                      <Button key={r.id} onClick={() => setRole(r)}>
-                        {r.order} · {r.name}
-                      </Button>
-                    ))}
-                    <Button
-                      onClick={() =>
-                        setRole({ name: "", order: 0, permissions: [] })
-                      }
-                    >
-                      Nouveau rôle
-                    </Button>
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void save(async () => {
-                        const result = await request(
-                          `/administration/roles${role.id ? "/" + role.id : ""}`,
-                          RoleSchema,
-                          signal,
-                          {
-                            method: role.id ? "PUT" : "POST",
-                            body: JSON.stringify({
-                              operationId: crypto.randomUUID(),
-                              expectedVersion: role.version,
-                              name: role.name,
-                              order: role.order,
-                              permissions: role.permissions,
-                            }),
-                          },
-                        );
-                        setRole(result);
-                      });
-                    }}
-                  >
-                    <h2>{role.id ? "Modifier le rôle" : "Créer un rôle"}</h2>
-                    <Field
-                      name="role-name"
-                      label="Nom du rôle"
-                      value={role.name ?? ""}
-                      onChange={(name) => setRole({ ...role, name })}
-                      required
-                    />
-                    <Field
-                      name="role-order"
-                      label="Ordre"
-                      type="number"
-                      value={String(role.order ?? 0)}
-                      onChange={(v) => setRole({ ...role, order: Number(v) })}
-                    />
-                    <Permissions
-                      value={role.permissions ?? []}
-                      onChange={(permissions) =>
-                        setRole({ ...role, permissions })
-                      }
-                    />
-                    <Button type="submit" loading={busy}>
-                      Enregistrer le rôle
-                    </Button>
-                  </form>
+            </nav>
+            <div className="settings-content">
+              {loading ? (
+                <div role="status">
+                  <Loader /> Chargement de l’administration…
                 </div>
-              )}
-              {tab === "groups" && (
-                <div className="admin-layout">
-                  <div>
-                    <h2>Équipes et sites</h2>
-                    {!groups.length && <p>Aucun groupe enregistré.</p>}
-                    {groups.map((g) => (
-                      <Button key={g.id} onClick={() => setGroup(g)}>
-                        {g.kind === "team" ? "Équipe" : "Site"} · {g.name}
-                      </Button>
-                    ))}
-                    <Button
-                      onClick={() =>
-                        setGroup({ kind: "team", name: "", memberIds: [] })
-                      }
-                    >
-                      Nouveau groupe
-                    </Button>
-                  </div>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void save(async () =>
-                        setGroup(
-                          await request(
-                            `/administration/groups${group.id ? "/" + group.id : ""}`,
-                            GroupSchema,
-                            signal,
-                            {
-                              method: group.id ? "PUT" : "POST",
-                              body: JSON.stringify({
-                                operationId: crypto.randomUUID(),
-                                expectedVersion: group.version,
-                                name: group.name,
-                                kind: group.kind,
-                                memberIds: group.memberIds,
-                              }),
-                            },
-                          ),
-                        ),
-                      );
-                    }}
-                  >
-                    <h2>
-                      {group.id ? "Modifier le groupe" : "Créer un groupe"}
-                    </h2>
-                    <Select
-                      name="group-kind"
-                      label="Type de groupe"
-                      value={group.kind ?? "team"}
-                      disabled={Boolean(group.id)}
-                      onChange={(kind) =>
-                        setGroup({ ...group, kind: kind as Group["kind"] })
-                      }
-                    >
-                      <option value="team">Équipe</option>
-                      <option value="site">Site</option>
-                    </Select>
-                    <Field
-                      name="group-name"
-                      label="Nom du groupe"
-                      value={group.name ?? ""}
-                      onChange={(name) => setGroup({ ...group, name })}
-                      required
-                    />
-                    <fieldset>
-                      <legend>Membres</legend>
-                      {users.map((u) => (
-                        <label className="check-row" key={u.id}>
-                          <input
-                            type="checkbox"
-                            checked={group.memberIds?.includes(u.id) ?? false}
-                            onChange={(e) =>
-                              setGroup({
-                                ...group,
-                                memberIds: e.target.checked
-                                  ? [...(group.memberIds ?? []), u.id]
-                                  : (group.memberIds ?? []).filter(
-                                      (id) => id !== u.id,
-                                    ),
-                              })
+              ) : (
+                <>
+                  {tab === "fields" && <CustomFieldAdministration />}
+                  {tab === "installation" && <Installation />}
+                  {tab === "roles" && (
+                    <>
+                      <details className="permission-matrix" open>
+                        <summary>Matrice des permissions par rôle</summary>
+                        <p className="muted">
+                          Permissions explicites des rôles. Les droits directs
+                          et les affectations de dossiers restent contrôlés
+                          séparément. Sélectionnez une cellule pour ouvrir son
+                          rôle.
+                        </p>
+                        <div className="table-scroll">
+                          <Table>
+                            <thead>
+                              <TableRow>
+                                <TableHeader>Permission</TableHeader>
+                                <TableHeader>Sans rôle</TableHeader>
+                                {roles.map((r) => (
+                                  <TableHeader key={r.id}>{r.name}</TableHeader>
+                                ))}
+                              </TableRow>
+                            </thead>
+                            <tbody>
+                              {ActionSchema.options.map((action) => (
+                                <TableRow key={action}>
+                                  <TableHeader scope="row">
+                                    {actionLabels[action]}
+                                  </TableHeader>
+                                  <TableCell>
+                                    Non accordée par un rôle
+                                  </TableCell>
+                                  {roles.map((r) => (
+                                    <TableCell key={r.id}>
+                                      <button
+                                        type="button"
+                                        className="permission-cell"
+                                        onClick={() => setRole(r)}
+                                        aria-label={`Modifier ${actionLabels[action]} · ${r.name}`}
+                                      >
+                                        {r.permissions
+                                          .filter((p) => p.action === action)
+                                          .map((p) =>
+                                            p.kind === "*"
+                                              ? "Toutes les ressources"
+                                              : p.kind,
+                                          )
+                                          .join(", ") || "—"}
+                                      </button>
+                                    </TableCell>
+                                  ))}
+                                </TableRow>
+                              ))}
+                            </tbody>
+                          </Table>
+                        </div>
+                      </details>
+                      <div className="admin-layout">
+                        <div>
+                          <h2>Rôles ordonnés</h2>
+                          {!roles.length && <p>Aucun rôle enregistré.</p>}
+                          {roles.map((r) => (
+                            <Button key={r.id} onClick={() => setRole(r)}>
+                              {r.order} · {r.name}
+                            </Button>
+                          ))}
+                          <Button
+                            onClick={() =>
+                              setRole({ name: "", order: 0, permissions: [] })
+                            }
+                          >
+                            Nouveau rôle
+                          </Button>
+                        </div>
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void save(async () => {
+                              const result = await request(
+                                `/administration/roles${role.id ? "/" + role.id : ""}`,
+                                RoleSchema,
+                                signal,
+                                {
+                                  method: role.id ? "PUT" : "POST",
+                                  body: JSON.stringify({
+                                    operationId: crypto.randomUUID(),
+                                    expectedVersion: role.version,
+                                    name: role.name,
+                                    order: role.order,
+                                    permissions: role.permissions,
+                                  }),
+                                },
+                              );
+                              setRole(result);
+                            });
+                          }}
+                        >
+                          <h2>
+                            {role.id ? "Modifier le rôle" : "Créer un rôle"}
+                          </h2>
+                          <Field
+                            name="role-name"
+                            label="Nom du rôle"
+                            value={role.name ?? ""}
+                            onChange={(name) => setRole({ ...role, name })}
+                            required
+                          />
+                          <Field
+                            name="role-order"
+                            label="Ordre"
+                            type="number"
+                            value={String(role.order ?? 0)}
+                            onChange={(v) =>
+                              setRole({ ...role, order: Number(v) })
                             }
                           />
-                          {u.name}
-                          {u.active ? "" : " (inactif)"}
-                        </label>
-                      ))}
-                    </fieldset>
-                    <p className="muted">
-                      Être membre ne donne aucun accès sans affectation
-                      explicite à un dossier.
-                    </p>
-                    <Button type="submit" loading={busy}>
-                      Enregistrer le groupe
-                    </Button>
-                  </form>
-                </div>
-              )}
-              {tab === "users" && (
-                <div className="admin-layout">
-                  <div>
-                    <h2>Utilisateurs</h2>
-                    {users.map((u) => (
-                      <Button key={u.id} onClick={() => setEditUser(u)}>
-                        {u.name}
-                        {u.active ? "" : " · Inactif"}
-                      </Button>
-                    ))}
-                    <Button
-                      onClick={() => {
-                        setEditUser(null);
-                        setNewUser({ name: "", email: "", password: "" });
-                      }}
-                    >
-                      Nouvel utilisateur
-                    </Button>
-                  </div>
-                  {editUser ? (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void save(async () =>
-                          setEditUser(
-                            await request(
-                              `/administration/users/${editUser.id}`,
-                              AdministrationUserSchema,
-                              signal,
-                              {
-                                method: "PUT",
-                                body: JSON.stringify({
-                                  operationId: crypto.randomUUID(),
-                                  expectedVersion: editUser.version,
-                                  name: editUser.name,
-                                  active: editUser.active,
-                                  permissions: editUser.directPermissions,
-                                  roleIds: editUser.roleIds,
-                                }),
-                              },
-                            ),
-                          ),
-                        );
-                      }}
-                    >
-                      <h2>Modifier l’utilisateur</h2>
-                      <Field
-                        name="user-name"
-                        label="Nom de l’utilisateur"
-                        value={editUser.name}
-                        onChange={(name) => setEditUser({ ...editUser, name })}
-                      />
-                      <p>{editUser.email}</p>
-                      <label className="check-row">
-                        <input
-                          type="checkbox"
-                          checked={editUser.active}
-                          onChange={(e) =>
-                            setEditUser({
-                              ...editUser,
-                              active: e.target.checked,
-                            })
+                          <Permissions
+                            value={role.permissions ?? []}
+                            onChange={(permissions) =>
+                              setRole({ ...role, permissions })
+                            }
+                          />
+                          <Button type="submit" loading={busy}>
+                            Enregistrer le rôle
+                          </Button>
+                        </form>
+                      </div>
+                    </>
+                  )}
+                  {tab === "groups" && (
+                    <div className="admin-layout">
+                      <div>
+                        <h2>Équipes et sites</h2>
+                        {!groups.length && <p>Aucun groupe enregistré.</p>}
+                        {groups.map((g) => (
+                          <Button key={g.id} onClick={() => setGroup(g)}>
+                            {g.kind === "team" ? "Équipe" : "Site"} · {g.name}
+                          </Button>
+                        ))}
+                        <Button
+                          onClick={() =>
+                            setGroup({ kind: "team", name: "", memberIds: [] })
                           }
+                        >
+                          Nouveau groupe
+                        </Button>
+                      </div>
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void save(async () =>
+                            setGroup(
+                              await request(
+                                `/administration/groups${group.id ? "/" + group.id : ""}`,
+                                GroupSchema,
+                                signal,
+                                {
+                                  method: group.id ? "PUT" : "POST",
+                                  body: JSON.stringify({
+                                    operationId: crypto.randomUUID(),
+                                    expectedVersion: group.version,
+                                    name: group.name,
+                                    kind: group.kind,
+                                    memberIds: group.memberIds,
+                                  }),
+                                },
+                              ),
+                            ),
+                          );
+                        }}
+                      >
+                        <h2>
+                          {group.id ? "Modifier le groupe" : "Créer un groupe"}
+                        </h2>
+                        <Select
+                          name="group-kind"
+                          label="Type de groupe"
+                          value={group.kind ?? "team"}
+                          disabled={Boolean(group.id)}
+                          onChange={(kind) =>
+                            setGroup({ ...group, kind: kind as Group["kind"] })
+                          }
+                        >
+                          <option value="team">Équipe</option>
+                          <option value="site">Site</option>
+                        </Select>
+                        <Field
+                          name="group-name"
+                          label="Nom du groupe"
+                          value={group.name ?? ""}
+                          onChange={(name) => setGroup({ ...group, name })}
+                          required
                         />
-                        Accès actif
-                      </label>
-                      <fieldset>
-                        <legend>Rôles globaux</legend>
-                        {roles.map((r) => (
-                          <label className="check-row" key={r.id}>
+                        <fieldset>
+                          <legend>Membres</legend>
+                          {users.map((u) => (
+                            <label className="check-row" key={u.id}>
+                              <input
+                                type="checkbox"
+                                checked={
+                                  group.memberIds?.includes(u.id) ?? false
+                                }
+                                onChange={(e) =>
+                                  setGroup({
+                                    ...group,
+                                    memberIds: e.target.checked
+                                      ? [...(group.memberIds ?? []), u.id]
+                                      : (group.memberIds ?? []).filter(
+                                          (id) => id !== u.id,
+                                        ),
+                                  })
+                                }
+                              />
+                              {u.name}
+                              {u.active ? "" : " (inactif)"}
+                            </label>
+                          ))}
+                        </fieldset>
+                        <p className="muted">
+                          Être membre ne donne aucun accès sans affectation
+                          explicite à un dossier.
+                        </p>
+                        <Button type="submit" loading={busy}>
+                          Enregistrer le groupe
+                        </Button>
+                      </form>
+                    </div>
+                  )}
+                  {tab === "users" && (
+                    <div className="admin-layout">
+                      <div>
+                        <h2>Utilisateurs</h2>
+                        {users.map((u) => (
+                          <Button key={u.id} onClick={() => setEditUser(u)}>
+                            {u.name}
+                            {u.active ? "" : " · Inactif"}
+                          </Button>
+                        ))}
+                        <Button
+                          onClick={() => {
+                            setEditUser(null);
+                            setNewUser({ name: "", email: "", password: "" });
+                          }}
+                        >
+                          Nouvel utilisateur
+                        </Button>
+                      </div>
+                      {editUser ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void save(async () =>
+                              setEditUser(
+                                await request(
+                                  `/administration/users/${editUser.id}`,
+                                  AdministrationUserSchema,
+                                  signal,
+                                  {
+                                    method: "PUT",
+                                    body: JSON.stringify({
+                                      operationId: crypto.randomUUID(),
+                                      expectedVersion: editUser.version,
+                                      name: editUser.name,
+                                      active: editUser.active,
+                                      permissions: editUser.directPermissions,
+                                      roleIds: editUser.roleIds,
+                                    }),
+                                  },
+                                ),
+                              ),
+                            );
+                          }}
+                        >
+                          <h2>Modifier l’utilisateur</h2>
+                          <Field
+                            name="user-name"
+                            label="Nom de l’utilisateur"
+                            value={editUser.name}
+                            onChange={(name) =>
+                              setEditUser({ ...editUser, name })
+                            }
+                          />
+                          <p>{editUser.email}</p>
+                          <label className="check-row">
                             <input
                               type="checkbox"
-                              checked={editUser.roleIds.includes(r.id)}
+                              checked={editUser.active}
                               onChange={(e) =>
                                 setEditUser({
                                   ...editUser,
-                                  roleIds: e.target.checked
-                                    ? [...editUser.roleIds, r.id]
-                                    : editUser.roleIds.filter(
-                                        (id) => id !== r.id,
-                                      ),
+                                  active: e.target.checked,
                                 })
                               }
                             />
-                            {r.name}
+                            Accès actif
                           </label>
-                        ))}
-                      </fieldset>
-                      <Permissions
-                        value={editUser.directPermissions}
-                        onChange={(directPermissions) =>
-                          setEditUser({ ...editUser, directPermissions })
-                        }
-                      />
-                      <Button type="submit" loading={busy}>
-                        Enregistrer l’utilisateur
-                      </Button>
-                    </form>
-                  ) : (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void save(async () => {
-                          await request("/users", SessionUserSchema, signal, {
-                            method: "POST",
-                            body: JSON.stringify({
-                              ...newUser,
-                              permissions: [],
-                              operationId: crypto.randomUUID(),
-                            }),
-                          });
-                          setNewUser({ name: "", email: "", password: "" });
-                        });
-                      }}
-                    >
-                      <h2>Créer un utilisateur</h2>
-                      <Field
-                        name="new-name"
-                        label="Nom de l’utilisateur"
-                        value={newUser.name}
-                        onChange={(name) => setNewUser({ ...newUser, name })}
-                      />
-                      <Field
-                        name="new-email"
-                        label="Email de l’utilisateur"
-                        type="email"
-                        value={newUser.email}
-                        onChange={(email) => setNewUser({ ...newUser, email })}
-                      />
-                      <Field
-                        name="new-password"
-                        label="Mot de passe initial"
-                        type="password"
-                        value={newUser.password}
-                        onChange={(password) =>
-                          setNewUser({ ...newUser, password })
-                        }
-                        hint="12 caractères minimum. Ajoutez ensuite les droits et affectations."
-                      />
-                      <Button type="submit" loading={busy}>
-                        Créer l’utilisateur
-                      </Button>
-                    </form>
+                          <fieldset>
+                            <legend>Rôles globaux</legend>
+                            {roles.map((r) => (
+                              <label className="check-row" key={r.id}>
+                                <input
+                                  type="checkbox"
+                                  checked={editUser.roleIds.includes(r.id)}
+                                  onChange={(e) =>
+                                    setEditUser({
+                                      ...editUser,
+                                      roleIds: e.target.checked
+                                        ? [...editUser.roleIds, r.id]
+                                        : editUser.roleIds.filter(
+                                            (id) => id !== r.id,
+                                          ),
+                                    })
+                                  }
+                                />
+                                {r.name}
+                              </label>
+                            ))}
+                          </fieldset>
+                          <Permissions
+                            value={editUser.directPermissions}
+                            onChange={(directPermissions) =>
+                              setEditUser({ ...editUser, directPermissions })
+                            }
+                          />
+                          <Button type="submit" loading={busy}>
+                            Enregistrer l’utilisateur
+                          </Button>
+                        </form>
+                      ) : (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void save(async () => {
+                              await request(
+                                "/users",
+                                SessionUserSchema,
+                                signal,
+                                {
+                                  method: "POST",
+                                  body: JSON.stringify({
+                                    ...newUser,
+                                    permissions: [],
+                                    operationId: crypto.randomUUID(),
+                                  }),
+                                },
+                              );
+                              setNewUser({ name: "", email: "", password: "" });
+                            });
+                          }}
+                        >
+                          <h2>Créer un utilisateur</h2>
+                          <Field
+                            name="new-name"
+                            label="Nom de l’utilisateur"
+                            value={newUser.name}
+                            onChange={(name) =>
+                              setNewUser({ ...newUser, name })
+                            }
+                          />
+                          <Field
+                            name="new-email"
+                            label="Email de l’utilisateur"
+                            type="email"
+                            value={newUser.email}
+                            onChange={(email) =>
+                              setNewUser({ ...newUser, email })
+                            }
+                          />
+                          <Field
+                            name="new-password"
+                            label="Mot de passe initial"
+                            type="password"
+                            value={newUser.password}
+                            onChange={(password) =>
+                              setNewUser({ ...newUser, password })
+                            }
+                            hint="12 caractères minimum. Ajoutez ensuite les droits et affectations."
+                          />
+                          <Button type="submit" loading={busy}>
+                            Créer l’utilisateur
+                          </Button>
+                        </form>
+                      )}
+                    </div>
                   )}
-                </div>
+                  {tab === "assignments" && (
+                    <Assignments roles={roles} groups={groups} users={users} />
+                  )}
+                </>
               )}
-              {tab === "assignments" && (
-                <Assignments roles={roles} groups={groups} users={users} />
-              )}
-            </>
-          )}
+            </div>
+          </div>
         </>
       ) : (
         <p>Administration réservée aux utilisateurs autorisés.</p>

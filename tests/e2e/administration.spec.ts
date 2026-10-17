@@ -290,6 +290,10 @@ test("référentiel : champ personnalisé, établissement, contact lié et déte
   await page.getByLabel("Effectif interface", { exact: true }).fill("0");
   await page.getByLabel("SIREN", { exact: true }).fill("003456789");
   await page.getByLabel("Capital", { exact: true }).fill("0.00");
+  await page
+    .getByText("Établissements", { exact: true })
+    .filter({ visible: true })
+    .click();
   await page.getByRole("button", { name: "Ajouter un établissement" }).click();
   await page.getByLabel("SIRET 1").fill("00345678900012");
   await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
@@ -314,6 +318,7 @@ test("référentiel : champ personnalisé, établissement, contact lié et déte
   await expect(
     page.getByLabel("Effectif interface", { exact: true }),
   ).toHaveValue("0");
+  await page.locator("summary").filter({ hasText: "Établissements" }).click();
   await expect(page.getByLabel("SIRET 1")).toHaveValue("00345678900012");
   await page.getByRole("button", { name: "Fermer la fiche" }).click();
   await page
@@ -845,6 +850,9 @@ test("champs des vues : chargement, indisponibilité, refus, reprise et absence 
   expect(calls).toBe(3);
   mode = "empty";
   await page.reload();
+  await page
+    .getByText("Filtres, colonnes et vues enregistrées", { exact: true })
+    .click();
   await expect(
     page.getByText("Aucun champ personnalisé pour ce type de fiche.", {
       exact: true,
@@ -880,6 +888,9 @@ test("champs des vues : chargement, indisponibilité, refus, reprise et absence 
   ).toBeVisible();
   late = false;
   await page.getByRole("link", { name: "Contacts", exact: true }).click();
+  await page
+    .getByText("Filtres, colonnes et vues enregistrées", { exact: true })
+    .click();
   await expect(
     page.getByText("Aucun champ personnalisé pour ce type de fiche.", {
       exact: true,

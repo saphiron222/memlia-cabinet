@@ -1,3 +1,15 @@
+import { KanbanCard } from "../../upstream/plane/kanban-card";
+import { TabButton } from "../../upstream/plane/controls";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
+import { useInstallation } from "../administration/preferences";
+import { CalendarGrid } from "./CalendarGrid";
+import { Peek } from "../../interface/Peek";
+import { FiscalDetail } from "../fiscal/FiscalDetail";
 import { formatCivilDate } from "./civil";
 import { columnLabels, columnValue } from "../records/columns";
 import { loadWorkflowModels } from "./models";
@@ -7,6 +19,7 @@ import { z } from "zod";
 import { Button, Input, Checkbox } from "@memlia/ui";
 import {
   WorkflowCalendarSchema,
+  CivilDateSchema,
   RecordListQuerySchema,
   WorkflowModelSchema,
   CabinetRecordSchema,
@@ -37,10 +50,25 @@ export function Workflows({
   calendar?: boolean;
 }) {
   const signal = useScope();
+  const { info } = useInstallation();
+  const today = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: info?.cabinetTimeZone ?? "Europe/Paris",
+  }).format(new Date());
   const [id, setId] = useState(() =>
       new URLSearchParams(location.hash.split("?")[1]).get("id"),
     ),
-    [mode, setMode] = useState(calendar ? "calendar" : "list"),
+    [mode, setMode] = useState(
+      () =>
+        new URLSearchParams(location.hash.split("?")[1]).get("view") ??
+        (calendar ? "month" : "list"),
+    ),
+    [inspector, setInspector] = useState<CabinetRecord | null>(null),
+    [anchor, setAnchor] = useState(
+      () =>
+        CivilDateSchema.safeParse(
+          new URLSearchParams(location.hash.split("?")[1]).get("anchor"),
+        ).data ?? today,
+    ),
     [query, setQuery] = useState<RecordListQuery>(() => {
       const defaults = calendar
         ? {
@@ -59,6 +87,8 @@ export function Workflows({
       );
       delete raw.id;
       delete raw.section;
+      delete raw.view;
+      delete raw.anchor;
       const parsed = RecordListQuerySchema.safeParse({
         ...defaults,
         ...raw,
@@ -77,32 +107,89 @@ export function Workflows({
     [revision, setRevision] = useState(0),
     [create, setCreate] = useState(false),
     [configuration, setConfiguration] = useState(false),
-    [year, setYear] = useState(String(new Date().getFullYear()));
+    [year, setYear] = useState(
+      () =>
+        new URLSearchParams(location.hash.split("?")[1])
+          .get("from")
+          ?.slice(0, 4) ?? today.slice(0, 4),
+    );
   const link = (r: CabinetRecord) =>
     result?.productionIds.includes(r.id)
       ? "#production?id=" + r.id
       : r.kind === "obligation"
         ? "#fiscal?id=" + r.id
-        : "#tache?id=" + r.id;
+        : "#tache?" +
+          queryString({ ...query }) +
+          "&view=" +
+          mode +
+          "&anchor=" +
+          anchor +
+          "&id=" +
+          r.id;
   useEffect(() => {
-    const change = () =>
-      setId(new URLSearchParams(location.hash.split("?")[1]).get("id"));
+    const change = () => {
+      const params = new URLSearchParams(location.hash.split("?")[1]);
+      setId(params.get("id"));
+      setMode(params.get("view") ?? (calendar ? "month" : "list"));
+      const parsedAnchor = CivilDateSchema.safeParse(params.get("anchor"));
+      if (parsedAnchor.success) setAnchor(parsedAnchor.data);
+      const raw = Object.fromEntries(params);
+      for (const key of ["id", "section", "view", "anchor"]) delete raw[key];
+      const parsed = RecordListQuerySchema.safeParse({
+        ...raw,
+        ...(!calendar ? { kind: "tache" } : {}),
+      });
+      if (parsed.success) setQuery(parsed.data);
+    };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
-  }, []);
+  }, [calendar]);
+  useEffect(() => {
+    if (!calendar) return;
+    if (!id) {
+      setInspector(null);
+      return;
+    }
+    const c = new AbortController();
+    void request("/records/" + id, CabinetRecordSchema, c.signal)
+      .then(setInspector)
+      .catch((e) => {
+        if (!c.signal.aborted) setError(message(e));
+      });
+    return () => c.abort();
+  }, [id, calendar]);
   useEffect(() => {
     if (mode === "calendar")
-      setQuery((q) =>
-        q.from && q.to
-          ? q
-          : {
-              ...q,
-              from: year + "-01-01",
-              to: year + "-12-31",
-              offset: 0,
-            },
-      );
+      setQuery((q) => ({
+        ...q,
+        from: year + "-01-01",
+        to: year + "-12-31",
+        offset: 0,
+      }));
   }, [mode]);
+  useEffect(() => {
+    if (mode !== "month" && mode !== "calendarWeek") return;
+    const start = new Date(anchor + "T12:00:00Z");
+    if (mode === "month") start.setUTCDate(1);
+    start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + (mode === "month" ? 41 : 6));
+    setQuery((q) => ({
+      ...q,
+      from: start.toISOString().slice(0, 10),
+      to: end.toISOString().slice(0, 10),
+      offset: 0,
+    }));
+  }, [mode, anchor]);
+  useEffect(() => {
+    const page = calendar ? "calendrier" : "tache";
+    if (location.hash.slice(1).split("?")[0] !== page) return;
+    const params = new URLSearchParams(queryString(query));
+    params.set("view", mode);
+    params.set("anchor", anchor);
+    if (id) params.set("id", id);
+    history.replaceState(null, "", `#${page}?${params}`);
+  }, [query, mode, anchor, id, calendar]);
   const fetchQuery = queryString({
     ...query,
 
@@ -202,10 +289,20 @@ export function Workflows({
       </a>
     );
   }
+  const returnParams = new URLSearchParams(queryString(query));
+  returnParams.set("view", mode);
+  returnParams.set("anchor", anchor);
+  const returnHref = `#${calendar ? "calendrier" : "tache"}?${returnParams}`;
   if (id && !calendar)
     return (
       <div className="workflow-workspace">
-        <TaskDetail key={id} id={id} models={models} user={user} />
+        <TaskDetail
+          key={id}
+          id={id}
+          models={models}
+          user={user}
+          returnHref={returnHref}
+        />
       </div>
     );
   return (
@@ -219,8 +316,10 @@ export function Workflows({
         >
           {(calendar
             ? [
+                ["month", "Mois"],
+                ["calendarWeek", "Semaine"],
                 ["list", "Liste"],
-                ["calendar", "Calendrier"],
+                ["calendar", "Année"],
               ]
             : [
                 ["list", "Liste"],
@@ -229,14 +328,21 @@ export function Workflows({
                 ["calendar", "Calendrier"],
               ]
           ).map(([key, label]) => (
-            <button
+            <TabButton
               key={key}
               role="tab"
               aria-selected={mode === key}
-              onClick={() => setMode(key!)}
+              onClick={() => {
+                if (
+                  key === "calendar" &&
+                  (mode === "month" || mode === "calendarWeek")
+                )
+                  setYear(anchor.slice(0, 4));
+                setMode(key!);
+              }}
             >
               {label}
-            </button>
+            </TabButton>
           ))}
         </div>
         <div className="actions">
@@ -245,18 +351,98 @@ export function Workflows({
               {configuration ? "Fermer les modèles" : "Modèles et récurrences"}
             </Button>
           )}
-          {!calendar && (
-            <Button variant="solid" onClick={() => setCreate(true)}>
-              Créer une tâche
-            </Button>
-          )}
+          {!calendar &&
+            [...user.permissions, ...user.scopedPermissions].some(
+              (p) =>
+                p.action === "create" && (p.kind === "*" || p.kind === "tache"),
+            ) && (
+              <Button variant="solid" onClick={() => setCreate(true)}>
+                Créer une tâche
+              </Button>
+            )}
         </div>
       </div>
+      {inspector && (
+        <Peek
+          label="Détail de l’échéance"
+          onClose={() => {
+            setId(null);
+            setInspector(null);
+          }}
+        >
+          {result?.productionIds.includes(inspector.id) ? (
+            <>
+              <h2>{inspector.title}</h2>
+              <p>{dateLabel(due(inspector))}</p>
+              <a href={link(inspector)}>Ouvrir la ligne de production</a>
+            </>
+          ) : inspector.kind === "tache" ? (
+            <TaskDetail
+              id={inspector.id}
+              models={models}
+              user={user}
+              returnHref={returnHref}
+              onReturn={() => {
+                setId(null);
+                setInspector(null);
+              }}
+            />
+          ) : (
+            <FiscalDetail
+              id={inspector.id}
+              onChange={() => setRevision((v) => v + 1)}
+              returnHref={returnHref}
+              onReturn={() => {
+                setId(null);
+                setInspector(null);
+              }}
+            />
+          )}
+        </Peek>
+      )}
       {configuration && (
         <WorkflowModels
           models={models}
           onChange={() => setRevision((v) => v + 1)}
         />
+      )}
+      {(mode === "month" || mode === "calendarWeek") && (
+        <div className="calendar-navigation">
+          <Button
+            aria-label="Période précédente"
+            onClick={() => {
+              const d = new Date(anchor + "T12:00:00Z");
+              if (mode === "month") {
+                d.setUTCDate(1);
+                d.setUTCMonth(d.getUTCMonth() - 1);
+              } else d.setUTCDate(d.getUTCDate() - 7);
+              setAnchor(d.toISOString().slice(0, 10));
+            }}
+          >
+            ‹
+          </Button>
+          <h2>
+            {new Date(anchor + "T12:00:00Z").toLocaleDateString("fr-FR", {
+              month: "long",
+              year: "numeric",
+              timeZone: "UTC",
+            })}
+          </h2>
+          <Button
+            aria-label="Période suivante"
+            onClick={() => {
+              const d = new Date(anchor + "T12:00:00Z");
+              if (mode === "month") {
+                d.setUTCDate(1);
+                d.setUTCMonth(d.getUTCMonth() + 1);
+              } else d.setUTCDate(d.getUTCDate() + 7);
+              setAnchor(d.toISOString().slice(0, 10));
+            }}
+          >
+            ›
+          </Button>
+          <Button onClick={() => setAnchor(today)}>Aujourd’hui</Button>
+        </div>
       )}
       <div className="work-toolbar">
         <label className="work-search">
@@ -267,11 +453,11 @@ export function Workflows({
             onChange={(e) => patch({ q: e.target.value })}
           />
         </label>
-        {(calendar || mode === "calendar") && (
+        {mode === "calendar" && (
           <Field
             name="calendar-year"
             label="Année"
-            value={query.from?.slice(0, 4) ?? year}
+            value={year}
             type="number"
             onChange={(v) => {
               setYear(v);
@@ -346,7 +532,10 @@ export function Workflows({
       )}
       {loading ? (
         <p role="status">Chargement des échéances…</p>
-      ) : result && !result.items.length ? (
+      ) : result &&
+        !result.items.length &&
+        mode !== "month" &&
+        mode !== "calendarWeek" ? (
         <div className="work-empty">
           <h3>Aucun travail dans ce périmètre</h3>
           <p>Adaptez les filtres ou créez une tâche.</p>
@@ -354,21 +543,35 @@ export function Workflows({
       ) : (
         result && (
           <>
+            {(mode === "month" || mode === "calendarWeek") && (
+              <CalendarGrid
+                items={result.items}
+                anchor={anchor}
+                today={today}
+                week={mode === "calendarWeek"}
+                onSelect={(r) => {
+                  setId(r.id);
+                  setInspector(r);
+                }}
+              />
+            )}
             {mode === "list" && (
               <div className="table-scroll">
-                <table className="work-grid">
+                <Table className="work-grid">
                   <thead>
-                    <tr>
+                    <TableRow>
                       {(query.columns ?? "title").split(",").map((key) => (
-                        <th key={key}>{columnLabels[key] ?? key}</th>
+                        <TableHeader key={key}>
+                          {columnLabels[key] ?? key}
+                        </TableHeader>
                       ))}
-                    </tr>
+                    </TableRow>
                   </thead>
                   <tbody>
                     {result.items.map((r) => (
-                      <tr key={r.id}>
+                      <TableRow key={r.id}>
                         {(query.columns ?? "title").split(",").map((key) => (
-                          <td key={key}>
+                          <TableCell key={key}>
                             {key === "title" ? (
                               <a href={link(r)}>{r.title}</a>
                             ) : key === "dossierId" ? (
@@ -380,7 +583,18 @@ export function Workflows({
                             ) : key === "dueDate" ? (
                               dateLabel(due(r))
                             ) : key === "state" ? (
-                              <span className="badge">
+                              <span
+                                className="semantic-status"
+                                data-state={
+                                  r.kind === "tache" &&
+                                  r.data.state === "terminee"
+                                    ? "done"
+                                    : r.kind === "tache" &&
+                                        r.data.state === "en_cours"
+                                      ? "pending"
+                                      : undefined
+                                }
+                              >
                                 {r.kind === "tache"
                                   ? stateLabels[r.data.state]
                                   : r.kind === "obligation"
@@ -397,12 +611,12 @@ export function Workflows({
                             ) : (
                               columnValue(r, key)
                             )}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               </div>
             )}
             {mode === "kanban" && (
@@ -442,7 +656,7 @@ export function Workflows({
                             column.id,
                       )
                       .map((r) => (
-                        <article
+                        <KanbanCard
                           key={r.id}
                           draggable
                           onDragStart={(e) =>
@@ -463,7 +677,7 @@ export function Workflows({
                               </option>
                             ))}
                           </Select>
-                        </article>
+                        </KanbanCard>
                       ))}
                   </section>
                 ))}

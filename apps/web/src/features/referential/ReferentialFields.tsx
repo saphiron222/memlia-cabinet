@@ -18,26 +18,29 @@ function Address({
   prefix?: string;
 }) {
   return (
-    <fieldset>
-      <legend>Adresse</legend>
-      {(
-        [
-          ["line1", "Adresse ligne 1"],
-          ["line2", "Adresse ligne 2"],
-          ["postalCode", "Code postal"],
-          ["city", "Ville"],
-          ["country", "Pays"],
-        ] as const
-      ).map(([key, label]) => (
-        <Field
-          key={key}
-          name={prefix + "-" + key}
-          label={label}
-          value={value[key]}
-          onChange={(v) => onChange({ ...value, [key]: v })}
-        />
-      ))}
-    </fieldset>
+    <details className="property-section">
+      <summary>Adresse</summary>
+      <fieldset>
+        <legend className="sr-only">Adresse</legend>
+        {(
+          [
+            ["line1", "Adresse ligne 1"],
+            ["line2", "Adresse ligne 2"],
+            ["postalCode", "Code postal"],
+            ["city", "Ville"],
+            ["country", "Pays"],
+          ] as const
+        ).map(([key, label]) => (
+          <Field
+            key={key}
+            name={prefix + "-" + key}
+            label={label}
+            value={value[key]}
+            onChange={(v) => onChange({ ...value, [key]: v })}
+          />
+        ))}
+      </fieldset>
+    </details>
   );
 }
 export function ReferentialFields({
@@ -165,34 +168,45 @@ export function ReferentialFields({
       )}
       {record.kind === "dossier" && (
         <>
-          {(
-            [
-              ["createdOn", "Date de création"],
-              ["startedOn", "Début d’activité"],
-              ["endedOn", "Fin d’activité"],
-              ["financialYearEnd", "Clôture de l’exercice"],
-            ] as const
-          ).map(([key, label]) => (
-            <Field
-              key={key}
-              name={key}
-              label={label}
-              type="date"
-              value={record.data[key] ?? ""}
-              onChange={(v) => setData(key, v || null)}
-            />
-          ))}
+          <details className="property-section">
+            <summary>Dates administratives et activité</summary>
+            <div className="property-fields-grid">
+              {(
+                [
+                  ["createdOn", "Date de création"],
+                  ["startedOn", "Début d’activité"],
+                  ["endedOn", "Fin d’activité"],
+                ] as const
+              ).map(([key, label]) => (
+                <Field
+                  key={key}
+                  name={key}
+                  label={label}
+                  type="date"
+                  value={record.data[key] ?? ""}
+                  onChange={(v) => setData(key, v || null)}
+                />
+              ))}
+              <Field
+                name="activityCode"
+                label="Code d’activité"
+                value={record.data.activityCode}
+                onChange={(v) => setData("activityCode", v)}
+              />
+              <Field
+                name="activity"
+                label="Activité"
+                value={record.data.activity}
+                onChange={(v) => setData("activity", v)}
+              />
+            </div>
+          </details>
           <Field
-            name="activityCode"
-            label="Code d’activité"
-            value={record.data.activityCode}
-            onChange={(v) => setData("activityCode", v)}
-          />
-          <Field
-            name="activity"
-            label="Activité"
-            value={record.data.activity}
-            onChange={(v) => setData("activity", v)}
+            name="financialYearEnd"
+            label="Clôture de l’exercice"
+            type="date"
+            value={record.data.financialYearEnd ?? ""}
+            onChange={(v) => setData("financialYearEnd", v || null)}
           />
           {(
             [
@@ -234,187 +248,198 @@ export function ReferentialFields({
               ))}
             </Select>
           ))}
-          <fieldset>
-            <legend>Obligations configurées</legend>
-            {[
-              "TVA",
-              "IS",
-              "CFE",
-              "CVAE",
-              "DAS2",
-              "DSN",
-              "IRPP",
-              "RCM",
-              "IFU",
-              "DES",
-              "TF",
-            ].map((value) => (
-              <label className="check-row" key={value}>
-                <input
-                  type="checkbox"
-                  checked={record.data.obligations.includes(
-                    value as (typeof record.data.obligations)[number],
-                  )}
-                  onChange={(e) =>
-                    setData(
-                      "obligations",
-                      e.target.checked
-                        ? [...record.data.obligations, value]
-                        : record.data.obligations.filter((v) => v !== value),
-                    )
-                  }
-                />
-                {value}
-              </label>
-            ))}
-            <p className="muted">
-              Paramètres du dossier ; aucune déclaration ni habilitation n’est
-              émise.
-            </p>
-          </fieldset>
-          <fieldset>
-            <legend>Identifiants complémentaires</legend>
-            {record.data.identifiers.map((identifier, index) => (
-              <div key={index}>
-                <Field
-                  name={`identifier-kind-${index}`}
-                  label="Type d’identifiant"
-                  value={identifier.kind}
-                  onChange={(kind) =>
-                    setData(
-                      "identifiers",
-                      record.data.identifiers.map((v, i) =>
-                        i === index ? { ...v, kind } : v,
-                      ),
-                    )
-                  }
-                />
-                <Field
-                  name={`identifier-value-${index}`}
-                  label="Valeur de l’identifiant"
-                  value={identifier.value}
-                  onChange={(value) =>
-                    setData(
-                      "identifiers",
-                      record.data.identifiers.map((v, i) =>
-                        i === index ? { ...v, value } : v,
-                      ),
-                    )
-                  }
-                />
-                <Button
-                  type="button"
-                  onClick={() =>
-                    setData(
-                      "identifiers",
-                      record.data.identifiers.filter((_, i) => i !== index),
-                    )
-                  }
-                >
-                  Retirer cet identifiant
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              onClick={() =>
-                setData("identifiers", [
-                  ...record.data.identifiers,
-                  { kind: "", value: "" },
-                ])
-              }
-            >
-              Ajouter un identifiant
-            </Button>
-          </fieldset>
-          <fieldset>
-            <legend>Établissements</legend>
-            {record.data.establishments.map((e, index) => {
-              const patch = (key: string, value: unknown) =>
-                setData(
-                  "establishments",
-                  record.data.establishments.map((v, i) =>
-                    i === index ? { ...v, [key]: value } : v,
-                  ),
-                );
-              return (
-                <fieldset key={e.id}>
-                  <legend>Établissement {index + 1}</legend>
+          <details className="property-section">
+            <summary>Obligations configurées</summary>
+            <fieldset>
+              <legend className="sr-only">Obligations configurées</legend>
+              {[
+                "TVA",
+                "IS",
+                "CFE",
+                "CVAE",
+                "DAS2",
+                "DSN",
+                "IRPP",
+                "RCM",
+                "IFU",
+                "DES",
+                "TF",
+              ].map((value) => (
+                <label className="check-row" key={value}>
+                  <input
+                    type="checkbox"
+                    checked={record.data.obligations.includes(
+                      value as (typeof record.data.obligations)[number],
+                    )}
+                    onChange={(e) =>
+                      setData(
+                        "obligations",
+                        e.target.checked
+                          ? [...record.data.obligations, value]
+                          : record.data.obligations.filter((v) => v !== value),
+                      )
+                    }
+                  />
+                  {value}
+                </label>
+              ))}
+              <p className="muted">
+                Paramètres du dossier ; aucune déclaration ni habilitation n’est
+                émise.
+              </p>
+            </fieldset>
+          </details>
+          <details className="property-section">
+            <summary>Identifiants complémentaires</summary>
+            <fieldset>
+              <legend className="sr-only">Identifiants complémentaires</legend>
+              {record.data.identifiers.map((identifier, index) => (
+                <div key={index}>
                   <Field
-                    name={`est-${e.id}-name`}
-                    label="Nom de l’établissement"
-                    value={e.name}
-                    onChange={(v) => patch("name", v)}
+                    name={`identifier-kind-${index}`}
+                    label="Type d’identifiant"
+                    value={identifier.kind}
+                    onChange={(kind) =>
+                      setData(
+                        "identifiers",
+                        record.data.identifiers.map((v, i) =>
+                          i === index ? { ...v, kind } : v,
+                        ),
+                      )
+                    }
                   />
                   <Field
-                    name={`est-${e.id}-siret`}
-                    label={`SIRET ${index + 1}`}
-                    value={e.siret ?? ""}
-                    onChange={(v) => patch("siret", v || null)}
-                    hint="14 chiffres textuels."
+                    name={`identifier-value-${index}`}
+                    label="Valeur de l’identifiant"
+                    value={identifier.value}
+                    onChange={(value) =>
+                      setData(
+                        "identifiers",
+                        record.data.identifiers.map((v, i) =>
+                          i === index ? { ...v, value } : v,
+                        ),
+                      )
+                    }
                   />
-                  <Address
-                    prefix={`est-${e.id}`}
-                    value={e.address}
-                    onChange={(v) => patch("address", v)}
-                  />
-                  {(
-                    [
-                      ["openedOn", "Ouverture de l’établissement"],
-                      ["closedOn", "Fermeture de l’établissement"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <Field
-                      key={key}
-                      name={`est-${e.id}-${key}`}
-                      label={label}
-                      type="date"
-                      value={e[key] ?? ""}
-                      onChange={(v) => patch(key, v || null)}
-                    />
-                  ))}
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={e.headOffice}
-                      onChange={(v) => patch("headOffice", v.target.checked)}
-                    />
-                    Siège social
-                  </label>
-                  <label className="check-row">
-                    <input
-                      type="checkbox"
-                      checked={e.active}
-                      onChange={(v) => patch("active", v.target.checked)}
-                    />
-                    Établissement actif
-                  </label>
                   <Button
                     type="button"
                     onClick={() =>
                       setData(
-                        "establishments",
-                        record.data.establishments.filter((v) => v.id !== e.id),
+                        "identifiers",
+                        record.data.identifiers.filter((_, i) => i !== index),
                       )
                     }
                   >
-                    Retirer l’établissement
+                    Retirer cet identifiant
                   </Button>
-                </fieldset>
-              );
-            })}
-            <Button
-              type="button"
-              onClick={() =>
-                setData("establishments", [
-                  ...record.data.establishments,
-                  EstablishmentSchema.parse({ id: crypto.randomUUID() }),
-                ])
-              }
-            >
-              Ajouter un établissement
-            </Button>
-          </fieldset>
+                </div>
+              ))}
+              <Button
+                type="button"
+                onClick={() =>
+                  setData("identifiers", [
+                    ...record.data.identifiers,
+                    { kind: "", value: "" },
+                  ])
+                }
+              >
+                Ajouter un identifiant
+              </Button>
+            </fieldset>
+          </details>
+          <details className="property-section">
+            <summary>Établissements</summary>
+            <fieldset>
+              <legend className="sr-only">Établissements</legend>
+              {record.data.establishments.map((e, index) => {
+                const patch = (key: string, value: unknown) =>
+                  setData(
+                    "establishments",
+                    record.data.establishments.map((v, i) =>
+                      i === index ? { ...v, [key]: value } : v,
+                    ),
+                  );
+                return (
+                  <fieldset key={e.id}>
+                    <legend>Établissement {index + 1}</legend>
+                    <Field
+                      name={`est-${e.id}-name`}
+                      label="Nom de l’établissement"
+                      value={e.name}
+                      onChange={(v) => patch("name", v)}
+                    />
+                    <Field
+                      name={`est-${e.id}-siret`}
+                      label={`SIRET ${index + 1}`}
+                      value={e.siret ?? ""}
+                      onChange={(v) => patch("siret", v || null)}
+                      hint="14 chiffres textuels."
+                    />
+                    <Address
+                      prefix={`est-${e.id}`}
+                      value={e.address}
+                      onChange={(v) => patch("address", v)}
+                    />
+                    {(
+                      [
+                        ["openedOn", "Ouverture de l’établissement"],
+                        ["closedOn", "Fermeture de l’établissement"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <Field
+                        key={key}
+                        name={`est-${e.id}-${key}`}
+                        label={label}
+                        type="date"
+                        value={e[key] ?? ""}
+                        onChange={(v) => patch(key, v || null)}
+                      />
+                    ))}
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={e.headOffice}
+                        onChange={(v) => patch("headOffice", v.target.checked)}
+                      />
+                      Siège social
+                    </label>
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={e.active}
+                        onChange={(v) => patch("active", v.target.checked)}
+                      />
+                      Établissement actif
+                    </label>
+                    <Button
+                      type="button"
+                      onClick={() =>
+                        setData(
+                          "establishments",
+                          record.data.establishments.filter(
+                            (v) => v.id !== e.id,
+                          ),
+                        )
+                      }
+                    >
+                      Retirer l’établissement
+                    </Button>
+                  </fieldset>
+                );
+              })}
+              <Button
+                type="button"
+                onClick={() =>
+                  setData("establishments", [
+                    ...record.data.establishments,
+                    EstablishmentSchema.parse({ id: crypto.randomUUID() }),
+                  ])
+                }
+              >
+                Ajouter un établissement
+              </Button>
+            </fieldset>
+          </details>
         </>
       )}
     </>

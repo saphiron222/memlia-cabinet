@@ -1,6 +1,8 @@
+import { Alert } from "./upstream/cal/Alert";
+import { NativeSelect } from "./upstream/plane/controls";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
-import { Input } from "@memlia/ui";
+import { Input } from "./upstream/cal/Input";
 export type Errors = Record<string, string>;
 export function validationErrors(error: z.ZodError): Errors {
   return Object.fromEntries(
@@ -29,26 +31,34 @@ export function ErrorSummary({
   }, [errors, message]);
   if (!message && !Object.keys(errors ?? {}).length) return null;
   return (
-    <div className="error-summary" role="alert" tabIndex={-1} ref={ref}>
-      <strong>{message ?? "Vérifiez les champs du formulaire."}</strong>
-      {errors && Object.keys(errors).length > 0 && (
-        <ul>
-          {Object.entries(errors).map(([field, error]) => (
-            <li key={field}>
-              <a
-                href={"#" + field}
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById(field)?.focus();
-                }}
-              >
-                {fieldLabels[field] ?? "Champ à corriger"} : {error}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <Alert
+      severity="error"
+      className="error-summary"
+      role="alert"
+      tabIndex={-1}
+      ref={ref}
+      title={message ?? "Vérifiez les champs du formulaire."}
+      message={
+        errors &&
+        Object.keys(errors).length > 0 && (
+          <ul>
+            {Object.entries(errors).map(([field, error]) => (
+              <li key={field}>
+                <a
+                  href={"#" + field}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    document.getElementById(field)?.focus();
+                  }}
+                >
+                  {fieldLabels[field] ?? "Champ à corriger"} : {error}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    />
   );
 }
 const fieldLabels: Record<string, string> = {
@@ -146,7 +156,7 @@ export function Select({
   return (
     <div className="field">
       <label htmlFor={name}>{label}</label>
-      <select
+      <NativeSelect
         id={name}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -155,7 +165,7 @@ export function Select({
         aria-describedby={errors[name] ? name + "-error" : undefined}
       >
         {children}
-      </select>
+      </NativeSelect>
       {errors[name] && (
         <small className="field-error" id={name + "-error"}>
           {errors[name]}

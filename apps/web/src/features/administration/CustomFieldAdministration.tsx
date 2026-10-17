@@ -1,3 +1,4 @@
+import { NativeTextArea } from "../../upstream/plane/controls";
 import { useEffect, useState } from "react";
 import { Button } from "@memlia/ui";
 import {
@@ -208,7 +209,7 @@ export function CustomFieldAdministration() {
           {draft.type === "choice" && (
             <label>
               Choix (un par ligne)
-              <textarea
+              <NativeTextArea
                 aria-label="Choix (un par ligne)"
                 value={choices}
                 onChange={(e) => setChoices(e.target.value)}

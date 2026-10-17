@@ -498,5 +498,9 @@
   "GET /api/v1/production/exports/:id/parts/:part": {
     "file": "apps/server/test/production.test.ts",
     "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/fiscal/matrix": {
+    "file": "apps/server/test/fiscal-matrix.test.ts",
+    "test": "matrix separates dossier pagination and date reference, preserving exact amounts and export filters"
   }
 }

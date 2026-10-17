@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/postcss";
 import { defineConfig } from "vite";
 import { resolve } from "node:path";
 import { distributeNotices } from "./notices.ts";
@@ -9,7 +10,10 @@ export default defineConfig({
   css: {
     modules: { localsConvention: "camelCaseOnly" },
     postcss: {
-      plugins: [wrapInTwentyUiCascadeLayer({ sourceDirectory: source })],
+      plugins: [
+        tailwindcss(),
+        wrapInTwentyUiCascadeLayer({ sourceDirectory: source }),
+      ],
     },
     preprocessorOptions: {
       scss: {

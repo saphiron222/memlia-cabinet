@@ -1,3 +1,6 @@
+import { NativeDialog } from "../../upstream/plane/controls";
+import { NativeTextArea } from "../../upstream/plane/controls";
+import { TabButton } from "../../upstream/plane/controls";
 import { tabKeys } from "./tabs";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -156,7 +159,7 @@ export function TaskForm({
     }
   }
   return (
-    <dialog
+    <NativeDialog
       ref={ref}
       className="work-dialog"
       aria-labelledby="task-form-heading"
@@ -188,7 +191,7 @@ export function TaskForm({
             ["assignment", "Affectation"],
             ["details", "Détails"],
           ].map(([id, name]) => (
-            <button
+            <TabButton
               type="button"
               role="tab"
               aria-selected={tab === id}
@@ -196,7 +199,7 @@ export function TaskForm({
               onClick={() => setTab(id!)}
             >
               {name}
-            </button>
+            </TabButton>
           ))}
         </div>
         {tab === "main" && (
@@ -331,7 +334,7 @@ export function TaskForm({
           <>
             <div className="field">
               <label htmlFor="task-description">Description</label>
-              <textarea
+              <NativeTextArea
                 id="task-description"
                 rows={4}
                 value={data.description}
@@ -378,6 +381,6 @@ export function TaskForm({
           </Button>
         </footer>
       </form>
-    </dialog>
+    </NativeDialog>
   );
 }

@@ -8,15 +8,22 @@
     "dev": "vite --configLoader native --host 127.0.0.1"
   },
   "dependencies": {
+    "@makeplane/propel": "0.7.3",
     "@memlia/contracts": "0.1.0",
     "@memlia/ui": "0.1.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-day-picker": "10.0.2",
+    "react-dom": "19.3.1",
+    "tailwind-merge": "3.4.0",
+    "tailwindcss": "4.1.17"
   },
   "devDependencies": {
-    "vite": "8.3.4",
-    "sass": "1.105.2",
+    "@tailwindcss/postcss": "4.1.17",
     "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0"
+    "@types/react-dom": "19.3.0",
+    "sass": "1.105.2",
+    "vite": "8.3.4"
   }
 }

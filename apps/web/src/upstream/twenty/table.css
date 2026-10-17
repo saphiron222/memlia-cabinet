@@ -1,0 +1,52 @@
+/* Ported from Twenty ui/layout/table components. AGPLv3 + Application Exception.
+ * Native table display replaces source flex/grid; rows are 36px instead of spacing[8]
+ * for mixed cabinet cell controls. Theme values map to existing Twenty variables. */
+.tw-source-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.tw-source-row {
+  background-color: transparent;
+  border-radius: var(--t-border-radius-md);
+  height: auto;
+  text-decoration: none;
+  transition: background-color
+    calc(var(--t-animation-duration-normal, 0.1) * 1s);
+  width: 100%;
+}
+.tw-source-row[data-selected="true"] {
+  background-color: var(--t-accent-quaternary);
+}
+.tw-source-row[data-expanded="true"] {
+  background-color: var(--t-background-transparent-light);
+}
+.tw-source-row:hover {
+  background-color: var(--t-background-transparent-light);
+}
+.tw-source-row[data-clickable="true"] {
+  cursor: pointer;
+}
+.tw-source-header {
+  align-items: center;
+  border-bottom: 1px solid var(--t-border-color-light);
+  color: var(--t-font-color-tertiary);
+  font-weight: var(--t-font-weight-medium, 500);
+  gap: 4px;
+  height: 36px;
+  padding: 0 8px;
+  text-align: left;
+}
+.tw-source-cell {
+  align-items: center;
+  cursor: inherit;
+  gap: var(--cell-gap, normal);
+  height: var(--cell-height, 36px);
+  max-width: var(--cell-max-width, none);
+  min-width: var(--cell-min-width, auto);
+  overflow: var(--cell-overflow, visible);
+  padding: var(--cell-padding, 0 8px);
+  text-align: left;
+  text-overflow: var(--cell-text-overflow, clip);
+  white-space: var(--cell-white-space, normal);
+}

@@ -1,3 +1,11 @@
+import { TabButton } from "../../upstream/plane/controls";
+import { NativeSelect } from "../../upstream/plane/controls";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
 import { PopulationEditor } from "./PopulationEditor";
 import { columnTypeLabel, frequencyLabel } from "./value";
 import { tabKeys } from "../workflows/tabs";
@@ -275,14 +283,14 @@ export function ModelEditor({
             ? [["population", "Population"]]
             : []),
         ].map(([id, label]) => (
-          <button
+          <TabButton
             key={id}
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id!)}
           >
             {label}
-          </button>
+          </TabButton>
         ))}
       </div>
       <div className="production-editor-body">
@@ -527,20 +535,20 @@ export function ModelEditor({
         {tab === "columns" && model.kind === "stage_type" && (
           <>
             <div className="table-scroll">
-              <table className="work-grid">
+              <Table className="work-grid">
                 <thead>
-                  <tr>
-                    <th>Statut</th>
-                    <th>Couleur</th>
-                    <th>Icône</th>
-                    <th>Final</th>
-                    <th>Aperçu / ordre</th>
-                  </tr>
+                  <TableRow>
+                    <TableHeader>Statut</TableHeader>
+                    <TableHeader>Couleur</TableHeader>
+                    <TableHeader>Icône</TableHeader>
+                    <TableHeader>Final</TableHeader>
+                    <TableHeader>Aperçu / ordre</TableHeader>
+                  </TableRow>
                 </thead>
                 <tbody>
                   {model.statuses.map((s, index) => (
-                    <tr key={s.id}>
-                      <td>
+                    <TableRow key={s.id}>
+                      <TableCell>
                         <input
                           aria-label={"Nom du statut " + (index + 1)}
                           value={s.name}
@@ -555,9 +563,9 @@ export function ModelEditor({
                             })
                           }
                         />
-                      </td>
-                      <td>
-                        <select
+                      </TableCell>
+                      <TableCell>
+                        <NativeSelect
                           aria-label={"Couleur " + s.name}
                           value={s.color}
                           onChange={(e) =>
@@ -584,10 +592,10 @@ export function ModelEditor({
                           ].map((x) => (
                             <option key={x}>{x}</option>
                           ))}
-                        </select>
-                      </td>
-                      <td>
-                        <select
+                        </NativeSelect>
+                      </TableCell>
+                      <TableCell>
+                        <NativeSelect
                           aria-label={"Icône " + s.name}
                           value={s.icon}
                           onChange={(e) =>
@@ -609,9 +617,9 @@ export function ModelEditor({
                               <option key={x}>{x}</option>
                             ),
                           )}
-                        </select>
-                      </td>
-                      <td>
+                        </NativeSelect>
+                      </TableCell>
+                      <TableCell>
                         <Checkbox
                           aria-label={"Final " + s.name}
                           checked={s.final}
@@ -624,8 +632,8 @@ export function ModelEditor({
                             })
                           }
                         />
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         <StageValue
                           column={ProductionColumnSchema.parse({
                             id: s.id,
@@ -650,11 +658,11 @@ export function ModelEditor({
                         >
                           ↓
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
             <Button
               onClick={() =>

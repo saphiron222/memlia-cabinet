@@ -1,3 +1,4 @@
+import { NativeDialog } from "../../upstream/plane/controls";
 import { useEffect, useRef, type ReactNode } from "react";
 export function Overlay({
   children,
@@ -13,7 +14,7 @@ export function Overlay({
     return () => previous?.focus();
   }, []);
   return (
-    <dialog
+    <NativeDialog
       ref={ref}
       className="production-overlay"
       onCancel={(e) => {
@@ -22,6 +23,6 @@ export function Overlay({
       }}
     >
       {children}
-    </dialog>
+    </NativeDialog>
   );
 }

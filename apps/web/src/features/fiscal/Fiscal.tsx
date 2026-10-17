@@ -1,3 +1,10 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "../../upstream/twenty/Table";
+import { FiscalMatrixView } from "./FiscalMatrix";
 import { useEffect, useState } from "react";
 import { Button } from "@memlia/ui";
 import {
@@ -30,6 +37,44 @@ import { FiscalDetail } from "./FiscalDetail";
 import { FiscalGeneration } from "./FiscalGeneration";
 import { natureLabels } from "./labels";
 export function Fiscal() {
+  const [hash, setHash] = useState(location.hash);
+  useEffect(() => {
+    const update = () => setHash(location.hash);
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  const p = new URLSearchParams(hash.split("?")[1]),
+    nature = p.get("nature"),
+    dossierId = p.get("matrixDossier") ?? undefined;
+  return (
+    <>
+      <nav className="nature-strip" aria-label="Natures fiscales">
+        {[
+          ["", "Toutes"],
+          ...FiscalNatureSchema.options.map((n) => [n, natureLabels[n]]),
+        ].map(([n, label]) => (
+          <a
+            key={n}
+            href={n ? `#fiscal?nature=${n}` : "#fiscal"}
+            aria-current={(nature ?? "") === n ? "page" : undefined}
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+      {nature === "TVA" || nature === "IS" || dossierId ? (
+        <FiscalMatrixView
+          key={dossierId ?? nature}
+          nature={nature ?? undefined}
+          dossierId={dossierId}
+        />
+      ) : (
+        <FiscalList key={nature ?? "all"} nature={nature ?? undefined} />
+      )}
+    </>
+  );
+}
+function FiscalList({ nature }: { nature?: string }) {
   const { info: installation } = useInstallation();
   const signal = useScope(),
     enabled = useModuleEnabled("fiscal"),
@@ -43,6 +88,7 @@ export function Fiscal() {
     [query, setQuery] = useState<RecordListQuery>(() =>
       RecordListQuerySchema.parse({
         kind: "obligation",
+        nature,
         fiscalOnly: "true",
         columns:
           "title,nature,fiscalSubtype,fiscalCampaign,fiscalRegime,period,amount,validation,freshnessState",
@@ -278,19 +324,19 @@ export function Fiscal() {
         <>
           <p>{total} obligations autorisées</p>
           <div className="table-scroll">
-            <table>
+            <Table>
               <thead>
-                <tr>
-                  <th>Sélection</th>
+                <TableRow>
+                  <TableHeader>Sélection</TableHeader>
                   {columns.map((c) => (
-                    <th key={c}>{columnLabels[c] ?? c}</th>
+                    <TableHeader key={c}>{columnLabels[c] ?? c}</TableHeader>
                   ))}
-                </tr>
+                </TableRow>
               </thead>
               <tbody>
                 {items.map((r) => (
-                  <tr key={r.id}>
-                    <td>
+                  <TableRow key={r.id}>
+                    <TableCell>
                       <input
                         type="checkbox"
                         aria-label={`Sélectionner ${r.title}`}
@@ -303,20 +349,20 @@ export function Fiscal() {
                           )
                         }
                       />
-                    </td>
+                    </TableCell>
                     {columns.map((c) => (
-                      <td key={c}>
+                      <TableCell key={c}>
                         {c === "title" ? (
                           <a href={`#fiscal?id=${r.id}`}>{r.title}</a>
                         ) : (
                           columnValue(r, c, installation?.cabinetTimeZone)
                         )}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
           {!items.length && <p>Aucune obligation ne correspond aux filtres.</p>}
           <Button

@@ -54,13 +54,11 @@ test("GED : import, erreurs, recherche, versions, téléchargement et pièces du
   await expect(opener).toBeFocused();
   await opener.click();
   await page.getByLabel("Dossier de la pièce").selectOption(dossier.id);
-  await page
-    .getByLabel("Fichier original")
-    .setInputFiles({
-      name: "faux.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("<html>Connexion fictive</html>"),
-    });
+  await page.getByLabel("Fichier original").setInputFiles({
+    name: "faux.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("<html>Connexion fictive</html>"),
+  });
   await page
     .getByRole("button", { name: "Conserver la pièce", exact: true })
     .click();
@@ -69,13 +67,11 @@ test("GED : import, erreurs, recherche, versions, téléchargement et pièces du
     "aria-invalid",
     "true",
   );
-  await page
-    .getByLabel("Fichier original")
-    .setInputFiles({
-      name: "notes-fictives.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("orchidée locale fictive"),
-    });
+  await page.getByLabel("Fichier original").setInputFiles({
+    name: "notes-fictives.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("orchidée locale fictive"),
+  });
   await page
     .getByRole("button", { name: "Conserver la pièce", exact: true })
     .click();
@@ -88,13 +84,11 @@ test("GED : import, erreurs, recherche, versions, téléchargement et pièces du
       exact: true,
     })
     .click();
-  await page
-    .getByLabel("Fichier original")
-    .setInputFiles({
-      name: "notes-fictives.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("orchidée révisée fictive"),
-    });
+  await page.getByLabel("Fichier original").setInputFiles({
+    name: "notes-fictives.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("orchidée révisée fictive"),
+  });
   await page
     .getByRole("button", { name: "Conserver la pièce", exact: true })
     .click();
@@ -122,7 +116,7 @@ test("GED : import, erreurs, recherche, versions, téléchargement et pièces du
       .locator("tbody tr")
       .first()
       .evaluate((e) => e.getBoundingClientRect().height),
-  ).toBe(32);
+  ).toBe(36);
   await page.screenshot({
     path: "test-results/task3-documents-light.png",
     fullPage: true,

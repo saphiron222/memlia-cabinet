@@ -1,3 +1,4 @@
+import { NativeTextArea } from "../../upstream/plane/controls";
 import { useEffect, useState } from "react";
 import {
   CustomFieldListSchema,
@@ -130,7 +131,7 @@ export function CustomValues({
                   ) : f.type === "long_text" ? (
                     <div className="field" key={f.id}>
                       <label htmlFor={f.id}>{f.name}</label>
-                      <textarea
+                      <NativeTextArea
                         id={f.id}
                         maxLength={10000}
                         value={typeof v === "string" ? v : ""}

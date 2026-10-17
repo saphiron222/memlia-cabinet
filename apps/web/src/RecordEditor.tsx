@@ -1,3 +1,5 @@
+import { NativeTextArea } from "./upstream/plane/controls";
+import { PeekView } from "./upstream/plane/peek-view";
 import {
   DossierChoices,
   useDossierChoices,
@@ -269,7 +271,7 @@ export function RecordEditor({
   const dirty =
     saved && JSON.stringify(content(saved)) !== JSON.stringify(draft);
   return (
-    <dialog
+    <PeekView
       ref={dialog}
       className="record-panel"
       onCancel={(e) => {
@@ -290,6 +292,21 @@ export function RecordEditor({
           ×
         </Button>
       </header>
+      {saved && (
+        <div className="record-context">
+          <strong>{saved.title}</strong>
+          <span className="muted">
+            {saved.kind === "dossier"
+              ? saved.data.siren || "SIREN non renseigné"
+              : singularLabels[kind]}
+          </span>
+          {saved.kind === "dossier" && (
+            <a href={`#fiscal?matrixDossier=${saved.id}`} onClick={onClose}>
+              Échéances par nature et mois
+            </a>
+          )}
+        </div>
+      )}
       {loading ? (
         <p role="status">Chargement de la fiche…</p>
       ) : id && !saved ? (
@@ -379,7 +396,11 @@ export function RecordEditor({
               </>
             )}
             <CustomFieldsStatus state={custom} />
-            <fieldset disabled={!editable || busy || conflict}>
+            <fieldset
+              className="record-property-fields"
+              disabled={!editable || busy || conflict}
+            >
+              <legend>Informations de la fiche</legend>
               <Field
                 name="title"
                 label="Titre"
@@ -437,7 +458,7 @@ export function RecordEditor({
               {"notes" in draft.data && (
                 <div className="field">
                   <label htmlFor="notes">Notes</label>
-                  <textarea
+                  <NativeTextArea
                     id="notes"
                     value={draft.data.notes}
                     onChange={(e) => data("notes", e.target.value)}
@@ -469,7 +490,7 @@ export function RecordEditor({
                   </Select>
                   <div className="field">
                     <label htmlFor="description">Description</label>
-                    <textarea
+                    <NativeTextArea
                       id="description"
                       maxLength={10000}
                       value={draft.data.description}
@@ -782,6 +803,6 @@ export function RecordEditor({
           )}
         </>
       )}
-    </dialog>
+    </PeekView>
   );
 }

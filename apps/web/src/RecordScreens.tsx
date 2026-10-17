@@ -1,3 +1,9 @@
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "./upstream/twenty/Table";
 import { useInstallation } from "./features/administration/preferences";
 import { CsvExport } from "./features/records/CsvExport";
 import {
@@ -74,6 +80,28 @@ export function Records({
       const id = new URLSearchParams(location.hash.split("?")[1]).get("id");
       return id ? { id } : null;
     });
+  useEffect(() => {
+    const change = () => {
+      const params = new URLSearchParams(location.hash.split("?")[1]);
+      const id = params.get("id");
+      setEditor(id ? { id } : null);
+      params.delete("id");
+      const parsed = RecordListQuerySchema.safeParse({
+        ...Object.fromEntries(params),
+        kind,
+        columns: params.get("columns") ?? defaultColumns(kind),
+      });
+      if (parsed.success) setFilters(parsed.data);
+    };
+    window.addEventListener("hashchange", change);
+    return () => window.removeEventListener("hashchange", change);
+  }, [kind]);
+  useEffect(() => {
+    if (location.hash.slice(1).split("?")[0] !== kind) return;
+    const params = new URLSearchParams(queryString(filters));
+    if (editor?.id) params.set("id", editor.id);
+    history.replaceState(null, "", `#${kind}?${params}`);
+  }, [filters, editor?.id, kind]);
   const generation = useRef(0);
   const can = (action: SessionUser["permissions"][number]["action"]) =>
     (action === "create" && kind === "dossier"
@@ -108,16 +136,6 @@ export function Records({
   }, [query, revision]);
   return (
     <>
-      {kind === "dossier" && (
-        <Companies user={user} onChanged={() => setRevision((v) => v + 1)} />
-      )}
-      <CustomFieldsStatus state={custom} />
-      <ViewControls
-        query={filters}
-        onChange={setFilters}
-        custom={customFields}
-        fieldsReady={!custom.loading && !custom.error}
-      />
       <div className="toolbar">
         <div className="search">
           <label className="sr-only" htmlFor="search">
@@ -144,6 +162,26 @@ export function Records({
           />
           Archives
         </label>
+        <div className="record-context-tools">
+          {" "}
+          {kind === "dossier" && (
+            <Companies
+              user={user}
+              onChanged={() => setRevision((v) => v + 1)}
+            />
+          )}
+          {(custom.loading || custom.error) && (
+            <div className="record-field-status">
+              <CustomFieldsStatus state={custom} />
+            </div>
+          )}
+          <ViewControls
+            query={filters}
+            onChange={setFilters}
+            custom={customFields}
+            fieldsReady={!custom.loading && !custom.error}
+          />
+        </div>
         <div className="toolbar-end">
           {can("export") && <CsvExport query={filters} />}
           {can("create") && (
@@ -182,7 +220,7 @@ export function Records({
               </div>
             ) : (
               <div className="table-scroll">
-                <table>
+                <Table>
                   <caption className="sr-only">
                     {labels[kind]}{" "}
                     {kind === "tache" || kind === "obligation"
@@ -190,10 +228,10 @@ export function Records({
                       : "autorisés"}
                   </caption>
                   <thead>
-                    <tr>
-                      <th className="record-icon" aria-label="Type" />
+                    <TableRow>
+                      <TableHeader className="record-icon" aria-label="Type" />
                       {columns.map((key) => (
-                        <th key={key} scope="col">
+                        <TableHeader key={key} scope="col">
                           {columnLabels[key] ??
                             (key.startsWith("custom.")
                               ? (customFields.find(
@@ -205,18 +243,18 @@ export function Records({
                                     ? "Champ non chargé"
                                     : "Champ personnalisé"))
                               : key)}
-                        </th>
+                        </TableHeader>
                       ))}
-                    </tr>
+                    </TableRow>
                   </thead>
                   <tbody>
                     {result.items.map((record) => (
-                      <tr key={record.id}>
-                        <td className="record-icon">
-                          <span aria-hidden>◈</span>
-                        </td>
+                      <TableRow key={record.id}>
+                        <TableCell className="record-icon">
+                          <IconBuilding size={14} aria-hidden />
+                        </TableCell>
                         {columns.map((key) => (
-                          <td key={key}>
+                          <TableCell key={key}>
                             {key === "title" ? (
                               <>
                                 <button
@@ -241,12 +279,12 @@ export function Records({
                                 installation?.cabinetTimeZone,
                               )
                             )}
-                          </td>
+                          </TableCell>
                         ))}
-                      </tr>
+                      </TableRow>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               </div>
             )}
             <footer className="pagination">

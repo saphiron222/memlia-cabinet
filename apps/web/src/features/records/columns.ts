@@ -85,8 +85,8 @@ export const columnLabels: Record<string, string> = {
 };
 export const defaultColumns = (kind: RecordKind) =>
   ({
-    dossier: "title,siren,legalForm,version",
-    contact: "title,email,contactType,version",
+    dossier: "title,siren,vatRegime,financialYearEnd,legalForm",
+    contact: "title,email,phone,contactType",
     tache: "title,dueDate,state,version",
     obligation: "title,dueDate,validation,version",
   })[kind];
@@ -167,7 +167,21 @@ export function columnValue(
   if (value === null || value === undefined || value === "")
     return "Non renseigné";
   if (typeof value === "boolean") return value ? "Oui" : "Non";
-  if (typeof value === "object") return JSON.stringify(value);
+  if (key === "address" && typeof value === "object" && value)
+    return Object.values(value).filter(Boolean).join(", ") || "Non renseignée";
+  if (Array.isArray(value))
+    return value.length
+      ? `${value.length} élément${value.length > 1 ? "s" : ""}`
+      : "Aucun";
+  if (typeof value === "object") return "Propriétés structurées";
+  if (
+    ["vatRegime", "incomeTaxRegime", "vatFrequency", "fiscalRegime"].includes(
+      key,
+    )
+  )
+    return labelValue(String(value));
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value)))
+    return String(value).split("-").reverse().join("/");
   return (
     (
       {
