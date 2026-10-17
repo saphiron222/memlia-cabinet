@@ -169,6 +169,7 @@
 - [ ] Implement source account/capability/scopes/period/preflight screens, local credential entry and expiry/revocation, distinct pending-field-validation state. Keep unacquired private contracts and unauthorized portal writes unavailable with a specific reason.
 - [ ] Verify all 17 source adapters, each with a nominal fixture and its own interruption/checkpoint/replay case, through the common collection contract and GED. Correct missing source-specific behavior; a family-wide generic success test cannot stand in for all 17.
 - [ ] RED then GREEN: wrong issuer/audience/nonce/state or missing PKCE fails OIDC; disabled user cannot regain access from an existing IdP login, email collision never auto-links. Show provider availability as configured, not a fabricated Apple availability promise.
+- [ ] Implement individual invitation, expiry/refusal, first password, own password change, session revocation and administrator-assisted recovery with hashed one-use tokens and an audit event; no token in list/export/log. RED then GREEN: replay/expired recovery fails, password reset revokes old sessions, last active administrator retains an explicit recovery method.
 - [ ] Implement facturation électronique directory/provider status and evidence with dated source, help by module/workflow/import/export, support bundle preview/redaction; dossier AI remains proposed and off. Browser checks, check/test/build, commit and report.
 
 ### Task 11: Exploitation complète, reprise après panne et performance

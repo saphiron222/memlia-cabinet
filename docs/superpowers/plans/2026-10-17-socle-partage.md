@@ -59,16 +59,19 @@
 **Files:**
 - Create: `packages/ui/package.json`, `packages/ui/src/index.ts`, `packages/ui/vendor/*`, `packages/ui/PROVENANCE.json`, `packages/ui/LICENSE.twenty-ui`.
 - Create: `apps/web/package.json`, `apps/web/vite.config.ts`, `apps/web/index.html`, `apps/web/src/*`.
+- Modify: `packages/contracts/src/index.ts`, `packages/contracts/src/records.ts`, server route imports for canonical query/list schemas.
 - Test: `tests/e2e/cabinet.spec.ts`, `playwright.config.ts`.
 
 **Interfaces:**
 - Consumes the Task 1 HTTP contract and types from `@memlia/contracts`; no handwritten duplicate payload types.
+- Owns deferred M1 from Task 1 review: export `UserListSchema` and `RecordListQuerySchema` from contracts and make both server and UI consume them. Setup status exposes `requiresToken`; the form requests the local bootstrap token only for that branch, never persists it in browser storage.
 - Produces setup/login, dashboard, dossiers, contacts, tasks and obligations pages with actual list/form/detail actions, filter/search, persistent edits, task checklist/transition/history and CSV export.
 - Produces a Twenty frame: 220px navigation, 48px collapsed mode, 13px Inter, dense 32px table rows, 400px detail panel, exact light/dark CSS variables and accessible controls.
 
 - [ ] Read `docs/design-twenty.md`; vendor the declared MIT files with notices and record deliberate import adaptations. Do not copy twenty-front under a MIT claim.
 - [ ] Write/run the failing browser flow in an isolated fictitious data directory: setup, create dossier/task, edit date, close/reopen/reload, transition and export.
 - [ ] Implement shared UI primitives from real Twenty source and the connected pages. Loading, empty, validation, denied, error and conflict states must have real branches.
+- [ ] Use labelled business fields and ordinary dossier/task/obligation actions, not a JSON/schema editor as the user's form. Link field errors and a focusable error summary, restore focus on close, and discard stale in-flight responses after navigation/session change.
 - [ ] Add keyboard/form-error and theme/navigation checks; run the browser suite green and inspect screenshots visually.
 - [ ] Run strict checking and production build; commit. Do not display an unimplemented command as working.
 
@@ -88,6 +91,7 @@
 - [ ] Implement local temporary write, content validation and atomic commitment; retain provenance and versions.
 - [ ] Write failing tests for HTML disguised as PDF, path traversal name, forbidden dossier, interrupted file and duplicate bytes with distinct source versions.
 - [ ] Implement explicit outcomes, check that no invalid document is made definitive, and run the suite green.
+- [ ] Resolve deferred M2 from Task 1 review: preserve structured HTTP 413 for body/upload limits instead of reporting500, with a real oversized request test.
 - [ ] Add a failing two-document text search and version-chain test; extract supported local text, search only authorized documents, and return an explicit extraction/content-availability state for unsupported or damaged content. Same filenames never merge unrelated originals.
 - [ ] Connect upload/download/list to the UI; browser test and build green; commit.
 
