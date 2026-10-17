@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-17",
+  "referenceProduct": "https://teradion.fr/",
+  "localPrivateArchive": "evidence/private/teradion",
+  "corpora": [
+    {
+      "id": "video",
+      "frames": 2494,
+      "localIndex": "evidence/private/teradion/video/index.html"
+    },
+    {
+      "id": "recorded-demos",
+      "steps": 79,
+      "localManifest": "evidence/private/teradion/observations/demos-integrales/manifest.json"
+    },
+    {
+      "id": "guides",
+      "documents": 39
+    },
+    {
+      "id": "public-faq",
+      "answers": 31
+    },
+    {
+      "id": "authenticated-ui",
+      "boundedChecksPassed": 9,
+      "notClaimed": "Backend equivalence or complete permission execution"
+    }
+  ],
+  "upstreamSource": "evidence/upstream/twenty-source.json",
+  "publishedPrivateAccountData": false,
+  "originalArchiveRootMarker": "teradion-rea-research"
+}

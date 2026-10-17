@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.superpowers/
+.env
+.env.*
+!.env.example
+var/
+.data/
+*.log
+.DS_Store
+evidence/private/

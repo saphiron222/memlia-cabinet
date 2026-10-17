@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/twentyhq/twenty",
+  "commit": "e7743ba77003f3eab957cfcca8e760d383cde550",
+  "archive": "twenty-e7743ba77003f3eab957cfcca8e760d383cde550.tar.gz",
+  "sha256": "ab82a2edfbe029bb3c188cd3a71d79a4e2655142604fadb9b0cc1f696cf6c610",
+  "bytes": 165044863,
+  "note": "Complete checked-out source snapshot excluding Git internals and installed dependencies. Selected MIT code is vendored separately with provenance."
+}
