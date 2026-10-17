@@ -10,8 +10,14 @@ export interface Connection {
     params?: unknown[],
   ): Promise<T[]>;
 }
+export interface TransactionOptions {
+  jit?: false;
+}
 export interface Database extends Connection {
-  transaction<T>(run: (tx: Connection) => Promise<T>): Promise<T>;
+  transaction<T>(
+    run: (tx: Connection) => Promise<T>,
+    options?: TransactionOptions,
+  ): Promise<T>;
   close(): Promise<void>;
 }
 export async function openDatabase(options: {
@@ -47,7 +53,7 @@ export async function openDatabase(options: {
     };
     const db: Database = {
       query,
-      async transaction(run) {
+      async transaction(run, transactionOptions) {
         available();
         const client = await pool.connect();
         try {
@@ -59,6 +65,8 @@ export async function openDatabase(options: {
           if (!maintenance.rows[0]?.acquired)
             throw new Error("Installation en maintenance.");
           await client.query("SELECT pg_advisory_xact_lock(72461017)");
+          if (transactionOptions?.jit === false)
+            await client.query("SET LOCAL jit = off");
           const result = await run({
             query: async (sql, params) =>
               (await client.query(sql, params)).rows,

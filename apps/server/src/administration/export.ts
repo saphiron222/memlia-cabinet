@@ -167,115 +167,122 @@ export class Exports {
               );
               continue;
             }
-            const page = await this.db.transaction(async (tx) => {
-              const rows = await tx.query(
-                "SELECT u.* FROM cabinet_users u JOIN cabinet_exports e ON e.actor_id=u.id WHERE e.id=$1 AND u.active=true",
-                [input.exportId],
-              );
-              if (!rows[0]) fail(403, "FORBIDDEN", "Sortie inaccessible.");
-              const actor = await effectiveUser(tx, rows[0]);
-              await this.readable(tx, actor, input.exportId);
-              if (prior.phase === "records") {
-                if (input.query) {
-                  const planned = await tx.query(
-                    "SELECT r.content,p.version FROM cabinet_export_plan p LEFT JOIN cabinet_records r ON r.id=p.id WHERE p.export_id=$1 AND p.ordinal>$2 ORDER BY p.ordinal LIMIT 1000",
-                    [input.exportId, prior.records],
-                  );
-                  return planned.map((r) => {
-                    if (!r.content)
-                      fail(
-                        409,
-                        "EXPORT_CHANGED",
-                        "Une fiche a changé pendant la préparation ; régénérer.",
-                      );
-                    const record = CabinetRecordSchema.parse(r.content);
-                    if (record.version !== Number(r.version))
-                      fail(
-                        409,
-                        "EXPORT_CHANGED",
-                        "Une fiche a changé pendant la préparation ; régénérer.",
-                      );
-                    return record;
-                  });
-                }
-                const params: unknown[] = [prior.after];
-                const predicate = authorizedPredicate(actor, "export", (v) => {
-                  params.push(v);
-                  return "$" + params.length;
-                });
-                return (
-                  await tx.query(
-                    `SELECT r.content FROM cabinet_records r WHERE ($1::uuid IS NULL OR r.id>$1::uuid) AND ${predicate} ORDER BY r.id LIMIT 1000`,
-                    params,
-                  )
-                ).map((r) => CabinetRecordSchema.parse(r.content));
-              }
-              if (prior.phase === "production")
-                return productionExportPage(
-                  tx,
-                  input.exportId,
-                  actor,
-                  prior.after,
-                );
-              if (prior.phase === "workflows")
-                return workflowExportPage(
-                  tx,
-                  input.exportId,
-                  actor,
-                  prior.after,
-                );
-              if (prior.phase === "fiscal" && !input.originals)
-                return (
-                  await this.fiscalPage(
-                    tx,
-                    "SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer ORDER BY e.id LIMIT 1000",
-                    [input.exportId, prior.after],
-                  )
-                ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
-              if (prior.phase === "fiscal" && input.originals) {
-                const params: unknown[] = [input.exportId, prior.after];
-                const filters = currentNoticePredicate(
-                  input.query ?? {},
-                  (value) => {
-                    params.push(value);
-                    return "$" + params.length;
-                  },
-                );
-                return (
-                  await this.fiscalPage(
-                    tx,
-                    `SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer AND ${filters} AND ${latestNoticePredicate("(r.content->>'version')::integer")} ORDER BY e.id LIMIT 1000`,
-                    params,
-                  )
-                ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
-              }
-              if (input.originals) {
-                const selected = await tx.query(
-                  "SELECT d.id FROM cabinet_documents d WHERE ($2::uuid IS NULL OR d.id>$2::uuid) AND EXISTS(SELECT 1 FROM cabinet_export_rows e WHERE e.export_id=$1 AND e.kind='fiscal' AND (e.content->'event'->>'originalId'=d.id::text OR (e.content->'event'->'suiteIds') ? d.id::text)) ORDER BY d.id LIMIT 1000",
-                  [input.exportId, prior.after],
-                );
-                const documents = [];
-                for (const item of selected)
-                  documents.push(
-                    await this.documents.get(tx, actor, String(item.id)),
-                  );
-                return documents;
-              }
-              const dossierIds = (
-                await tx.query(
-                  "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='record' AND content->>'kind'='dossier' ORDER BY id",
+            const page = await this.db.transaction(
+              async (tx) => {
+                const rows = await tx.query(
+                  "SELECT u.* FROM cabinet_users u JOIN cabinet_exports e ON e.actor_id=u.id WHERE e.id=$1 AND u.active=true",
                   [input.exportId],
-                )
-              ).map((r) => String(r.id));
-              return (
-                await this.documents.exportReferences(
-                  tx,
-                  actor,
-                  dossierIds,
-                  prior.after,
-                )
-              ).items;
-            });
+                );
+                if (!rows[0]) fail(403, "FORBIDDEN", "Sortie inaccessible.");
+                const actor = await effectiveUser(tx, rows[0]);
+                await this.readable(tx, actor, input.exportId);
+                if (prior.phase === "records") {
+                  if (input.query) {
+                    const planned = await tx.query(
+                      "SELECT r.content,p.version FROM cabinet_export_plan p LEFT JOIN cabinet_records r ON r.id=p.id WHERE p.export_id=$1 AND p.ordinal>$2 ORDER BY p.ordinal LIMIT 1000",
+                      [input.exportId, prior.records],
+                    );
+                    return planned.map((r) => {
+                      if (!r.content)
+                        fail(
+                          409,
+                          "EXPORT_CHANGED",
+                          "Une fiche a changé pendant la préparation ; régénérer.",
+                        );
+                      const record = CabinetRecordSchema.parse(r.content);
+                      if (record.version !== Number(r.version))
+                        fail(
+                          409,
+                          "EXPORT_CHANGED",
+                          "Une fiche a changé pendant la préparation ; régénérer.",
+                        );
+                      return record;
+                    });
+                  }
+                  const params: unknown[] = [prior.after];
+                  const predicate = authorizedPredicate(
+                    actor,
+                    "export",
+                    (v) => {
+                      params.push(v);
+                      return "$" + params.length;
+                    },
+                  );
+                  return (
+                    await tx.query(
+                      `SELECT r.content FROM cabinet_records r WHERE ($1::uuid IS NULL OR r.id>$1::uuid) AND ${predicate} ORDER BY r.id LIMIT 1000`,
+                      params,
+                    )
+                  ).map((r) => CabinetRecordSchema.parse(r.content));
+                }
+                if (prior.phase === "production")
+                  return productionExportPage(
+                    tx,
+                    input.exportId,
+                    actor,
+                    prior.after,
+                  );
+                if (prior.phase === "workflows")
+                  return workflowExportPage(
+                    tx,
+                    input.exportId,
+                    actor,
+                    prior.after,
+                  );
+                if (prior.phase === "fiscal" && !input.originals)
+                  return (
+                    await this.fiscalPage(
+                      tx,
+                      "SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer ORDER BY e.id LIMIT 1000",
+                      [input.exportId, prior.after],
+                    )
+                  ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
+                if (prior.phase === "fiscal" && input.originals) {
+                  const params: unknown[] = [input.exportId, prior.after];
+                  const filters = currentNoticePredicate(
+                    input.query ?? {},
+                    (value) => {
+                      params.push(value);
+                      return "$" + params.length;
+                    },
+                  );
+                  return (
+                    await this.fiscalPage(
+                      tx,
+                      `SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer AND ${filters} AND ${latestNoticePredicate("(r.content->>'version')::integer")} ORDER BY e.id LIMIT 1000`,
+                      params,
+                    )
+                  ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
+                }
+                if (input.originals) {
+                  const selected = await tx.query(
+                    "SELECT d.id FROM cabinet_documents d WHERE ($2::uuid IS NULL OR d.id>$2::uuid) AND EXISTS(SELECT 1 FROM cabinet_export_rows e WHERE e.export_id=$1 AND e.kind='fiscal' AND (e.content->'event'->>'originalId'=d.id::text OR (e.content->'event'->'suiteIds') ? d.id::text)) ORDER BY d.id LIMIT 1000",
+                    [input.exportId, prior.after],
+                  );
+                  const documents = [];
+                  for (const item of selected)
+                    documents.push(
+                      await this.documents.get(tx, actor, String(item.id)),
+                    );
+                  return documents;
+                }
+                const dossierIds = (
+                  await tx.query(
+                    "SELECT id FROM cabinet_export_rows WHERE export_id=$1 AND kind='record' AND content->>'kind'='dossier' ORDER BY id",
+                    [input.exportId],
+                  )
+                ).map((r) => String(r.id));
+                return (
+                  await this.documents.exportReferences(
+                    tx,
+                    actor,
+                    dossierIds,
+                    prior.after,
+                  )
+                ).items;
+              },
+              prior.phase === "production" ? { jit: false } : undefined,
+            );
             const fields = await this.db.transaction(async (tx) => {
               if (input.query) return [];
               const ids = [

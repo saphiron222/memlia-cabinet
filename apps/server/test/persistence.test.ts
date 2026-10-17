@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { CabinetRecordSchema } from "@memlia/contracts";
 import { fixture, dossier, task, operationId } from "./helpers.js";
+import type { Connection } from "../src/storage/database.js";
 it("persists dossier/task date, checklist, transitions and CSV through a fresh application", async () => {
   const f = await fixture();
   try {
@@ -129,3 +130,79 @@ it("fails the whole history request when reading an older dossier encounters a s
     await f.close();
   }
 });
+
+it.skipIf(!process.env.DATABASE_URL)(
+  "PostgreSQL transaction JIT policy resets after commit and rollback on the same connection and preserves the fixture schema",
+  async () => {
+    const f = await fixture();
+    try {
+      await f.maintainDatabase(async (database) => {
+        const inspect = async (tx: Connection) =>
+          (
+            await tx.query<{
+              pid: number;
+              jit: string;
+              schema: string;
+              search_path: string;
+            }>(
+              "SELECT pg_backend_pid() AS pid,current_setting('jit') AS jit,current_schema() AS schema,current_setting('search_path') AS search_path",
+            )
+          )[0]!;
+        const original = await database.transaction(async (tx) => {
+          const state = await inspect(tx);
+          // Exercise reset even when the operator's default is already off.
+          await tx.query("SET jit = on");
+          return state;
+        });
+        const baseline = { ...original, jit: "on" };
+        expect(baseline.schema).toMatch(/^test_[a-f0-9]+$/);
+        try {
+          expect(await database.transaction(inspect)).toEqual(baseline);
+          const committed = await database.transaction(
+            async (tx) => {
+              const state = await inspect(tx);
+              expect(state).toEqual({ ...baseline, jit: "off" });
+              await tx.query("CREATE TABLE jit_policy_probe (value integer)");
+              await tx.query("INSERT INTO jit_policy_probe VALUES (1)");
+              return state;
+            },
+            { jit: false },
+          );
+          const afterCommit = await database.transaction(inspect);
+          expect(afterCommit).toEqual(baseline);
+          let rolledBack: typeof baseline | undefined;
+          await expect(
+            database.transaction(
+              async (tx) => {
+                rolledBack = await inspect(tx);
+                expect(rolledBack).toEqual({ ...baseline, jit: "off" });
+                await tx.query("INSERT INTO jit_policy_probe VALUES (2)");
+                throw new Error("Fictitious transaction rollback");
+              },
+              { jit: false },
+            ),
+          ).rejects.toThrow("Fictitious transaction rollback");
+          const afterRollback = await database.transaction(inspect);
+          expect(afterRollback).toEqual(baseline);
+          expect(
+            await database.query("SELECT value FROM jit_policy_probe"),
+          ).toEqual([{ value: 1 }]);
+          console.info("PostgreSQL transaction JIT isolation", {
+            connectionDefault: original.jit,
+            baseline,
+            committed,
+            afterCommit,
+            rolledBack,
+            afterRollback,
+          });
+        } finally {
+          await database.transaction((tx) =>
+            tx.query("SELECT set_config('jit',$1,false)", [original.jit]),
+          );
+        }
+      });
+    } finally {
+      await f.close();
+    }
+  },
+);

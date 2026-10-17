@@ -359,20 +359,23 @@ it("rollback après GED : recrée la préparation et engage une seule observatio
           work: (
             tx: import("../src/storage/database.js").Connection,
           ) => Promise<T>,
+          options?: Parameters<typeof db.transaction>[1],
         ) =>
-          db.transaction((tx) =>
-            work({
-              query: async (sql, params) => {
-                if (
-                  reject &&
-                  sql.startsWith("INSERT INTO cabinet_collection_snapshots")
-                ) {
-                  reject = false;
-                  throw Error("Interruption SQL fictive");
-                }
-                return tx.query(sql, params);
-              },
-            }),
+          db.transaction(
+            (tx) =>
+              work({
+                query: async (sql, params) => {
+                  if (
+                    reject &&
+                    sql.startsWith("INSERT INTO cabinet_collection_snapshots")
+                  ) {
+                    reject = false;
+                    throw Error("Interruption SQL fictive");
+                  }
+                  return tx.query(sql, params);
+                },
+              }),
+            options,
           ),
       };
       const runner = new JobRunner(wrapped);

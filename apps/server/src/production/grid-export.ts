@@ -121,6 +121,7 @@ export class ProductionGridExport {
                 complete: !page.hasMore,
               };
             },
+            { jit: false },
           );
         }
         return { parts: ctx.checkpoint.part };

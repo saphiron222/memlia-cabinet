@@ -1153,25 +1153,27 @@ test("generation interrupted after its first committed batch resumes identical d
     let held = false;
     const intercepted: typeof db = {
       ...db,
-      transaction: async (run) => {
+      transaction: async (run, options) => {
         let committed = false;
-        const result = await db.transaction((tx) =>
-          run({
-            query: async <T extends Record<string, unknown>>(
-              sql: string,
-              params?: unknown[],
-            ) => {
-              const rows = await tx.query<T>(sql, params);
-              if (
-                sql.startsWith("UPDATE cabinet_jobs SET checkpoint=") &&
-                !held
-              ) {
-                committed = true;
-                held = true;
-              }
-              return rows;
-            },
-          }),
+        const result = await db.transaction(
+          (tx) =>
+            run({
+              query: async <T extends Record<string, unknown>>(
+                sql: string,
+                params?: unknown[],
+              ) => {
+                const rows = await tx.query<T>(sql, params);
+                if (
+                  sql.startsWith("UPDATE cabinet_jobs SET checkpoint=") &&
+                  !held
+                ) {
+                  committed = true;
+                  held = true;
+                }
+                return rows;
+              },
+            }),
+          options,
         );
         if (committed) {
           entered();

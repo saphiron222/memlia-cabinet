@@ -347,64 +347,86 @@ it("durable silent checkpoints exceed 500 units while coalesced progress stays w
   }
 });
 
-it("derived checkpoint and work commit atomically and invalid checkpoints roll back before retry", async () => {
-  const f = await fixture();
-  try {
-    const actor = await f.setup();
-    await f.maintainDatabase(async (db) => {
-      await db.query("CREATE TABLE derived_checkpoint_fixture (value integer)");
-      let attempt = 0;
-      const jobs = new JobRunner(db);
-      const q = jobs.register({
-        kind: "derived-checkpoint-fixture",
-        input: z.object({}),
-        checkpoint: z.object({ count: z.number().int().nonnegative() }),
-        initial: { count: 0 },
-        result: z.object({ count: z.number() }),
-        scope: () => ({ dossierId: null, resourceKey: "derived" }),
-        authorize: async () => {},
-        execute: async (_i, c) => {
-          attempt++;
-          await c.commit(
-            (n: number) => ({ count: attempt === 1 ? -1 : n }),
-            null,
-            "",
-            async (tx) => {
-              await tx.query(
-                "INSERT INTO derived_checkpoint_fixture VALUES(1)",
-              );
-              return Number(
-                (
-                  await tx.query(
-                    "SELECT count(*) AS count FROM derived_checkpoint_fixture",
-                  )
-                )[0]!.count,
-              );
-            },
-          );
-          return { count: c.checkpoint.count };
-        },
+it.each([
+  ["default", undefined],
+  ["JIT off", { jit: false }],
+] as const)(
+  "derived checkpoint and work commit atomically and invalid checkpoints roll back before retry (%s)",
+  async (_policy, options) => {
+    const f = await fixture();
+    try {
+      const actor = await f.setup();
+      await f.maintainDatabase(async (db) => {
+        await db.query(
+          "CREATE TABLE derived_checkpoint_fixture (value integer)",
+        );
+        const defaultJit = process.env.DATABASE_URL
+          ? (await db.query("SELECT current_setting('jit') AS jit"))[0]!.jit
+          : undefined;
+        let attempt = 0;
+        const jobs = new JobRunner(db);
+        const q = jobs.register({
+          kind: "derived-checkpoint-fixture",
+          input: z.object({}),
+          checkpoint: z.object({ count: z.number().int().nonnegative() }),
+          initial: { count: 0 },
+          result: z.object({ count: z.number() }),
+          scope: () => ({ dossierId: null, resourceKey: "derived" }),
+          authorize: async () => {},
+          execute: async (_i, c) => {
+            attempt++;
+            await c.commit(
+              (n: number) => ({ count: attempt === 1 ? -1 : n }),
+              "derived-unit",
+              "Unité fictive avec checkpoint dérivé.",
+              async (tx) => {
+                if (process.env.DATABASE_URL)
+                  expect(
+                    (await tx.query("SELECT current_setting('jit') AS jit"))[0]!
+                      .jit,
+                  ).toBe(options?.jit === false ? "off" : defaultJit);
+                await tx.query(
+                  "INSERT INTO derived_checkpoint_fixture VALUES(1)",
+                );
+                return Number(
+                  (
+                    await tx.query(
+                      "SELECT count(*) AS count FROM derived_checkpoint_fixture",
+                    )
+                  )[0]!.count,
+                );
+              },
+              options,
+            );
+            return { count: c.checkpoint.count };
+          },
+        });
+        const id = await db.transaction((tx) =>
+          q.enqueue(tx, actor, operationId(), {}),
+        );
+        await jobs.tick();
+        expect(
+          await db.query("SELECT * FROM derived_checkpoint_fixture"),
+        ).toEqual([]);
+        const rolledBack = await db.transaction((tx) => jobs.get(tx, id));
+        expect(rolledBack.checkpoint).toEqual({ count: 0 });
+        expect(
+          rolledBack.job.events.some((e) => e.code === "derived-unit"),
+        ).toBe(false);
+        await jobs.tick();
+        const done = await db.transaction((tx) => jobs.get(tx, id));
+        expect(done.job.state).toBe("completed");
+        expect(done.checkpoint).toEqual({ count: 1 });
+        expect(
+          done.job.events.filter((e) => e.code === "derived-unit"),
+        ).toHaveLength(1);
+        expect(
+          await db.query("SELECT * FROM derived_checkpoint_fixture"),
+        ).toHaveLength(1);
+        await jobs.stop();
       });
-      const id = await db.transaction((tx) =>
-        q.enqueue(tx, actor, operationId(), {}),
-      );
-      await jobs.tick();
-      expect(
-        await db.query("SELECT * FROM derived_checkpoint_fixture"),
-      ).toEqual([]);
-      expect(
-        (await db.transaction((tx) => jobs.get(tx, id))).checkpoint,
-      ).toEqual({ count: 0 });
-      await jobs.tick();
-      const done = await db.transaction((tx) => jobs.get(tx, id));
-      expect(done.job.state).toBe("completed");
-      expect(done.checkpoint).toEqual({ count: 1 });
-      expect(
-        await db.query("SELECT * FROM derived_checkpoint_fixture"),
-      ).toHaveLength(1);
-      await jobs.stop();
-    });
-  } finally {
-    await f.close();
-  }
-});
+    } finally {
+      await f.close();
+    }
+  },
+);

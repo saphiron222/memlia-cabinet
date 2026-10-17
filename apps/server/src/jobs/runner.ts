@@ -6,7 +6,11 @@ import {
   type Job,
   type SessionUser,
 } from "@memlia/contracts";
-import type { Connection, Database } from "../storage/database.js";
+import type {
+  Connection,
+  Database,
+  TransactionOptions,
+} from "../storage/database.js";
 import { idempotent } from "../storage/operations.js";
 import { effectiveUser } from "../identity/service.js";
 import { fail } from "../errors.js";
@@ -20,6 +24,7 @@ export interface JobContext<C> {
     code: string | null,
     message: string,
     work: (tx: Connection, actor: SessionUser) => Promise<T>,
+    options?: TransactionOptions,
   ): Promise<T>;
 }
 export interface JobDefinition<I, C, R> {
@@ -103,7 +108,7 @@ export class JobRunner {
           attempt: job.attempts,
           checkpoint: bounded(definition.checkpoint, job.checkpoint),
           signal,
-          commit: async (checkpoint, code, message, work) => {
+          commit: async (checkpoint, code, message, work, options) => {
             signal.throwIfAborted();
             let parsed: C;
             const value = await this.db.transaction(async (tx) => {
@@ -127,7 +132,7 @@ export class JobRunner {
               );
               if (code !== null) await this.event(tx, job.id, code, message);
               return result;
-            });
+            }, options);
             context.checkpoint = parsed!;
             return value;
           },

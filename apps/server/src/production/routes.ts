@@ -170,15 +170,18 @@ export function registerProductionRoutes(
     ),
   );
   app.get("/api/v1/production/models/:id/rows", async (req) =>
-    db.transaction(async (tx) => {
-      const actor = await user(tx, req);
-      return productionRows(
-        tx,
-        actor,
-        id(req.params),
-        ProductionQuerySchema.parse(req.query),
-      );
-    }),
+    db.transaction(
+      async (tx) => {
+        const actor = await user(tx, req);
+        return productionRows(
+          tx,
+          actor,
+          id(req.params),
+          ProductionQuerySchema.parse(req.query),
+        );
+      },
+      { jit: false },
+    ),
   );
   app.get("/api/v1/production/models/:id", async (req) =>
     db.transaction(async (tx) => {
