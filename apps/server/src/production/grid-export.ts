@@ -82,19 +82,15 @@ export class ProductionGridExport {
               let part = prior.part,
                 bytes = 0;
               for (const row of page.items) {
+                const frozen = await loadProductionModel(
+                  tx,
+                  row.modelId,
+                  row.modelVersion,
+                );
+                await modelAccess(tx, actor, frozen);
                 const size = Math.max(
                   Buffer.byteLength(JSON.stringify(row)),
-                  Buffer.byteLength(
-                    csv(
-                      await loadProductionModel(
-                        tx,
-                        row.modelId,
-                        row.modelVersion,
-                      ),
-                      [row],
-                      i.query.referenceDate,
-                    ),
-                  ),
+                  Buffer.byteLength(csv(frozen, [row], i.query.referenceDate)),
                 );
                 if (size > 8 * 1024 * 1024)
                   fail(
@@ -202,13 +198,15 @@ export class ProductionGridExport {
       await loadProductionRow(tx, actor, row.id, "export");
     }
     const fragments = await Promise.all(
-      items.map(async (row) =>
-        csv(
-          await loadProductionModel(tx, row.modelId, row.modelVersion),
-          [row],
-          i.query.referenceDate,
-        ),
-      ),
+      items.map(async (row) => {
+        const frozen = await loadProductionModel(
+          tx,
+          row.modelId,
+          row.modelVersion,
+        );
+        await modelAccess(tx, actor, frozen);
+        return csv(frozen, [row], i.query.referenceDate);
+      }),
     );
     return fragments
       .map((fragment, index) =>

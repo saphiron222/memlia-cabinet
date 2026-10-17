@@ -672,3 +672,175 @@ test("round1 I3 I6 I7 frozen populated models annual followup selection and manu
     expect(rows[0]).toMatchObject({ period, dueDate: due });
   }
 });
+
+test("round2 N1 calendar opens prior-year balance with its own frozen configuration", async ({
+  page,
+}) => {
+  const { post, model } = await roundSetup(page);
+  const today = await (
+    await page.request.get("/api/v1/production/calendar")
+  ).json();
+  const year = String(Number(today.today.slice(0, 4)) - 1);
+  const d = await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: { kind: "dossier", title: "N1 Bilan antérieur", data: {} },
+  });
+  const m = await model({
+    kind: "balance",
+    name: "N1 Configuration historique",
+    target: "dossier",
+    year: Number(year),
+    family: "BIC",
+    columns: [
+      {
+        id: crypto.randomUUID(),
+        name: "N1 Étape conservée",
+        type: "boolean",
+        plannedDate: `${year}-06-15`,
+      },
+    ],
+  });
+  const row = await post(`/production/models/${m.id}/rows`, {
+    operationId: crypto.randomUUID(),
+    expectedVersion: 1,
+    target: { kind: "dossier", id: d.id, label: d.title },
+    period: year,
+  });
+  await model(
+    {
+      ...m.model,
+      columns: [{ ...m.model.columns[0], name: "N1 Étape future" }],
+    },
+    m.id,
+    1,
+  );
+  await page.goto("/#calendrier?natures=bilan");
+  await page.getByLabel("Année", { exact: true }).fill(year);
+  const link = page.locator(`a[href="#production?id=${row.id}"]`);
+  await expect(link).toBeVisible();
+  await link.click();
+  const detail = page.getByRole("complementary", { name: `Fiche ${d.title}` });
+  await expect(detail).toBeVisible();
+  await expect(page.getByLabel("Année", { exact: true })).toHaveValue(year);
+  await expect(
+    detail.getByText("N1 Étape conservée", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    detail.getByText("N1 Étape future", { exact: true }),
+  ).toHaveCount(0);
+  await expect(detail).toContainText("configuration v1");
+  await page.screenshot({
+    path: "evidence/private/task4/round2-calendar-frozen-detail.png",
+    fullPage: true,
+  });
+});
+
+test("round2 N1 direct followup detail is independent of grid page and uses its annual cell period", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  const { post, model } = await roundSetup(page);
+  const today = await (
+    await page.request.get("/api/v1/production/calendar")
+  ).json();
+  const year = String(Number(today.today.slice(0, 4)) - 1);
+  const column = crypto.randomUUID();
+  const m = await model({
+    kind: "followup",
+    name: "N1 Suivi hors page",
+    target: "dossier",
+    columns: [
+      {
+        id: column,
+        name: "N1 Montant figé",
+        type: "decimal",
+        frequency: "monthly",
+      },
+    ],
+  });
+  const d = await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: { kind: "dossier", title: "ZZZ N1 Hors page", data: {} },
+  });
+  const row = await post(`/production/models/${m.id}/rows`, {
+    operationId: crypto.randomUUID(),
+    expectedVersion: 1,
+    target: { kind: "dossier", id: d.id, label: d.title },
+    period: year,
+  });
+  await post(`/production/rows/${row.id}/commands`, {
+    operationId: crypto.randomUUID(),
+    expectedVersion: 1,
+    command: {
+      kind: "cell",
+      columnId: column,
+      period: `${year}-${today.today.slice(5, 7)}`,
+      value: "42",
+    },
+  });
+  const latest = await model(
+    {
+      ...m.model,
+      columns: [{ ...m.model.columns[0], name: "N1 Montant futur" }],
+    },
+    m.id,
+    1,
+  );
+  for (let n = 0; n < 100; n++) {
+    const target = await post("/records", {
+      operationId: crypto.randomUUID(),
+      record: {
+        kind: "dossier",
+        title: `AAA N1 ${String(n).padStart(3, "0")}`,
+        data: {},
+      },
+    });
+    await post(`/production/models/${m.id}/rows`, {
+      operationId: crypto.randomUUID(),
+      expectedVersion: latest.version,
+      target: { kind: "dossier", id: target.id, label: target.title },
+      period: year,
+    });
+  }
+  const firstPage = await (
+    await page.request.get(
+      `/api/v1/production/models/${m.id}/rows?period=${year}&sort=title`,
+    )
+  ).json();
+  expect(firstPage.items).toHaveLength(100);
+  expect(firstPage.items.some((r: any) => r.id === row.id)).toBe(false);
+  await page.goto(`/#production?id=${row.id}`);
+  const detail = page.getByRole("complementary", { name: `Fiche ${d.title}` });
+  await expect(detail).toBeVisible();
+  await expect(page.getByLabel("Année", { exact: true })).toHaveValue(year);
+  await expect(detail).toContainText(`${year}-${today.today.slice(5, 7)}`);
+  await expect(detail).toContainText("42");
+  await expect(
+    detail.getByText("N1 Montant figé", { exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 900, height: 1000 });
+  if (
+    !(await page.locator("html").evaluate((e) => e.classList.contains("dark")))
+  ) {
+    await page.getByRole("button", { name: "Activer le thème sombre" }).click();
+  }
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.screenshot({
+    path: "evidence/private/task4/round2-offpage-annual-detail.png",
+    fullPage: true,
+  });
+  // Resolving a link must not keep forcing its year after ordinary navigation.
+  const currentYear = today.today.slice(0, 4);
+  const loaded = page.waitForResponse(
+    (r) =>
+      r.url().includes(`/production/models/${m.id}/rows?`) &&
+      new URL(r.url()).searchParams.get("period") === currentYear &&
+      r.status() === 200,
+  );
+  await page.getByLabel("Année", { exact: true }).fill(currentYear);
+  await loaded;
+  await expect(page.getByText("Aucune ligne dans ce périmètre")).toBeVisible();
+  await expect(page.getByLabel("Année", { exact: true })).toHaveValue(
+    currentYear,
+  );
+});

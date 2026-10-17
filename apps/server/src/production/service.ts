@@ -487,7 +487,8 @@ export async function createProductionRow(
       "INVALID_ANNUAL_PERIOD",
       "Le suivi appartient à une année à quatre chiffres.",
     );
-  if (template.kind === "custom") {
+  const publicCustomCommand = template.kind === "custom" && !generation;
+  const occurrenceDate = () => {
     const date = productionOccurrenceDate(template.rule!, i.period);
     if (!date)
       fail(
@@ -495,8 +496,9 @@ export async function createProductionRow(
         "INVALID_OCCURRENCE",
         "Choisissez une occurrence de la règle configurée.",
       );
-    dueDate = date;
-  }
+    return date;
+  };
+  if (template.kind === "custom" && generation) dueDate = occurrenceDate();
   const scope = await targetScope(tx, actor, i.target, "read");
   if (template.target !== i.target.kind)
     fail(400, "INVALID_TARGET", "La cible ne correspond pas au modèle.");
@@ -521,103 +523,157 @@ export async function createProductionRow(
     ],
   );
   if (existing[0]) await loadProductionRow(tx, actor, String(existing[0].id));
-  const result = await idempotent(
-    tx,
-    actor,
-    i.operationId,
-    { productionRow: { modelId, i, dueDate } },
-    async () => {
-      if (existing[0])
-        return loadProductionRow(tx, actor, String(existing[0].id));
-      if (m.version !== i.expectedVersion)
-        fail(409, "VERSION_CONFLICT", "Le modèle a changé.");
-      if (template.closed || template.paused)
-        fail(409, "MODEL_PAUSED", "Modèle fermé ou génération suspendue.");
-      let recordId: string | null = null;
-      const dates = template.columns
-        .map((c) => c.plannedDate)
-        .filter((d): d is string => !!d)
-        .sort();
-      const date = dueDate ?? dates[0] ?? null;
-      if (template.kind === "balance" || template.kind === "custom") {
-        const record = await saveRecord(
-          tx,
-          actor,
-          {
-            operationId: stableId(i.operationId + ":record"),
-            record: RecordContentSchema.parse({
-              kind: "obligation",
-              title: template.name + " · " + i.period,
-              dossierId: i.target.id,
-              data: {
-                nature: template.kind === "balance" ? "bilan" : template.nature,
-                period: i.period,
-                dueDate: date,
-              },
-            }),
-          },
-          now,
-          undefined,
-          "created",
-          undefined,
-          {
-            kind: generation ? "generated" : "manual",
-            reference: generation ? m.id : actor.id,
-            version: String(m.version),
-            at: now.toISOString(),
-          },
-        );
-        recordId = record.id;
-      }
-      const row = ProductionRowSchema.parse({
-        id: recordId ?? randomUUID(),
-        recordId,
-        modelId,
-        modelVersion: m.version,
-        version: 1,
-        target: { ...i.target, label: scope?.title ?? i.target.label },
-        scope,
-        period: i.period,
-        occurrenceKey: key,
-        dueDate: date,
-        assigneeId: template.assigneeId,
-        tags: template.tags,
-        documentIds:
-          scope?.kind === "dossier"
-            ? (
-                await tx.query(
-                  "SELECT id FROM cabinet_documents WHERE id=ANY($1::uuid[]) AND dossier_id=$2",
-                  [template.documentIds, scope.id],
-                )
-              ).map((d) => String(d.id))
-            : template.documentIds,
-        workVersionAtCreation: recordId && template.checklistModelId ? 1 : 0,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      });
-      await activeAssignee(tx, row.assigneeId);
-      await validateDocuments(tx, actor, row, row.documentIds);
-      await persistRow(tx, row);
-      if (recordId && template.checklistModelId)
-        await commandWork(
-          tx,
-          actor,
-          recordId,
-          {
-            operationId: stableId(i.operationId + ":checklist"),
-            expectedVersion: 0,
-            command: {
-              kind: "instantiate",
-              modelId: template.checklistModelId,
-              ...(checklistVersion ? { modelVersion: checklistVersion } : {}),
+  let result: ProductionRow;
+  try {
+    result = await idempotent(
+      tx,
+      actor,
+      i.operationId,
+      publicCustomCommand
+        ? { productionRowCreate: { modelId, i } }
+        : { productionRow: { modelId, i, dueDate } },
+      async () => {
+        if (publicCustomCommand) dueDate = occurrenceDate();
+        if (existing[0])
+          return loadProductionRow(tx, actor, String(existing[0].id));
+        if (m.version !== i.expectedVersion)
+          fail(409, "VERSION_CONFLICT", "Le modèle a changé.");
+        if (template.closed || template.paused)
+          fail(409, "MODEL_PAUSED", "Modèle fermé ou génération suspendue.");
+        let recordId: string | null = null;
+        const dates = template.columns
+          .map((c) => c.plannedDate)
+          .filter((d): d is string => !!d)
+          .sort();
+        const date = dueDate ?? dates[0] ?? null;
+        if (template.kind === "balance" || template.kind === "custom") {
+          const record = await saveRecord(
+            tx,
+            actor,
+            {
+              operationId: stableId(i.operationId + ":record"),
+              record: RecordContentSchema.parse({
+                kind: "obligation",
+                title: template.name + " · " + i.period,
+                dossierId: i.target.id,
+                data: {
+                  nature:
+                    template.kind === "balance" ? "bilan" : template.nature,
+                  period: i.period,
+                  dueDate: date,
+                },
+              }),
             },
+            now,
+            undefined,
+            "created",
+            undefined,
+            {
+              kind: generation ? "generated" : "manual",
+              reference: generation ? m.id : actor.id,
+              version: String(m.version),
+              at: now.toISOString(),
+            },
+          );
+          recordId = record.id;
+        }
+        const row = ProductionRowSchema.parse({
+          id: recordId ?? randomUUID(),
+          recordId,
+          modelId,
+          modelVersion: m.version,
+          version: 1,
+          target: { ...i.target, label: scope?.title ?? i.target.label },
+          scope,
+          period: i.period,
+          occurrenceKey: key,
+          dueDate: date,
+          assigneeId: template.assigneeId,
+          tags: template.tags,
+          documentIds:
+            scope?.kind === "dossier"
+              ? (
+                  await tx.query(
+                    "SELECT id FROM cabinet_documents WHERE id=ANY($1::uuid[]) AND dossier_id=$2",
+                    [template.documentIds, scope.id],
+                  )
+                ).map((d) => String(d.id))
+              : template.documentIds,
+          workVersionAtCreation: recordId && template.checklistModelId ? 1 : 0,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        });
+        await activeAssignee(tx, row.assigneeId);
+        await validateDocuments(tx, actor, row, row.documentIds);
+        await persistRow(tx, row);
+        if (recordId && template.checklistModelId)
+          await commandWork(
+            tx,
+            actor,
+            recordId,
+            {
+              operationId: stableId(i.operationId + ":checklist"),
+              expectedVersion: 0,
+              command: {
+                kind: "instantiate",
+                modelId: template.checklistModelId,
+                ...(checklistVersion ? { modelVersion: checklistVersion } : {}),
+              },
+            },
+            now,
+          );
+        return row;
+      },
+    );
+  } catch (error) {
+    if (
+      !publicCustomCommand ||
+      !(error instanceof ApiFault) ||
+      error.code !== "OPERATION_CONFLICT"
+    )
+      throw error;
+    // Older manual journals included a derived date (or null before derivation).
+    // Verify those exact fingerprints against the requested source version; never rewrite them.
+    const source = await loadProductionModel(tx, modelId, i.expectedVersion);
+    await modelAccess(tx, actor, source);
+    if (source.model.kind !== "custom") throw error;
+    const dates = [
+      productionOccurrenceDate(source.model.rule!, i.period),
+      null,
+    ];
+    let replay: ProductionRow | undefined;
+    for (const date of new Set(dates)) {
+      try {
+        replay = await idempotent(
+          tx,
+          actor,
+          i.operationId,
+          { productionRow: { modelId, i, dueDate: date } },
+          async () => {
+            throw error;
           },
-          now,
         );
-      return row;
-    },
-  );
+        break;
+      } catch (legacyError) {
+        if (
+          !(legacyError instanceof ApiFault) ||
+          legacyError.code !== "OPERATION_CONFLICT"
+        )
+          throw legacyError;
+      }
+    }
+    if (!replay) throw error;
+    result = ProductionRowSchema.parse(replay);
+  }
   await authorizeRow(tx, actor, result);
+  if (publicCustomCommand) {
+    await modelAccess(
+      tx,
+      actor,
+      await loadProductionModel(tx, result.modelId, result.modelVersion),
+    );
+    await loadProductionRow(tx, actor, result.id);
+  }
   return result;
 }
 export async function columnRole(

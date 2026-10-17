@@ -797,3 +797,245 @@ test("I8 duplicate operations recorded before the public-command journal remain 
   expect(retry.statusCode, retry.body).toBe(200);
   expect(retry.json()).toEqual(prior.json());
 });
+
+test.each(["public", "legacy-derived", "legacy-null"])(
+  "N2 %s custom creation replays original intent after recurrence edits and rechecks current creation rights",
+  async (journal) => {
+    const d = await start();
+    const m = await model({
+      kind: "custom",
+      name: "Création stable",
+      target: "dossier",
+      population: [d.id],
+      rule: {
+        frequency: "yearly",
+        start: "2026-01-01",
+        end: "2027-12-31",
+        nominalDay: 15,
+        lastDay: false,
+        weekDay: 1,
+      },
+    });
+    const p = await person(["read", "create"]);
+    const input = {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d.id, label: d.title },
+      period: "2026",
+    };
+    const first = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      input,
+      p.cookie,
+    );
+    expect(first.statusCode, first.body).toBe(200);
+    expect(first.json().dueDate).toBe("2026-01-15");
+    if (journal !== "public") {
+      const { idempotent } = await import("../src/storage/operations.js");
+      const { ProductionRowCreateSchema } = await import("@memlia/contracts");
+      await f.maintainDatabase(async (db) =>
+        db.transaction(async (tx) => {
+          await tx.query(
+            "DELETE FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+            [p.user.id, input.operationId],
+          );
+          await idempotent(
+            tx,
+            p.user,
+            input.operationId,
+            {
+              productionRow: {
+                modelId: m.id,
+                i: ProductionRowCreateSchema.parse(input),
+                dueDate: journal === "legacy-null" ? null : "2026-01-15",
+              },
+            },
+            async () => first.json(),
+          );
+        }),
+      );
+    }
+    await model(
+      { ...m.model, rule: { ...m.model.rule, nominalDay: 20 } },
+      m.id,
+      1,
+    );
+    const retry = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      input,
+      p.cookie,
+    );
+    expect(retry.statusCode, retry.body).toBe(200);
+    expect(retry.json()).toEqual(first.json());
+    const changed = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      { ...input, period: "2027" },
+      p.cookie,
+    );
+    expect(changed.statusCode, changed.body).toBe(409);
+    const revoke = await f.request(
+      "PUT",
+      `/administration/users/${p.user.id}`,
+      {
+        operationId: operationId(),
+        expectedVersion: p.user.version,
+        name: p.user.name,
+        active: true,
+        roleIds: [],
+        permissions: [{ action: "read", kind: "*", dossierId: null }],
+      },
+    );
+    expect(revoke.statusCode, revoke.body).toBe(200);
+    expect(
+      (
+        await f.request(
+          "POST",
+          `/production/models/${m.id}/rows`,
+          input,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(403);
+  },
+);
+
+test.each(["population", "document"])(
+  "N3 CSV authorizes frozen model %s at selection and restitution",
+  async (boundary) => {
+    const a = await start(),
+      b = (await f.request("POST", "/records", dossier("Autre portée"))).json();
+    const doc = boundary === "document" ? await upload(b.id) : null;
+    const column = operationId();
+    const m = await model({
+      kind: "balance",
+      name: "Export historique",
+      target: "dossier",
+      year: 2026,
+      family: "BIC",
+      population: boundary === "population" ? [a.id, b.id] : [a.id],
+      documentIds: doc ? [doc.id] : [],
+      columns: [
+        { id: column, name: "Libellé historique protégé", type: "boolean" },
+      ],
+    });
+    const row = await create(m, a, "2026");
+    const populated = await f.request(
+      "POST",
+      `/production/rows/${row.id}/commands`,
+      {
+        operationId: operationId(),
+        expectedVersion: 1,
+        command: {
+          kind: "cell",
+          columnId: column,
+          period: "once",
+          value: true,
+        },
+      },
+    );
+    expect(populated.statusCode, populated.body).toBe(200);
+    await model(
+      {
+        ...m.model,
+        population: [a.id],
+        documentIds: [],
+        columns: [{ ...m.model.columns[0], name: "Libellé courant" }],
+      },
+      m.id,
+      1,
+    );
+    const p = await person(["read", "export"]);
+    const begin = () =>
+      f.request(
+        "POST",
+        "/production/exports",
+        {
+          operationId: operationId(),
+          modelId: m.id,
+          query: { period: "2026" },
+        },
+        p.cookie,
+      );
+    const initial = await begin();
+    expect(initial.statusCode, initial.body).toBe(202);
+    await finish(`/production/exports/${initial.json().jobId}`, p.cookie);
+    const part = `/production/exports/${initial.json().jobId}/parts/1`;
+    expect((await f.request("GET", part, undefined, p.cookie)).body).toContain(
+      "Libellé historique protégé",
+    );
+    const restricted = await f.request("PUT", `/records/${b.id}`, {
+      operationId: operationId(),
+      expectedVersion: b.version,
+      record: {
+        kind: "dossier",
+        title: b.title,
+        confidential: true,
+        data: b.data,
+      },
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/models/${m.id}`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/rows/${row.id}`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/models/${m.id}?version=1`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(404);
+    const cached = await f.request("GET", part, undefined, p.cookie);
+    expect(cached.statusCode, cached.body).toBe(404);
+    expect(cached.body).not.toContain("Libellé historique protégé");
+    const next = await begin();
+    expect(next.statusCode, next.body).toBe(202);
+    let status: any;
+    for (let n = 0; n < 200; n++) {
+      status = (
+        await f.request(
+          "GET",
+          `/production/exports/${next.json().jobId}`,
+          undefined,
+          p.cookie,
+        )
+      ).json();
+      if (["completed", "failed"].includes(status.job.state)) break;
+      await new Promise((r) => setTimeout(r, 30));
+    }
+    expect(status.job.state).toBe("failed");
+    expect(JSON.stringify(status)).not.toContain("Libellé historique protégé");
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/exports/${next.json().jobId}/parts/1`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(409);
+  },
+);

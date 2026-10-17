@@ -40,6 +40,7 @@ export function Production({ user }: { user: SessionUser }) {
     [models, setModels] = useState<ProductionModel[]>([]),
     [selected, setSelected] = useState(""),
     [rowModels, setRowModels] = useState<ProductionModel[]>([]),
+    [linkedModel, setLinkedModel] = useState<ProductionModel | null>(null),
     [occurrence, setOccurrence] = useState(""),
     [rows, setRows] = useState<ProductionRow[]>([]),
     [more, setMore] = useState(false),
@@ -72,6 +73,7 @@ export function Production({ user }: { user: SessionUser }) {
     model = models.find((m) => m.id === selected),
     date = `${year}-${month}-01`;
   const rowRequest = useRef(0);
+  const openedLink = useRef<string | null>(null);
   const parsedQuery = ProductionQuerySchema.safeParse({
     referenceDate: kind === "followup" ? date : null,
     q,
@@ -102,7 +104,11 @@ export function Production({ user }: { user: SessionUser }) {
       : m.model.columns.map((column) => ({ column, version: m.version })),
   );
   const rowModel = (r: ProductionRow) =>
-    rowModels.find((m) => m.id === r.modelId && m.version === r.modelVersion);
+    linkedModel?.id === r.modelId && linkedModel.version === r.modelVersion
+      ? linkedModel
+      : rowModels.find(
+          (m) => m.id === r.modelId && m.version === r.modelVersion,
+        );
   const selectedRule =
     model?.model.kind !== "stage_type" ? model?.model.rule : null;
   const occurrences =
@@ -209,18 +215,50 @@ export function Production({ user }: { user: SessionUser }) {
   }, [selected, q, state, tag, deposit, offset, sort, year, month, models]);
   useEffect(() => {
     const id = new URLSearchParams(location.hash.split("?")[1]).get("id");
-    if (!id || loading || !models.length) return;
+    if (
+      !id ||
+      openedLink.current === id ||
+      loading ||
+      !models.length ||
+      !year ||
+      !month
+    )
+      return;
+    let cancelled = false;
     void request("/production/rows/" + id, ProductionRowSchema, signal)
-      .then((r) => {
-        const m = models.find((x) => x.id === r.modelId);
-        if (m) {
-          if (kind !== m.model.kind) setKind(m.model.kind);
-          if (selected !== m.id) setSelected(m.id);
-          else setRow(r);
+      .then(async (r) => {
+        // A linked row may belong to another year or page. Authorize its own
+        // frozen configuration independently of the visible grid snapshots.
+        const m = await request(
+          `/production/models/${r.modelId}?version=${r.modelVersion}`,
+          ProductionModelSchema,
+          signal,
+        );
+        if (cancelled) return;
+        const annual =
+          m.model.kind === "balance" || m.model.kind === "followup";
+        if (
+          kind !== m.model.kind ||
+          selected !== m.id ||
+          (annual && year !== r.period)
+        ) {
+          setKind(m.model.kind);
+          setSelected(m.id);
+          if (annual) setYear(r.period);
+          setOffset(0);
+          return;
         }
+        openedLink.current = id;
+        setLinkedModel(m);
+        setRow(r);
       })
-      .catch((e) => setError(message(e)));
-  }, [models, selected, loading]);
+      .catch((e) => {
+        if (!cancelled) setError(message(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [models, selected, loading, kind, year, month]);
   useEffect(() => {
     if (!job || ["completed", "failed"].includes(job.state)) return;
     const timer = setTimeout(() => {
