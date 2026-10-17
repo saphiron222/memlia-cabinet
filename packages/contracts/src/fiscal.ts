@@ -343,6 +343,8 @@ export const FiscalEventSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("payment"),
       id: z.uuid(),
+      attemptId: z.uuid().nullable().default(null),
+      declarationVersion: z.number().int().positive().nullable().default(null),
       debtId: z.uuid().nullable().default(null),
       amount: FiscalMoneySchema.refine((v) => !v.startsWith("-")).nullable(),
       date: z.iso.date(),

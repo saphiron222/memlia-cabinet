@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { FiscalEvent } from "@memlia/contracts";
+import type { FiscalEvent, FiscalDetail } from "@memlia/contracts";
 export const natureLabels: Record<string, string> = {
   TVA: "TVA",
   IS: "Impôt sur les sociétés",
@@ -42,6 +42,16 @@ export const eventLabels: Record<FiscalEvent["kind"], string> = {
   link_task: "Lier une tâche",
 };
 export const valueLabels: Record<string, string> = {
+  reel_normal: "Réel normal",
+  reel_simplifie: "Réel simplifié",
+  franchise: "Franchise en base",
+  exonere: "Exonéré",
+  hors_champ: "Hors champ",
+  IS: "Impôt sur les sociétés",
+  IR_BIC: "Impôt sur le revenu — BIC",
+  IR_BNC: "Impôt sur le revenu — BNC",
+  IR_BA: "Impôt sur le revenu — BA",
+  autre: "Autre",
   declaration: "Déclaration",
   acompte_1: "Premier acompte",
   acompte_2: "Deuxième acompte",
@@ -159,4 +169,15 @@ export function moneyLabel(value: string | null | undefined) {
   return (
     whole!.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f") + "," + decimal + " €"
   );
+}
+
+export function fiscalAttemptLabel(
+  detail: Pick<FiscalDetail, "timeline">,
+  id: string,
+  version: number | null,
+): string {
+  const entry = detail.timeline.find(
+    (e) => e.event.kind === "attempt" && e.event.id === id,
+  );
+  return `Déclaration ${version ?? "inconnue"}${entry?.event.kind === "attempt" ? ` · ${entry.event.productionReference} · ${new Date(entry.at).toLocaleDateString("fr-FR")}` : ""}`;
 }

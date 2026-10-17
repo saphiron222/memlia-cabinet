@@ -77,16 +77,15 @@ export function recordFilter(
     where.push(
       "r.kind='obligation' AND r.content->'data'->'fiscal' IS NOT NULL AND r.content->'data'->'fiscal' <> 'null'::jsonb",
     );
-  if (query.year) {
-    const year = parameter(query.year);
+  if (query.year || query.property) {
+    const notice = currentNoticePredicate(query, parameter);
+    const period = query.year
+      ? `substring(r.content->'data'->'fiscal'->'period'->>'start',1,4)=${parameter(query.year)}`
+      : "TRUE";
     where.push(
-      `(substring(r.content->'data'->'fiscal'->'period'->>'start',1,4)=${year} OR (r.content->'data'->'fiscal'->'noticeYears') @> jsonb_build_array((${year})::integer))`,
+      `CASE WHEN r.content->'data'->>'nature' IN ('CFE_IFER','TF') THEN EXISTS(SELECT 1 FROM cabinet_fiscal_events e WHERE e.obligation_id=r.id AND e.version<=(r.content->>'version')::integer AND ${notice} AND ${latestNoticePredicate("(r.content->>'version')::integer")}) ELSE (${period} AND ${query.property ? "FALSE" : "TRUE"}) END`,
     );
   }
-  if (query.property)
-    where.push(
-      `(r.content->'data'->'fiscal'->'properties') ? ${parameter(query.property)}`,
-    );
   if (query.month)
     where.push(
       `substring(r.content->'data'->'fiscal'->'period'->>'start',6,2)=${parameter(query.month)}`,
@@ -174,4 +173,24 @@ export function fiscalDocumentPredicate(
   documentId: string,
 ) {
   return `NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
+}
+
+// Grid and original archives use the same current notice and coupled year/property semantics.
+export function currentNoticePredicate(
+  query: Pick<RecordListQuery, "year" | "property">,
+  parameter: (v: unknown) => string,
+): string {
+  const filters = ["e.content->'event'->>'kind'='notice'"];
+  if (query.year)
+    filters.push(
+      `(e.content->'event'->>'year')::integer=${parameter(Number(query.year))}::integer`,
+    );
+  if (query.property)
+    filters.push(
+      `(e.content->'event'->'properties') ? ${parameter(query.property)}`,
+    );
+  return filters.join(" AND ");
+}
+export function latestNoticePredicate(version: string): string {
+  return `NOT EXISTS(SELECT 1 FROM cabinet_fiscal_events newer WHERE newer.obligation_id=e.obligation_id AND newer.content->'event'->>'kind'='notice' AND newer.content->'event'->>'id'=e.content->'event'->>'id' AND newer.version>e.version AND newer.version<=${version})`;
 }

@@ -10,7 +10,7 @@ import {
 } from "@memlia/contracts";
 import { Field, Select, ErrorSummary } from "../../forms";
 import { request, message } from "../../api";
-import { eventLabels, labelValue } from "./labels";
+import { eventLabels, labelValue, fiscalAttemptLabel } from "./labels";
 type Value =
   | string
   | number
@@ -82,6 +82,8 @@ function template(kind: string, detail: FiscalDetail): Record<string, Value> {
     },
     payment: {
       id: crypto.randomUUID(),
+      attemptId: null,
+      declarationVersion: null,
       debtId: null,
       amount: "",
       date,
@@ -411,6 +413,12 @@ export function CommandForm({
         : (labels[key] ?? key);
     if ((key === "kind" && path === "kind") || (key === "id" && path === "id"))
       return null;
+    if (kind === "payment" && key === "declarationVersion")
+      return (
+        <p key={path}>
+          Version de déclaration : {String(v ?? "Rattachement inconnu")}
+        </p>
+      );
     if (key === "policy" && v === null)
       return (
         <Button
@@ -575,7 +583,7 @@ export function CommandForm({
     if (key === "attemptId")
       relation = detail.situation.attempts.map((a) => ({
         id: a.id,
-        title: `Version ${a.declarationVersion} · ${a.id}`,
+        title: fiscalAttemptLabel(detail, a.id, a.declarationVersion),
       }));
     if (key === "debtId")
       relation = detail.timeline
@@ -721,7 +729,19 @@ export function CommandForm({
       >
         {Object.entries(value).map(([key, v]) => (
           <div key={key}>
-            {render(v, key, key, (next) => setValue({ ...value, [key]: next }))}
+            {render(v, key, key, (next) =>
+              setValue({
+                ...value,
+                [key]: next,
+                ...(kind === "payment" && key === "attemptId"
+                  ? {
+                      declarationVersion:
+                        detail.situation.attempts.find((a) => a.id === next)
+                          ?.declarationVersion ?? null,
+                    }
+                  : {}),
+              }),
+            )}
           </div>
         ))}
         <details>

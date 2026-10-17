@@ -12,6 +12,12 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
   await page.getByRole("link", { name: "Dossiers", exact: true }).click();
   await page.getByRole("button", { name: "Créer un dossier" }).click();
   await page.getByLabel("Titre", { exact: true }).fill("Dossier fiscal fictif");
+  await page
+    .getByLabel("Régime de TVA", { exact: true })
+    .selectOption("reel_normal");
+  await page
+    .getByLabel("Régime d’imposition", { exact: true })
+    .selectOption("IS");
   await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
   await page.getByRole("button", { name: "Fermer la fiche" }).click();
   await page.getByRole("link", { name: "Fiscalité", exact: true }).click();
@@ -29,6 +35,18 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
   await expect(
     page.getByRole("heading", { name: "TVA septembre fictive" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Marquer préparée", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Demander l’approbation", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Reprendre la préparation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Approuver localement", exact: true }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Marquer préparée", exact: true })
     .click();
@@ -200,4 +218,172 @@ test("fiscal : créer, préparer, demander et approuver garde dépôt et paiemen
     path: "test-results/task2-fiscal-dark-900.png",
     fullPage: true,
   });
+});
+
+test("review I3 persisted creations inherit only the applicable regime", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Adresse email").fill("fiscal@example.test");
+  await page.getByLabel("Mot de passe").fill("MotDePasseFictif123!");
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  for (const [nature, regime] of [
+    ["TVA", "reel_normal"],
+    ["IS", "IS"],
+    ["DES", null],
+  ] as const) {
+    await page.getByRole("link", { name: "Fiscalité", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Créer une obligation fiscale" })
+      .click();
+    await page
+      .getByLabel("Dossier de l’obligation")
+      .selectOption({ label: "Dossier fiscal fictif" });
+    await page
+      .getByLabel("Nature fiscale", { exact: true })
+      .selectOption(nature);
+    await page.getByLabel("Titre fiscal").fill(`Revue régime ${nature}`);
+    await page.getByLabel("Début de période").fill("2026-09-01");
+    await page.getByLabel("Fin de période").fill("2026-09-30");
+    const saved = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/v1/fiscal") && r.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Enregistrer l’obligation" })
+      .click();
+    const response = await saved;
+    expect(response.status()).toBe(201);
+    const created = await response.json();
+    const persisted = await page.request.get(
+      `/api/v1/fiscal/${created.record.id}`,
+    );
+    expect((await persisted.json()).record.data.fiscal.regime).toBe(regime);
+    await expect(
+      page.getByRole("heading", { name: `Revue régime ${nature}` }),
+    ).toBeVisible();
+    if (nature === "TVA")
+      await expect(
+        page.getByText("Réel normal", { exact: true }),
+      ).toBeVisible();
+  }
+});
+
+test("review I4 UI links a payment to a historical deposit and exposes the link after reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Adresse email").fill("fiscal@example.test");
+  await page.getByLabel("Mot de passe").fill("MotDePasseFictif123!");
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await page.getByRole("link", { name: "Fiscalité", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Revue régime IS", exact: true })
+    .click();
+  for (const version of [1, 2]) {
+    await page
+      .getByRole("button", { name: "Marquer préparée", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Demander l’approbation", exact: true })
+      .click();
+    await page.getByLabel("Motif de décision").fill("Revue fictive");
+    await page
+      .getByRole("button", { name: "Approuver localement", exact: true })
+      .click();
+    await page
+      .getByRole("tab", { name: "Dépôts et retours", exact: true })
+      .click();
+    await page
+      .getByRole("button", {
+        name: "Enregistrer une tentative de dépôt",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByLabel("Destinataires attendus", { exact: true })
+      .fill("DGFiP");
+    await page
+      .getByLabel("Référence de production", { exact: true })
+      .fill(`Production fictive ${version}`);
+    await page
+      .getByRole("group", { name: "Origine de l’observation", exact: true })
+      .getByLabel("Référence externe")
+      .fill(`depot-${version}`);
+    await page
+      .getByRole("button", {
+        name: "Enregistrer l’action fiscale",
+        exact: true,
+      })
+      .click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    if (version === 1) {
+      await page
+        .getByRole("tab", { name: "Vue d’ensemble", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Modifier le montant", exact: true })
+        .click();
+      await page.getByLabel("Montant de la révision").fill("120.00");
+      await page.getByLabel("Motif de l’action").fill("Correction fictive");
+      await page
+        .getByRole("button", {
+          name: "Enregistrer l’action fiscale",
+          exact: true,
+        })
+        .click();
+    }
+  }
+  await page
+    .getByRole("tab", { name: "Dettes et règlements", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Ajouter un règlement", exact: true })
+    .click();
+  await page
+    .getByLabel("Tentative concernée", { exact: true })
+    .selectOption({ index: 1 });
+  await expect(page.getByRole("dialog")).toContainText(
+    "Version de déclaration : 1",
+  );
+  await page.getByLabel("Montant", { exact: true }).fill("100.00");
+  await page.getByLabel("État constaté", { exact: true }).selectOption("order");
+  await page.getByLabel("Motif de l’action").fill("Ordre sur première version");
+  await page
+    .getByRole("group", { name: "Origine de l’observation", exact: true })
+    .getByLabel("Référence externe")
+    .fill("paiement-lie");
+  await page.setViewportSize({ width: 900, height: 900 });
+  await page.screenshot({
+    path: "test-results/task2-fix1-payment-panel.png",
+    fullPage: true,
+  });
+  const saved = page.waitForResponse(
+    (r) => r.url().endsWith("/commands") && r.request().method() === "POST",
+  );
+  await page
+    .getByRole("button", { name: "Enregistrer l’action fiscale", exact: true })
+    .click();
+  const detail = await (await saved).json();
+  const event = detail.timeline.at(-1).event;
+  expect(event.declarationVersion).toBe(1);
+  expect(event.attemptId).toBe(detail.situation.attempts[0].id);
+  expect(detail.situation.paid).toBe("0.00");
+  await page.reload();
+  await page
+    .getByRole("tab", { name: "Dettes et règlements", exact: true })
+    .click();
+  await expect(
+    page
+      .getByText("Déclaration 1 · Production fictive 1", { exact: false })
+      .first(),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/task2-fix1-payment-detail.png",
+    fullPage: true,
+  });
+  await page.getByRole("tab", { name: "Historique", exact: true }).click();
+  await expect(page.getByLabel("Chronologie fiscale")).toContainText(
+    "Déclaration 1 · Production fictive 1",
+  );
 });

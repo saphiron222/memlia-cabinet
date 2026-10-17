@@ -152,7 +152,9 @@ export async function generateFiscal(
             regime:
               input.nature === "TVA"
                 ? dossier.data.vatRegime
-                : dossier.data.incomeTaxRegime,
+                : input.nature === "IS"
+                  ? dossier.data.incomeTaxRegime
+                  : null,
           }),
           now,
           { key, rule: input.rule },

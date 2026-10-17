@@ -86,3 +86,15 @@ Les preuves locales sont les scénarios nommés de `apps/server/test/fiscal.test
 ## Résultats locaux du lot
 
 Le 17 octobre 2026 : contrôle TypeScript/59 sources Twenty/171 exigences/84 routes réussi ; suite générale PGlite **112 PASS, 2 tests PostgreSQL ignorés** (216,57 s). Sur PostgreSQL17 réel : **31 PASS** (21,02 s), couvrant les18scénarios fiscaux,2restaurations,9testsGED/migrations et2exports. Navigateur complet **25 PASS**, puis scénario fiscal enrichi de résolution d’une révision **1 PASS** (23,9 s) sur le dernier formulaire. Build réussi ; avertissement web **589,49 kB** minifié, **168,44 kB** gzip, conservé pour qualification. Aucun de ces résultats locaux ne vaut CI du lot ou validation en cabinet. Les captures et reçus détaillés restent privés.
+
+## Corrections de revue Task2 — round 1
+
+Une demande d’approbation ne rouvre jamais une version approuvée : une révision explicite est requise. Une modification de l’état de préparation invalide la demande en cours ; la décision exige à nouveau une préparation terminée et une demande active. Les droits de préparation et d’approbation restent distincts.
+
+La création manuelle et la génération héritent du régime TVA pour la TVA et du régime d’imposition pour l’IS. Les autres natures, dont DES, ne reçoivent aucun de ces régimes implicitement.
+
+Pour CFE/TF, la grille et le lot TAR choisissent les dernières versions de chaque avis ; les filtres bien **et** année doivent correspondre au même avis courant. Les anciennes versions restent dans l’historique. Les propriétés et années projetées sont recalculées lors d’une correction d’avis. Un lot sans avis sélectionné rend `emptySelection: true` et `complete: false` dans son rapport final ; une sélection effectuée (`selectionComplete`) ne signifie pas que des originaux ont été restitués.
+
+Un événement `payment` peut conserver `attemptId` et `declarationVersion`, tous deux nuls lorsque le rattachement est inconnu. Un rattachement renseigné doit désigner une tentative de la même obligation et sa propre version, y compris une version historique après correction. Les événements anciens sans ces champs se lisent avec des valeurs nulles. Le détail et l’historique restituent le lien ; l’interface affiche référence de dépôt, version de déclaration et date. Ce lien ne prouve ni acceptation ni débit et ne change pas les règles de calcul du paiement acquis.
+
+Réception locale du round 1, 17 octobre 2026 : suites fiscalité/export **23 PASS sur PGlite** et **23 PASS sur PostgreSQL17**, puis complément de génération et rôles **2 PASS sur chaque base** ; navigateur fiscal **3 PASS** ; contrôle et build réussis. Bundle actuel **590,99 kB** minifié / **168,84 kB** gzip (advisory existant conservé). Contre-revue et CI du candidat restent à effectuer par le contrôleur.

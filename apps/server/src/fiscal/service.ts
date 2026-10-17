@@ -277,12 +277,14 @@ export async function commandFiscal(
     data.dueDate = event.observed ?? event.campaignDate;
   }
   if (event.kind === "notice" && data.fiscal) {
+    const notices = [
+      ...detail.situation.notices.filter((n) => n.id !== event.id),
+      event,
+    ];
     data.fiscal = {
       ...data.fiscal,
-      noticeYears: [...new Set([...data.fiscal.noticeYears, event.year])],
-      properties: [
-        ...new Set([...data.fiscal.properties, ...event.properties]),
-      ],
+      noticeYears: [...new Set(notices.map((n) => n.year))],
+      properties: [...new Set(notices.flatMap((n) => n.properties))],
     };
   }
   if (event.kind === "link_task" && data.fiscal)
@@ -561,11 +563,45 @@ export async function commandFiscal(
               );
           }
         }
+        if (event.kind === "payment") {
+          const attempt = situation.attempts.find(
+            (a) => a.id === event.attemptId,
+          );
+          if (
+            (event.attemptId !== null &&
+              (!attempt ||
+                attempt.declarationVersion !== event.declarationVersion)) ||
+            (event.attemptId === null && event.declarationVersion !== null)
+          )
+            fail(
+              400,
+              "INVALID_PAYMENT_ATTEMPT",
+              "Choisir une tentative de cette obligation et sa version ; laisser le rattachement inconnu si la source ne le précise pas.",
+            );
+        }
         if (event.kind === "preparation" && situation.approval === "approved")
           fail(
             409,
             "REVISION_REQUIRED",
             "Créer une révision de la déclaration approuvée.",
+          );
+        if (
+          event.kind === "approval_request" &&
+          situation.approval === "approved"
+        )
+          fail(
+            409,
+            "REVISION_REQUIRED",
+            "Créer une révision de la déclaration approuvée.",
+          );
+        if (
+          event.kind === "approval_request" &&
+          situation.approval === "requested"
+        )
+          fail(
+            409,
+            "APPROVAL_ALREADY_REQUESTED",
+            "La demande d’approbation est déjà en cours.",
           );
         if (
           event.kind === "approval_request" &&
@@ -576,7 +612,11 @@ export async function commandFiscal(
             "NOT_PREPARED",
             "Terminer la préparation avant de demander une approbation.",
           );
-        if (event.kind === "approval" && situation.approval !== "requested")
+        if (
+          event.kind === "approval" &&
+          (situation.approval !== "requested" ||
+            situation.preparation !== "preparee")
+        )
           fail(
             409,
             "APPROVAL_NOT_REQUESTED",

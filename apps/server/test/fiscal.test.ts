@@ -94,8 +94,8 @@ async function startFiscal(nature = "IS", amount: string | null = "100.00") {
     title: `${nature} fictif`,
     nature,
     period: {
-      start: "2025-07-01",
-      end: "2026-06-30",
+      start: nature === "RCM_2777" ? "2026-09-01" : "2025-07-01",
+      end: nature === "RCM_2777" ? "2026-09-30" : "2026-06-30",
       campaign: "2026",
       subtype: "solde",
     },
@@ -109,7 +109,7 @@ async function startFiscal(nature = "IS", amount: string | null = "100.00") {
     get detail() {
       return detail;
     },
-    async command(event: Record<string, unknown>) {
+    async command(event: Record<string, unknown>, token = f.cookie) {
       const response = await f.request(
         "POST",
         `/fiscal/${detail.record.id}/commands`,
@@ -118,6 +118,7 @@ async function startFiscal(nature = "IS", amount: string | null = "100.00") {
           expectedVersion: detail.record.version,
           event,
         },
+        token,
       );
       expect(response.statusCode, response.body).toBe(200);
       detail = response.json();
@@ -739,6 +740,7 @@ test("occurrences follow dossier frequency and fiscal year, regenerate stably, f
         ...p.data,
         vatRegime: "reel_normal",
         vatFrequency: "trimestrielle",
+        incomeTaxRegime: "IS",
         financialYearEnd: "2026-06-30",
       },
     },
@@ -839,6 +841,35 @@ test("occurrences follow dossier frequency and fiscal year, regenerate stably, f
         r.data.fiscal.period.subtype === "solde",
     ).data.fiscal.period.start,
   ).toBe("2025-07-01");
+  for (const [nature, regime] of [
+    ["TVA", "reel_normal"],
+    ["IS", "IS"],
+    ["DES", null],
+  ] as const) {
+    if (nature === "DES") {
+      const generatedDes = await f.request("POST", "/fiscal/generate", {
+        ...input,
+        operationId: operationId(),
+        nature,
+      });
+      expect(generatedDes.statusCode, generatedDes.body).toBe(200);
+    }
+    const persisted = (
+      await f.request("GET", `/fiscal?nature=${nature}&dossierId=${p.id}`)
+    ).json();
+    expect(persisted.items.length).toBeGreaterThan(0);
+    expect(
+      persisted.items
+        .filter(
+          (r: { data: { fiscal: { occurrenceKey: string | null } } }) =>
+            r.data.fiscal.occurrenceKey !== null,
+        )
+        .every(
+          (r: { data: { fiscal: { regime: string | null } } }) =>
+            r.data.fiscal.regime === regime,
+        ),
+    ).toBe(true);
+  }
 });
 test("DSN establishment/month/recipient and DES manual evidence keep production and deadlines distinct", async () => {
   const s = await startFiscal();
@@ -1626,3 +1657,285 @@ test("cabinet shutdown aborts a paused original download and preserves its durab
   expect(retry.statusCode).toBe(200);
   expect(retry.body).toContain('"complete":true');
 }, 15000);
+
+test("review I1 approval cannot reopen an approved version and a changed preparation invalidates a pending request across distinct roles", async () => {
+  const s = await startFiscal();
+  const password = "MotDePasseFictif123!";
+  const user = (
+    await f.request("POST", "/users", {
+      operationId: operationId(),
+      name: "Préparateur revue",
+      email: "review-prep@example.test",
+      password,
+      permissions: ["read", "update"].map((action) => ({
+        action,
+        kind: "*",
+        dossierId: null,
+      })),
+    })
+  ).json();
+  const login = await f.request(
+    "POST",
+    "/login",
+    { email: user.email, password },
+    "",
+  );
+  const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+  async function prepare(event: Record<string, unknown>) {
+    const detail = (
+      await f.request("GET", `/fiscal/${s.detail.record.id}`)
+    ).json();
+    return f.request(
+      "POST",
+      `/fiscal/${s.detail.record.id}/commands`,
+      {
+        operationId: operationId(),
+        expectedVersion: detail.record.version,
+        event,
+      },
+      cookie,
+    );
+  }
+  await s.approve();
+  expect((await prepare({ kind: "approval_request" })).statusCode).toBe(409);
+  expect(
+    (await prepare({ kind: "preparation", state: "a_preparer" })).statusCode,
+  ).toBe(409);
+  await s.command({
+    kind: "revision",
+    amount: "110.00",
+    reason: "Correction explicite",
+  });
+  await s.command({ kind: "preparation", state: "preparee" }, cookie);
+  await s.command({ kind: "approval_request" }, cookie);
+  await s.command({ kind: "preparation", state: "a_preparer" }, cookie);
+  expect(s.detail.situation.approval).toBe("not_requested");
+  const refused = await f.request(
+    "POST",
+    `/fiscal/${s.detail.record.id}/commands`,
+    {
+      operationId: operationId(),
+      expectedVersion: s.detail.record.version,
+      event: {
+        kind: "approval",
+        decision: "approved",
+        reason: "Demande devenue caduque",
+      },
+    },
+  );
+  expect(refused.statusCode).toBe(409);
+  await s.approve();
+  expect(s.detail.situation.approval).toBe("approved");
+  expect(s.detail.situation.declarationVersion).toBe(2);
+});
+
+test("review I2 current notice filters retain history but match property and year on the same current notice", async () => {
+  const s = await startFiscal("TF");
+  const id = operationId();
+  const notice = {
+    kind: "notice",
+    id,
+    reference: "avis-corrige",
+    role: "principal",
+    year: 2025,
+    establishmentId: null,
+    properties: ["Bien A"],
+    municipalities: [],
+    amount: "100.00",
+    dueDate: null,
+    directDebit: "unknown",
+    originalId: null,
+    suiteIds: [],
+    expectedSuites: 0,
+    provenance,
+  };
+  await s.command(notice);
+  await s.command({
+    ...notice,
+    year: 2026,
+    properties: ["Bien B"],
+    provenance: { ...provenance, version: "2" },
+  });
+  await s.command({
+    ...notice,
+    id: operationId(),
+    reference: "autre-avis",
+    year: 2027,
+    properties: ["Bien C"],
+    provenance: { ...provenance, reference: "autre-avis" },
+  });
+  expect(s.detail.record.data.fiscal.properties.sort()).toEqual([
+    "Bien B",
+    "Bien C",
+  ]);
+  expect(s.detail.record.data.fiscal.noticeYears.sort()).toEqual([2026, 2027]);
+  for (const [query, total] of [
+    ["property=Bien%20A", 0],
+    ["year=2025", 0],
+    ["year=2026&property=Bien%20C", 0],
+    ["year=2026&property=Bien%20B", 1],
+    ["year=2027&property=Bien%20C", 1],
+  ] as const) {
+    expect(
+      (await f.request("GET", `/fiscal?nature=TF&${query}`)).json().total,
+      query,
+    ).toBe(total);
+  }
+  expect(
+    s.detail.timeline.filter(
+      (e: { event: { kind: string } }) => e.event.kind === "notice",
+    ),
+  ).toHaveLength(3);
+  const exportId = await completeExport({
+    originals: true,
+    query: {
+      kind: "obligation",
+      nature: "TF",
+      year: "2026",
+      property: "Bien B",
+    },
+  });
+  const archive = await f.request(
+    "GET",
+    `/administration/exports/${exportId}/originals.tar`,
+  );
+  expect(archive.statusCode).toBe(200);
+  expect(archive.rawPayload.toString()).toContain('"reference":"avis-corrige"');
+  expect(archive.rawPayload.toString()).not.toContain(
+    '"reference":"autre-avis"',
+  );
+  expect(archive.rawPayload.toString()).toContain(
+    '"missing":1,"complete":false',
+  );
+  const emptyId = await completeExport({
+    originals: true,
+    query: { kind: "obligation", nature: "TF", property: "Bien A" },
+  });
+  const empty = await f.request(
+    "GET",
+    `/administration/exports/${emptyId}/originals.tar`,
+  );
+  expect(empty.rawPayload.toString()).toContain('"emptySelection":true');
+  expect(empty.rawPayload.toString()).toContain('"complete":false');
+});
+
+test("review I4 payments identify their own historical attempt and version without implying acceptance or debit", async () => {
+  const s = await startFiscal("RCM_2777");
+  await s.approve();
+  const first = operationId(),
+    second = operationId();
+  await s.command({
+    kind: "attempt",
+    id: first,
+    declarationVersion: 1,
+    recipients: ["DGFiP"],
+    productionReference: "premier",
+    provenance,
+  });
+  await s.command({
+    kind: "revision",
+    amount: "120.00",
+    reason: "Nouvelle correction",
+  });
+  await s.approve();
+  await s.command({
+    kind: "attempt",
+    id: second,
+    declarationVersion: 2,
+    recipients: ["DGFiP"],
+    productionReference: "second",
+    provenance: { ...provenance, reference: "second" },
+  });
+  const payment = {
+    kind: "payment",
+    id: operationId(),
+    attemptId: first,
+    declarationVersion: 1,
+    amount: "100.00",
+    date: "2026-10-17",
+    state: "order",
+    reason: "Ordre de la première version",
+    provenance: { ...provenance, reference: "paiement-original" },
+  };
+  await s.command(payment);
+  const event = s.detail.timeline.at(-1).event;
+  expect(event.attemptId).toBe(first);
+  expect(event.declarationVersion).toBe(1);
+  expect(s.detail.situation.paid).toBe("0.00");
+  expect(s.detail.situation.applicableAcceptedVersion).toBeNull();
+  const foreign = (
+    await f.request("POST", "/fiscal", {
+      operationId: operationId(),
+      dossierId: s.parent.id,
+      title: "Autre obligation",
+      nature: "IS",
+      period: {
+        start: "2026-01-01",
+        end: "2026-12-31",
+        campaign: "2026",
+        subtype: "solde",
+      },
+    })
+  ).json();
+  let foreignVersion = foreign.record.version;
+  const foreignAttempt = operationId();
+  for (const event of [
+    { kind: "preparation", state: "preparee" },
+    { kind: "approval_request" },
+    { kind: "approval", decision: "approved", reason: "Validation fictive" },
+    {
+      kind: "attempt",
+      id: foreignAttempt,
+      declarationVersion: 1,
+      recipients: ["DGFiP"],
+      productionReference: "Autre déclaration",
+      provenance,
+    },
+  ]) {
+    const response = await f.request(
+      "POST",
+      `/fiscal/${foreign.record.id}/commands`,
+      { operationId: operationId(), expectedVersion: foreignVersion, event },
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    foreignVersion = response.json().record.version;
+  }
+  for (const invalid of [
+    { attemptId: first, declarationVersion: 2 },
+    { attemptId: foreignAttempt, declarationVersion: 1 },
+  ]) {
+    const response = await f.request(
+      "POST",
+      `/fiscal/${s.detail.record.id}/commands`,
+      {
+        operationId: operationId(),
+        expectedVersion: s.detail.record.version,
+        event: {
+          ...payment,
+          ...invalid,
+          id: operationId(),
+          provenance: { ...provenance, reference: operationId() },
+        },
+      },
+    );
+    expect(response.statusCode, response.body).toBe(400);
+  }
+  await s.command({
+    ...payment,
+    id: operationId(),
+    attemptId: null,
+    declarationVersion: null,
+    state: "unknown",
+    amount: null,
+    provenance: { ...provenance, reference: "origine-inconnue" },
+  });
+  await f.restart();
+  const restored = (
+    await f.request("GET", `/fiscal/${s.detail.record.id}`)
+  ).json();
+  expect(
+    restored.timeline.find(
+      (e: { event: { id?: string } }) => e.event.id === payment.id,
+    ).event,
+  ).toMatchObject({ attemptId: first, declarationVersion: 1 });
+});

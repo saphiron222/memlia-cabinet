@@ -81,7 +81,14 @@ export function FiscalCreate({
         confidential,
         financialYearEnd:
           dossier?.kind === "dossier" ? dossier.data.financialYearEnd : null,
-        regime: dossier?.kind === "dossier" ? dossier.data.vatRegime : null,
+        regime:
+          dossier?.kind === "dossier"
+            ? nature === "TVA"
+              ? dossier.data.vatRegime
+              : nature === "IS"
+                ? dossier.data.incomeTaxRegime
+                : null
+            : null,
       });
       onCreated(
         await request("/fiscal", FiscalDetailSchema, signal, {

@@ -1,3 +1,7 @@
+import {
+  currentNoticePredicate,
+  latestNoticePredicate,
+} from "../records/query.js";
 import { Readable } from "node:stream";
 import { tarFile, originalPath } from "../fiscal/tar.js";
 import { csvHeader, csvRow } from "../records/csv.js";
@@ -186,23 +190,17 @@ export class Exports {
                 ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
               if (prior.phase === "fiscal" && input.originals) {
                 const params: unknown[] = [input.exportId, prior.after];
-                const filters = ["e.content->'event'->>'kind'='notice'"];
-                if (input.query?.year) {
-                  params.push(Number(input.query.year));
-                  filters.push(
-                    `(e.content->'event'->>'year')::integer=$${params.length}`,
-                  );
-                }
-                if (input.query?.property) {
-                  params.push(input.query.property);
-                  filters.push(
-                    `(e.content->'event'->'properties') ? $${params.length}`,
-                  );
-                }
+                const filters = currentNoticePredicate(
+                  input.query ?? {},
+                  (value) => {
+                    params.push(value);
+                    return "$" + params.length;
+                  },
+                );
                 return (
                   await this.fiscalPage(
                     tx,
-                    `SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer AND ${filters.join(" AND ")} AND NOT EXISTS(SELECT 1 FROM cabinet_fiscal_events newer WHERE newer.obligation_id=e.obligation_id AND newer.content->'event'->>'kind'='notice' AND newer.content->'event'->>'id'=e.content->'event'->>'id' AND newer.version>e.version AND newer.version<=(r.content->>'version')::integer) ORDER BY e.id LIMIT 1000`,
+                    `SELECT e.id,e.content FROM cabinet_fiscal_events e JOIN cabinet_export_rows r ON r.export_id=$1 AND r.kind='record' AND r.id=e.obligation_id WHERE ($2::uuid IS NULL OR e.id>$2::uuid) AND e.version <= (r.content->>'version')::integer AND ${filters} AND ${latestNoticePredicate("(r.content->>'version')::integer")} ORDER BY e.id LIMIT 1000`,
                     params,
                   )
                 ).map((r) => FiscalTimelineEntrySchema.parse(r.content));
@@ -612,6 +610,7 @@ export class Exports {
         let completed = false,
           reportNumber = 0,
           downloaded = 0,
+          selectedNotices = 0,
           missing = 0,
           after: string | null = null;
         try {
@@ -638,6 +637,7 @@ export class Exports {
                 for (const row of rows) {
                   const e = FiscalTimelineEntrySchema.parse(row.content);
                   if (e.event.kind !== "notice") continue;
+                  selectedNotices++;
                   const notice = e.event;
                   const errors = [
                     ...(!notice.originalId ? ["MISSING_ORIGINAL"] : []),
@@ -745,8 +745,9 @@ export class Exports {
               JSON.stringify({
                 downloaded,
                 missing,
-                complete: missing === 0,
+                complete: missing === 0 && selectedNotices > 0,
                 selectionComplete: true,
+                emptySelection: selectedNotices === 0,
                 generatedAt: owner.now().toISOString(),
               }),
             ),

@@ -12,6 +12,7 @@ import { useModuleEnabled } from "../administration/preferences";
 import { CommandPanel } from "./CommandPanel";
 import {
   moneyLabel,
+  fiscalAttemptLabel,
   actionLabels,
   eventLabels,
   labelValue,
@@ -302,7 +303,7 @@ export function FiscalDetail({
             </div>
             <div>
               <dt>Régime fiscal</dt>
-              <dd>{p.regime ?? "Non renseigné"}</dd>
+              <dd>{p.regime ? labelValue(p.regime) : "Non renseigné"}</dd>
             </div>
             <div>
               <dt>Clôture</dt>
@@ -348,7 +349,7 @@ export function FiscalDetail({
           </ul>
           <p>
             Clôture : {p.financialYearEnd ?? "inconnue"} · Régime :{" "}
-            {p.regime ?? "inconnu"}
+            {p.regime ? labelValue(p.regime) : "inconnu"}
           </p>
         </section>
         <section hidden={tab !== "sources"}>
@@ -398,8 +399,20 @@ export function FiscalDetail({
           <Button
             disabled={
               !can("update") ||
+              s.approval === "approved" ||
+              s.preparation !== "preparee"
+            }
+            onClick={() =>
+              void command({ kind: "preparation", state: "a_preparer" })
+            }
+          >
+            Reprendre la préparation
+          </Button>
+          <Button
+            disabled={
+              !can("update") ||
               s.preparation !== "preparee" ||
-              s.approval !== "not_requested"
+              !["not_requested", "rejected"].includes(s.approval)
             }
             onClick={() => void command({ kind: "approval_request" })}
           >
@@ -546,6 +559,17 @@ export function FiscalDetail({
                       : `${moneyLabel(event.amount)} · ${event.date} · ${labelValue(event.kind === "payment" ? event.state : event.nature)}`}
                   </p>
                   <p>{event.reason}</p>
+                  {event.kind === "payment" && (
+                    <p>
+                      {event.attemptId
+                        ? fiscalAttemptLabel(
+                            detail,
+                            event.attemptId,
+                            event.declarationVersion,
+                          )
+                        : "Tentative et version non renseignées"}
+                    </p>
+                  )}
                   {event.kind === "schedule" && (
                     <ul>
                       {event.instalments.map((i, index) => (
@@ -759,6 +783,17 @@ export function FiscalDetail({
                 <strong>{eventLabels[e.event.kind]}</strong> ·{" "}
                 {new Date(e.at).toLocaleString("fr-FR")} · version {e.version}
                 {"reason" in e.event && <p>{e.event.reason}</p>}
+                {e.event.kind === "payment" && (
+                  <p>
+                    {e.event.attemptId
+                      ? fiscalAttemptLabel(
+                          detail,
+                          e.event.attemptId,
+                          e.event.declarationVersion,
+                        )
+                      : "Tentative et version non renseignées"}
+                  </p>
+                )}
                 {"provenance" in e.event && (
                   <p>
                     {labelValue(e.event.provenance.kind)} ·{" "}

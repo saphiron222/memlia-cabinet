@@ -119,6 +119,11 @@ export function deriveFiscalSituation(
         apurements.set(event.id, event);
         break;
       case "preparation":
+        if (
+          event.state !== result.preparation &&
+          result.approval === "requested"
+        )
+          result.approval = "not_requested";
         result.preparation = event.state;
         break;
       case "approval_request":
