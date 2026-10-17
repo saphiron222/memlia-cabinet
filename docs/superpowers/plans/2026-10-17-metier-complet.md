@@ -131,7 +131,7 @@ Préparation technique : `docs/recherche-suivi-fiscal.md` (campagnes datées, IF
 
 ### Task 7: Modèles Word, génération PDF, lettres et signature
 
-Préparation technique : `docs/recherche-documents-locaux.md` (sources, versions et limites ; aucune proposition n'y vaut preuve d'exécution).
+Préparation technique : `docs/recherche-documents-locaux.md` et `docs/recherche-signature-locale.md` (sources, versions et limites ; aucune proposition n'y vaut preuve d'exécution). L'adaptateur optionnel Documenso v2.20.0 permet de construire une prémisse sur un protocole publié ; il ne choisit ni n'active le prestataire du cabinet.
 
 **Files:** Create `packages/contracts/src/templates.ts`, `apps/server/src/templates/*`, `apps/web/src/features/templates/*`; extend GED for generated outputs; tests `apps/server/test/templates.test.ts`, `tests/e2e/templates.spec.ts`; conversion runtime in `Dockerfile` when needed.
 
@@ -143,6 +143,7 @@ Préparation technique : `docs/recherche-documents-locaux.md` (sources, versions
 - [ ] Implement DOCX import/variables/form/mission lines/conditions, versioned template and document generation/preview/GED. Generic models need not trigger signature; keep exact original and generated artifacts.
 - [ ] RED then GREEN: change a dossier field after preview; send is blocked as stale until regenerated. Editing a frozen letter creates a new version, never mutates the document already sent.
 - [ ] Implement signature provider contract and deterministic fixture transitions/proof import, explicit sender/recipient/approval, partial batch results and idempotent callbacks with authenticated verification; real provider connection awaits final access matrix. Browser flow, check/test/build, commit and report.
+- [ ] Exercise the published optional Documenso v2.20.0 protocol against a local HTTP fixture, disabled by default: multipart preparation, provider-original retrieval, explicit approval of that immutable PDF version before separate distribution, status and evidence retrieval. Preserve both generated and provider-normalized artifacts and their hashes; a transformation invalidates the previous approval. Authenticate the actual static-secret webhook and reconcile authenticated provider state, without inventing an HMAC or a stable event identifier. Only `COMPLETED` plus the required matching artifacts can complete the local signature proof; a downloadable PDF/certificate or an individual signature is insufficient. Lost create/distribute responses remain uncertain until reconciliation or human resolution, never a blind retry. No provider installation, real signature or legal qualification is implied.
 
 ### Task 8: Échanges fiscaux et sociaux, habilitations et formalités
 
