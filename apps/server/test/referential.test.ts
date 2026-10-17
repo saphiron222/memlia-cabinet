@@ -459,3 +459,244 @@ test("migration explicite paginée : plus de 200 valeurs, version figée et reno
     ).statusCode,
   ).toBe(409);
 });
+
+test.each(["simulate", "propose"] as const)(
+  "rejeu %s : périmètre historique et rattachement courant protégés après retrait",
+  async (route) => {
+    const { createServer } = await import("node:http");
+    let calls = 0;
+    const server = createServer((_req, res) => {
+      calls++;
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          results: [
+            { siren: "001234567", nom_complet: "Détection retrait fictive" },
+          ],
+          page: 1,
+          total_results: 1,
+        }),
+      );
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    try {
+      f = await fixture(undefined, {
+        companySearchOrigin: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
+      });
+      await f.setup();
+      const role = (
+        await f.request("POST", "/administration/roles", {
+          operationId: operationId(),
+          name: "Lecture révocable",
+          order: 1,
+          permissions: [{ action: "read", kind: "*" }],
+        })
+      ).json();
+      const u = (
+        await f.request("POST", "/users", {
+          operationId: operationId(),
+          name: "Détecteur fictif",
+          email: "detecteur@example.test",
+          password: "MotDePasseFictif123!",
+          permissions: ["manage_users", "create", "update"].map((action) => ({
+            action,
+            kind: "*",
+          })),
+        })
+      ).json();
+      expect(
+        (
+          await f.request("PUT", `/administration/users/${u.id}`, {
+            operationId: operationId(),
+            expectedVersion: u.version,
+            name: u.name,
+            active: true,
+            permissions: u.permissions,
+            roleIds: [role.id],
+          })
+        ).statusCode,
+      ).toBe(200);
+      const login = await f.request(
+        "POST",
+        "/login",
+        { email: u.email, password: "MotDePasseFictif123!" },
+        "",
+      );
+      const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+      const command =
+        route === "simulate"
+          ? {
+              operationId: operationId(),
+              sourceId: "retrait-fictif",
+              sourceVersion: "1",
+              automatic: true,
+              values: {
+                title: "Détection retrait fictive",
+                siren: "001234567",
+              },
+            }
+          : {
+              operationId: operationId(),
+              candidateId: (
+                await f.request(
+                  "GET",
+                  "/administration/companies/search?q=fictif",
+                  undefined,
+                  cookie,
+                )
+              ).json().items[0].candidateId,
+            };
+      const path =
+        route === "simulate"
+          ? "/administration/detections/simulate"
+          : "/administration/companies/propose";
+      const first = await f.request("POST", path, command, cookie);
+      expect(first.statusCode).toBe(route === "simulate" ? 201 : 200);
+      const historical = first.json();
+      const linked =
+        route === "simulate"
+          ? historical
+          : (
+              await f.request(
+                "POST",
+                `/administration/detections/${historical.id}/decide`,
+                {
+                  operationId: operationId(),
+                  expectedVersion: historical.version,
+                  decision: "create",
+                  choices: {},
+                },
+              )
+            ).json();
+      expect(linked.dossierId).toBeTruthy();
+      // Historical result linked for simulate; propose's old result was unlinked.
+      expect((await f.request("POST", path, command, cookie)).json()).toEqual(
+        historical,
+      );
+      const record = (
+        await f.request("GET", `/records/${linked.dossierId}`)
+      ).json();
+      const { id, version, createdAt, updatedAt, ...content } = record;
+      expect(
+        (
+          await f.request("PUT", `/records/${id}`, {
+            operationId: operationId(),
+            expectedVersion: version,
+            record: { ...content, confidential: true },
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(
+        (
+          await f.request(
+            "GET",
+            `/administration/detections/${historical.id}/preview`,
+            undefined,
+            cookie,
+          )
+        ).statusCode,
+      ).toBe(404);
+      expect((await f.request("POST", path, command, cookie)).statusCode).toBe(
+        404,
+      );
+      expect(
+        (
+          await f.request(
+            "POST",
+            path,
+            { ...command, operationId: operationId() },
+            cookie,
+          )
+        ).statusCode,
+      ).toBe(404);
+      expect(
+        (
+          await f.request("PUT", `/records/${id}`, {
+            operationId: operationId(),
+            expectedVersion: version + 1,
+            record: content,
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect((await f.request("POST", path, command, cookie)).json()).toEqual(
+        historical,
+      );
+      expect(
+        (
+          await f.request("PUT", `/administration/roles/${role.id}`, {
+            operationId: operationId(),
+            expectedVersion: role.version,
+            name: role.name,
+            order: 1,
+            permissions: [],
+          })
+        ).statusCode,
+      ).toBe(200);
+      await f.restart();
+      const denied = await f.request("POST", path, command, cookie);
+      expect(denied.statusCode).toBe(404);
+      expect(denied.body).not.toContain(id);
+      // Restore only a scoped assignment, then withdraw that assignment too.
+      expect(
+        (
+          await f.request("PUT", `/administration/roles/${role.id}`, {
+            operationId: operationId(),
+            expectedVersion: role.version + 1,
+            name: role.name,
+            order: 1,
+            permissions: [{ action: "read", kind: "*" }],
+          })
+        ).statusCode,
+      ).toBe(200);
+      expect(
+        (
+          await f.request("PUT", `/administration/users/${u.id}`, {
+            operationId: operationId(),
+            expectedVersion: u.version + 1,
+            name: u.name,
+            active: true,
+            permissions: u.permissions,
+            roleIds: [],
+          })
+        ).statusCode,
+      ).toBe(200);
+      const scope = {
+        dossierId: id,
+        expectedVersion: 1,
+        subject: { kind: "user", id: u.id },
+        roleId: role.id,
+        remove: false,
+      };
+      expect(
+        (
+          await f.request("POST", "/administration/assignments", {
+            operationId: operationId(),
+            rows: [scope],
+          })
+        ).json().items[0].status,
+      ).toBe("assigned");
+      expect((await f.request("POST", path, command, cookie)).json()).toEqual(
+        historical,
+      );
+      expect(
+        (
+          await f.request("POST", "/administration/assignments", {
+            operationId: operationId(),
+            rows: [{ ...scope, expectedVersion: 2, remove: true }],
+          })
+        ).json().items[0].status,
+      ).toBe("removed");
+      expect((await f.request("POST", path, command, cookie)).statusCode).toBe(
+        404,
+      );
+      expect(
+        (await f.request("GET", "/records?kind=dossier")).json().total,
+      ).toBe(1);
+      expect(calls).toBe(route === "propose" ? 1 : 0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  },
+);

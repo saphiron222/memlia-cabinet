@@ -8,6 +8,7 @@ import { ReferentialFields } from "./features/referential/ReferentialFields";
 import {
   CustomValues,
   useCustomFields,
+  CustomFieldsStatus,
 } from "./features/referential/CustomValues";
 import {
   useRecordCapabilities,
@@ -69,8 +70,8 @@ export function RecordEditor({
 }) {
   const dossierChoices = useDossierChoices(kind !== "dossier");
   const dossiers = dossierChoices.items;
-  const { fields: customFields, error: customFieldsError } =
-    useCustomFields(kind);
+  const custom = useCustomFields(kind);
+  const customFields = custom.fields;
   const signal = useScope(),
     dialog = useRef<HTMLDialogElement>(null);
   const [saved, setSaved] = useState<CabinetRecord | null>(null),
@@ -377,7 +378,7 @@ export function RecordEditor({
                 <Origins record={saved} />
               </>
             )}
-            <ErrorSummary message={customFieldsError || undefined} />
+            <CustomFieldsStatus state={custom} />
             <fieldset disabled={!editable || busy || conflict}>
               <Field
                 name="title"

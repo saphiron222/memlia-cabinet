@@ -751,3 +751,356 @@ test("reprise CSV : booléens personnalisés et frontière explicite entre insta
       .data.customFields[field.id],
   ).toBe(false);
 });
+
+test("identités importées : lignes mal formées isolées avant SQL UUID, lignes valides conservées", async () => {
+  f = await fixture();
+  await f.setup();
+  const { dossier } = await import("./helpers.js");
+  const d = (await f.request("POST", "/records", dossier())).json();
+  const role = (
+    await f.request("POST", "/administration/roles", {
+      operationId: operationId(),
+      name: "Lecture",
+      order: 1,
+      permissions: [{ action: "read", kind: "dossier" }],
+    })
+  ).json();
+  const user = (
+    await f.request("POST", "/users", {
+      operationId: operationId(),
+      name: "Sujet fictif",
+      email: "identite@example.test",
+      password: "MotDePasseFictif123!",
+      permissions: [],
+    })
+  ).json();
+  const invalid = "-".repeat(36);
+  for (const kind of ["dossier", "contact", "assignment"] as const) {
+    const mapping =
+      kind === "assignment"
+        ? {
+            "0": "dossierId",
+            "1": "subjectKind",
+            "2": "subjectId",
+            "3": "roleId",
+          }
+        : {
+            "0": "title",
+            "1": kind === "dossier" ? "recordId" : "dossierId",
+            "2": "relatedDossierIds",
+          };
+    if (kind === "dossier") delete (mapping as Record<string, string>)["2"];
+    const data =
+      kind === "assignment"
+        ? [
+            [d.id, "user", user.id, role.id],
+            [invalid, "user", user.id, role.id],
+            [d.id, "user", invalid, role.id],
+            [d.id, "user", user.id, invalid],
+          ]
+        : kind === "dossier"
+          ? [
+              ["Valide sans cible", ""],
+              ["Identité invalide", invalid],
+              ["Autre invalide", "a".repeat(36)],
+            ]
+          : [
+              ["Contact valide", d.id, "[]"],
+              ["Parent invalide", invalid, "[]"],
+              ["Lien invalide", d.id, JSON.stringify([invalid])],
+            ];
+    const bytes = [
+      Object.keys(mapping).join(";"),
+      ...data.map((row) =>
+        row.map((v) => '"' + v.replaceAll('"', '""') + '"').join(";"),
+      ),
+    ].join("\n");
+    const response = await f.request("POST", "/imports/preview", {
+      operationId: operationId(),
+      filename: "identites.csv",
+      format: "csv",
+      kind,
+      mapping,
+      bytes: Buffer.from(bytes).toString("base64"),
+    });
+    expect(response.statusCode).toBe(201);
+    const rows = (
+      await f.request("GET", `/imports/${response.json().id}/rows`)
+    ).json().items;
+    expect(rows[0].errors).toEqual([]);
+    for (const row of rows.slice(1))
+      expect(row.errors.length).toBeGreaterThan(0);
+    expect((await commitSelection(response.json(), [rows[0]]))[0].status).toBe(
+      kind === "assignment" ? "assigned" : "created",
+    );
+    expect(
+      (await f.request("GET", `/imports/${response.json().id}/report.csv`))
+        .body,
+    ).toContain("refused");
+  }
+  const custom = await f.request("POST", "/imports/preview", {
+    operationId: operationId(),
+    filename: "custom.csv",
+    format: "csv",
+    kind: "dossier",
+    mapping: { "0": "title", "1": "custom." + invalid },
+    bytes: Buffer.from("Nom;Valeur\nFictive;oui").toString("base64"),
+  });
+  expect(custom.statusCode).toBe(201);
+  expect(
+    (await f.request("GET", `/imports/${custom.json().id}/rows`)).json()
+      .items[0].errors.length,
+  ).toBeGreaterThan(0);
+});
+
+test("affectations d’un même dossier : deux sujets retenus sans conflit interne", async () => {
+  f = await fixture();
+  await f.setup();
+  const { dossier } = await import("./helpers.js");
+  const d = (await f.request("POST", "/records", dossier())).json();
+  const role = (
+    await f.request("POST", "/administration/roles", {
+      operationId: operationId(),
+      name: "Lecteurs",
+      order: 1,
+      permissions: [{ action: "read", kind: "dossier" }],
+    })
+  ).json();
+  const subjects = [];
+  for (const name of ["Équipe A", "Équipe B"])
+    subjects.push(
+      (
+        await f.request("POST", "/administration/groups", {
+          operationId: operationId(),
+          kind: "team",
+          name,
+          memberIds: [],
+        })
+      ).json(),
+    );
+  const p = (
+    await f.request("POST", "/imports/preview", {
+      operationId: operationId(),
+      filename: "affectations.csv",
+      format: "csv",
+      kind: "assignment",
+      mapping: {
+        "0": "dossierId",
+        "1": "subjectKind",
+        "2": "subjectId",
+        "3": "roleId",
+      },
+      bytes: Buffer.from(
+        "Dossier;Type;Sujet;Rôle\n" +
+          subjects
+            .map((s) => [d.id, "team", s.id, role.id].join(";"))
+            .join("\n"),
+      ).toString("base64"),
+    })
+  ).json();
+  const rows = (await f.request("GET", `/imports/${p.id}/rows`)).json().items;
+  expect(rows.map((r: any) => r.assignment.expectedVersion)).toEqual([1, 1]);
+  expect((await commitSelection(p, rows)).map((r: any) => r.status)).toEqual([
+    "assigned",
+    "assigned",
+  ]);
+  expect(
+    (await f.request("GET", `/administration/assignments/${d.id}`)).json()
+      .items,
+  ).toHaveLength(2);
+});
+
+test.each([false, true])(
+  "affectations multi-lots : reprise durable et édition extérieure=%s",
+  async (externalEdit) => {
+    f = await fixture();
+    const actor = await f.setup();
+    const { dossier } = await import("./helpers.js");
+    const d = (await f.request("POST", "/records", dossier())).json();
+    const role = (
+      await f.request("POST", "/administration/roles", {
+        operationId: operationId(),
+        name: "Lecture import",
+        order: 1,
+        permissions: [{ action: "read", kind: "dossier" }],
+      })
+    ).json();
+    const subjects: string[] = [];
+    for (let i = 0; i < 201; i++) {
+      const response = await f.request("POST", "/administration/groups", {
+        operationId: operationId(),
+        kind: "team",
+        name: `Équipe fictive ${i}`,
+        memberIds: [],
+      });
+      expect(response.statusCode).toBe(201);
+      subjects.push(response.json().id);
+    }
+    const initial = await f.request("POST", "/administration/assignments", {
+      operationId: operationId(),
+      rows: [
+        {
+          dossierId: d.id,
+          expectedVersion: 1,
+          subject: { kind: "team", id: subjects[0] },
+          roleId: role.id,
+          remove: false,
+        },
+      ],
+    });
+    expect(initial.statusCode, initial.body).toBe(200);
+    expect(initial.json().items[0].status).toBe("assigned");
+    const p = (
+      await f.request("POST", "/imports/preview", {
+        operationId: operationId(),
+        filename: "equipes.csv",
+        format: "csv",
+        kind: "assignment",
+        mapping: {
+          "0": "dossierId",
+          "1": "subjectKind",
+          "2": "subjectId",
+          "3": "roleId",
+          "4": "remove",
+        },
+        bytes: Buffer.from(
+          "Dossier;Type;Sujet;Rôle;Retrait\n" +
+            subjects
+              .map((id, i) =>
+                [d.id, "team", id, role.id, i === 0 ? "oui" : "non"].join(";"),
+              )
+              .join("\n"),
+        ).toString("base64"),
+      })
+    ).json();
+    const lines: any[] = [];
+    for (let offset = 0; offset < 201; offset += 100)
+      lines.push(
+        ...(
+          await f.request("GET", `/imports/${p.id}/rows?offset=${offset}`)
+        ).json().items,
+      );
+    expect(lines).toHaveLength(201);
+    expect(
+      lines.every(
+        (r) => r.errors.length === 0 && r.assignment.expectedVersion === 2,
+      ),
+    ).toBe(true);
+    let version = p.version;
+    for (let offset = 0; offset < 201; offset += 100) {
+      const selected = await f.request("PUT", `/imports/${p.id}/selection`, {
+        operationId: operationId(),
+        expectedVersion: version,
+        rows: lines
+          .slice(offset, offset + 100)
+          .map((r) => ({ lineId: r.lineId, accepted: true })),
+      });
+      expect(selected.statusCode).toBe(200);
+      version = selected.json().version;
+    }
+    const command = {
+      operationId: operationId(),
+      expectedVersion: version,
+      sourceHash: p.sourceHash,
+      lineIds: lines.map((r) => r.lineId),
+    };
+    const { JobRunner } = await import("../src/jobs/runner.js"),
+      { Imports } = await import("../src/imports/service.js"),
+      { applyAssignments } =
+        await import("../src/administration/assignments.js");
+    let processed = 0;
+    await f.maintainDatabase(async (db) => {
+      const first = new JobRunner(db),
+        service = new Imports(db, first, () => new Date());
+      const queued = await db.transaction((tx) =>
+        service.commit(tx, actor, p.id, command),
+      );
+      const execution = first.tick();
+      // Public progress/stop contract: allow a real committed batch, then drain.
+      for (let n = 0; n < 100; n++) {
+        const state = await db.transaction((tx) =>
+          service.get(tx, actor, p.id),
+        );
+        if (state.processed >= 100) break;
+      }
+      await first.pause();
+      await execution;
+      const stopped = await db.transaction((tx) =>
+        service.get(tx, actor, p.id),
+      );
+      processed = stopped.processed;
+      expect(processed).toBeGreaterThanOrEqual(100);
+      expect(processed).toBeLessThan(201);
+      const done = await db.transaction((tx) =>
+        service.rows(tx, actor, p.id, 0),
+      );
+      expect(done.items[0]!.status).toBe("removed");
+      expect(done.items.slice(1).every((r) => r.status === "assigned")).toBe(
+        true,
+      );
+      expect(
+        (await db.transaction((tx) => first.get(tx, queued.jobId!))).job.state,
+      ).toBe("queued");
+      if (externalEdit) {
+        const changed = await db.transaction((tx) =>
+          applyAssignments(
+            tx,
+            actor,
+            {
+              operationId: operationId(),
+              rows: [
+                {
+                  dossierId: d.id,
+                  expectedVersion: 2 + processed,
+                  subject: { kind: "team", id: subjects[0]! },
+                  roleId: role.id,
+                  remove: false,
+                },
+              ],
+            },
+            new Date(),
+          ),
+        );
+        expect(changed.items[0]!.status).toBe("assigned");
+      }
+      await first.stop();
+    });
+    // New app/DB lifecycle has opened; paused runner state remains durable.
+    await f.restart();
+    await f.maintainDatabase(async (db) => {
+      const second = new JobRunner(db),
+        service = new Imports(db, second, () => new Date());
+      await second.resume();
+      await second.tick();
+      expect(
+        (await db.transaction((tx) => service.get(tx, actor, p.id))).state,
+      ).toBe("completed");
+      await second.stop();
+    });
+    const results: any[] = [];
+    for (let offset = 0; offset < 201; offset += 100)
+      results.push(
+        ...(
+          await f.request("GET", `/imports/${p.id}/rows?offset=${offset}`)
+        ).json().items,
+      );
+    expect(
+      results
+        .slice(processed)
+        .every((r) => r.status === (externalEdit ? "refused" : "assigned")),
+    ).toBe(true);
+    if (externalEdit) expect(results.at(-1).errors[0]).toContain("CONFLICT");
+    const assignments = (
+      await f.request("GET", `/administration/assignments/${d.id}`)
+    ).json();
+    expect(assignments.version).toBe(externalEdit ? 3 + processed : 203);
+    expect(assignments.items).toHaveLength(externalEdit ? processed : 200);
+    expect(
+      (await f.request("POST", `/imports/${p.id}/commit`, command)).statusCode,
+    ).toBe(202);
+    expect(
+      (await f.request("GET", `/administration/assignments/${d.id}`)).json(),
+    ).toEqual(assignments);
+  },
+  60000,
+);

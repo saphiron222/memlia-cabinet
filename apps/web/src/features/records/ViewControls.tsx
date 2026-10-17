@@ -1,10 +1,10 @@
+import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Button } from "@memlia/ui";
-import { z } from "zod";
+import type { CustomField } from "@memlia/contracts";
 import {
   SavedViewSchema,
   SavedViewListSchema,
-  CustomFieldListSchema,
   RecordColumnKeys,
   type RecordListQuery,
   type SavedView,
@@ -16,8 +16,12 @@ import { ScopeFilters } from "./ScopeFilters";
 export function ViewControls({
   query,
   onChange,
+  custom,
+  fieldsReady,
 }: {
   query: RecordListQuery;
+  custom: CustomField[];
+  fieldsReady: boolean;
   onChange: (q: RecordListQuery) => void;
 }) {
   const signal = useScope(),
@@ -25,10 +29,7 @@ export function ViewControls({
     [selected, setSelected] = useState(""),
     [name, setName] = useState(""),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [custom, setCustom] = useState<
-      z.infer<typeof CustomFieldListSchema>["items"]
-    >([]);
+    [busy, setBusy] = useState(false);
   async function load() {
     setViews(
       (
@@ -40,9 +41,6 @@ export function ViewControls({
     void load().catch((e) => {
       if (!signal.aborted) setError(message(e));
     });
-    void request("/administration/fields", CustomFieldListSchema, signal)
-      .then((r) => setCustom(r.items.filter((f) => f.kind === query.kind)))
-      .catch(() => {});
   }, [query.kind]);
   async function save(update: boolean) {
     setBusy(true);
@@ -78,6 +76,7 @@ export function ViewControls({
     <details className="view-controls">
       <summary>Filtres, colonnes et vues enregistrées</summary>
       <ErrorSummary message={error || undefined} />
+      {!fieldsReady && <p>Colonnes personnalisées non chargées.</p>}
       <ScopeFilters query={query} onChange={patch} />
       <div className="admin-inline">
         <Select

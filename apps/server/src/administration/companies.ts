@@ -66,6 +66,16 @@ async function load(tx: Connection, actor: SessionUser, id: string) {
   await authorize(tx, actor, d);
   return d;
 }
+async function restitute(
+  tx: Connection,
+  actor: SessionUser,
+  historical: Detection,
+) {
+  // A journal snapshot can precede a later link: both scopes must remain readable.
+  await authorize(tx, actor, historical);
+  await load(tx, actor, historical.id);
+  return historical;
+}
 async function preview(
   tx: Connection,
   actor: SessionUser,
@@ -304,7 +314,7 @@ export function registerCompanyRoutes(
       const actor = await user(tx, req);
       if (!hasPermission(actor, "create", "dossier"))
         fail(403, "FORBIDDEN", "Création non autorisée.");
-      return idempotent(
+      const result = await idempotent(
         tx,
         actor,
         input.operationId,
@@ -331,6 +341,7 @@ export function registerCompanyRoutes(
           );
         },
       );
+      return restitute(tx, actor, result);
     });
   });
   app.post("/api/v1/administration/detections/simulate", async (req, reply) => {
@@ -338,7 +349,7 @@ export function registerCompanyRoutes(
     const d = await db.transaction(async (tx) => {
       const actor = await user(tx, req);
       requireGlobal(actor, "manage_users");
-      return idempotent(
+      const result = await idempotent(
         tx,
         actor,
         input.operationId,
@@ -359,6 +370,7 @@ export function registerCompanyRoutes(
             now(),
           ),
       );
+      return restitute(tx, actor, result);
     });
     reply.code(201);
     return d;
@@ -435,7 +447,7 @@ export function registerCompanyRoutes(
         );
       else if (!hasPermission(actor, "create", "dossier"))
         fail(403, "FORBIDDEN", "Décision non autorisée.");
-      return idempotent(
+      const result = await idempotent(
         tx,
         actor,
         input.operationId,
@@ -468,6 +480,7 @@ export function registerCompanyRoutes(
           return result;
         },
       );
+      return restitute(tx, actor, result);
     });
   });
 }

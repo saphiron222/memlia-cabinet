@@ -664,3 +664,186 @@ test("sortie complète : préparation visible, manifeste et partie téléchargea
   for await (const chunk of csvStream!) csvText += chunk.toString();
   expect(csvText).toContain("Dossier synthèse fictive");
 });
+
+test("champs des vues : chargement, indisponibilité, refus, reprise et absence explicites", async ({
+  page,
+}) => {
+  const credentials = {
+    email: "admin-gestion@example.test",
+    name: "Admin administration fictive",
+    password: "MotDePasseFictif123!",
+  };
+  await page.request.post("/api/v1/setup", {
+    headers: { Origin: origin },
+    data: credentials,
+  });
+  expect(
+    (
+      await page.request.post("/api/v1/login", {
+        headers: { Origin: origin },
+        data: { email: credentials.email, password: credentials.password },
+      })
+    ).status(),
+  ).toBe(200);
+  const field = await page.request.post("/api/v1/administration/fields", {
+    headers: { Origin: origin },
+    data: {
+      operationId: crypto.randomUUID(),
+      name: "Repère reprise fictif",
+      kind: "dossier",
+      type: "text",
+      placement: "information",
+      choices: [],
+    },
+  });
+  expect(field.status()).toBe(201);
+  const fieldId = (await field.json()).id;
+  expect(
+    (
+      await page.request.post("/api/v1/records", {
+        headers: { Origin: origin },
+        data: {
+          operationId: crypto.randomUUID(),
+          record: {
+            kind: "dossier",
+            title: "Fiche reprise colonnes",
+            data: { customFields: { [fieldId]: "Valeur retrouvée" } },
+          },
+        },
+      })
+    ).status(),
+  ).toBe(201);
+
+  let mode = "waiting",
+    calls = 0,
+    release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/administration/fields", async (route) => {
+    calls++;
+    if (mode === "waiting") {
+      await gate;
+      return route.fulfill({
+        status: 503,
+        json: {
+          error: {
+            code: "UNAVAILABLE",
+            message: "Référentiel temporairement indisponible.",
+          },
+        },
+      });
+    }
+    if (mode === "forbidden")
+      return route.fulfill({
+        status: 403,
+        json: { error: { code: "FORBIDDEN", message: "Lecture interdite." } },
+      });
+    if (mode === "empty")
+      return route.fulfill({ status: 200, json: { items: [] } });
+    return route.continue();
+  });
+  await page.goto("/#dossier");
+  await expect(
+    page.getByText("Chargement des champs personnalisés…", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Aucun champ personnalisé pour ce type de fiche.", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  release();
+  await expect(
+    page.getByText(
+      "Champs personnalisés indisponibles : Référentiel temporairement indisponible.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page
+    .getByText("Filtres, colonnes et vues enregistrées", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Colonnes personnalisées non chargées.", { exact: true }),
+  ).toBeVisible();
+  mode = "forbidden";
+  await page
+    .getByRole("button", {
+      name: "Réessayer les champs personnalisés",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText("Champs personnalisés : accès refusé.", { exact: true }),
+  ).toBeVisible();
+  mode = "success";
+  await page
+    .getByRole("button", {
+      name: "Réessayer les champs personnalisés",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("checkbox", {
+      name: "Afficher la colonne Repère reprise fictif",
+      exact: true,
+    })
+    .check();
+  await expect(
+    page.getByText("Colonnes personnalisées non chargées.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("columnheader", {
+      name: "Repère reprise fictif",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Valeur retrouvée", exact: true }),
+  ).toBeVisible();
+  expect(calls).toBe(3);
+  mode = "empty";
+  await page.reload();
+  await expect(
+    page.getByText("Aucun champ personnalisé pour ce type de fiche.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  // A response from the previous record kind cannot replace the new screen.
+  let finishLate!: () => void, lateDone!: () => void;
+  const waitLate = new Promise<void>((resolve) => {
+    finishLate = resolve;
+  });
+  const finishedLate = new Promise<void>((resolve) => {
+    lateDone = resolve;
+  });
+  await page.unroute("**/api/v1/administration/fields");
+  let late = true;
+  await page.route("**/api/v1/administration/fields", async (route) => {
+    if (!late) return route.fulfill({ status: 200, json: { items: [] } });
+    await waitLate;
+    try {
+      await route.fulfill({
+        status: 503,
+        json: {
+          error: { code: "LATE", message: "Ancienne réponse à ignorer." },
+        },
+      });
+    } finally {
+      lateDone();
+    }
+  });
+  await page.reload();
+  await expect(
+    page.getByText("Chargement des champs personnalisés…", { exact: true }),
+  ).toBeVisible();
+  late = false;
+  await page.getByRole("link", { name: "Contacts", exact: true }).click();
+  await expect(
+    page.getByText("Aucun champ personnalisé pour ce type de fiche.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  finishLate();
+  await finishedLate;
+  await expect(page.getByText(/Ancienne réponse à ignorer/)).toHaveCount(0);
+});

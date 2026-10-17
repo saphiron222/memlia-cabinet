@@ -498,10 +498,22 @@ export class Imports {
     line: ImportLine,
   ): Promise<ImportLine> {
     if (line.assignment) {
+      // The preview version is immutable. Only this import's committed mutations
+      // advance its expectation; an external mutation still causes a conflict.
+      // Row statuses and the assignment write share the batch transaction/checkpoint.
+      const completed = await tx.query(
+        "SELECT count(*) AS n FROM cabinet_import_rows WHERE preview_id=$1 AND content->'assignment'->>'dossierId'=$2 AND content->>'status' IN ('assigned','removed')",
+        [p.id, line.assignment.dossierId],
+      );
+      const expectedVersion =
+        line.assignment.expectedVersion + Number(completed[0]!.n);
       const result = await applyAssignments(
         tx,
         actor,
-        { operationId: randomUUID(), rows: [line.assignment] },
+        {
+          operationId: randomUUID(),
+          rows: [{ ...line.assignment, expectedVersion }],
+        },
         this.now(),
       );
       const status = result.items[0]!.status;

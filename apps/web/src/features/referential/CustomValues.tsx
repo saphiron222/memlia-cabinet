@@ -4,21 +4,69 @@ import {
   type CustomField,
   type CabinetRecord,
 } from "@memlia/contracts";
-import { request, useScope, message } from "../../api";
+import { request, message, RequestError } from "../../api";
+import { Button } from "@memlia/ui";
 import { Field, Select, ErrorSummary } from "../../forms";
 export function useCustomFields(kind: CabinetRecord["kind"]) {
-  const signal = useScope(),
-    [fields, setFields] = useState<CustomField[]>([]),
-    [error, setError] = useState("");
+  const [fields, setFields] = useState<CustomField[]>([]),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [revision, setRevision] = useState(0);
   useEffect(() => {
-    void request("/administration/fields", CustomFieldListSchema, signal)
-      .then((r) => setFields(r.items.filter((f) => f.kind === kind)))
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    setFields([]);
+    void request(
+      "/administration/fields",
+      CustomFieldListSchema,
+      controller.signal,
+    )
+      .then((r) => {
+        if (!controller.signal.aborted)
+          setFields(r.items.filter((f) => f.kind === kind));
+      })
       .catch((e) => {
-        if (!signal.aborted) setError(message(e));
+        if (!controller.signal.aborted)
+          setError(
+            e instanceof RequestError && e.status === 403
+              ? "Champs personnalisés : accès refusé."
+              : "Champs personnalisés indisponibles : " + message(e),
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
-  }, [kind]);
-  return { fields, error };
+    return () => controller.abort();
+  }, [kind, revision]);
+  return {
+    fields,
+    error,
+    loading,
+    retry: () => setRevision((value) => value + 1),
+  };
 }
+export function CustomFieldsStatus({
+  state,
+}: {
+  state: ReturnType<typeof useCustomFields>;
+}) {
+  if (state.loading)
+    return <p role="status">Chargement des champs personnalisés…</p>;
+  if (state.error)
+    return (
+      <div>
+        <ErrorSummary message={state.error} />
+        <Button onClick={state.retry}>
+          Réessayer les champs personnalisés
+        </Button>
+      </div>
+    );
+  return state.fields.length ? null : (
+    <p>Aucun champ personnalisé pour ce type de fiche.</p>
+  );
+}
+
 export function CustomValues({
   fields,
   placement,

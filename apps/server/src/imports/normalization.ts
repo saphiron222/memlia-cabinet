@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { installation } from "../administration/settings.js";
 import { checkAssignment } from "../administration/assignments.js";
 import { validateReferentialContent } from "../records/validation.js";
@@ -51,6 +52,9 @@ const arrayFields = new Set([
   "relatedDossierIds",
 ]);
 const boolFields = new Set(["archived", "confidential", "remove"]);
+const uuid = z.uuid();
+const customKey = (key: string) =>
+  key.startsWith("custom.") && uuid.safeParse(key.slice(7)).success;
 export const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 export const hash = (bytes: Buffer | string) =>
@@ -102,7 +106,7 @@ export async function normalize(
   let targetId: string | null = null;
   const allowed = new Set(fields[preview.kind]);
   const customIds = Object.values(preview.mapping)
-    .filter((k) => /^custom\.[a-f0-9-]{36}$/.test(k))
+    .filter((k) => customKey(k))
     .map((k) => k.slice(7));
   const booleanFields = new Set(
     customIds.length
@@ -119,7 +123,7 @@ export async function normalize(
     preview.sourceInstallationId !== (await installation(tx)).id;
   for (const [col, key] of Object.entries(preview.mapping)) {
     if (!key) continue;
-    if (!allowed.has(key) && !/^custom\.[a-f0-9-]{36}$/.test(key)) {
+    if (!allowed.has(key) && !customKey(key)) {
       errors.push("Champ non pris en charge : " + key);
       continue;
     }
@@ -185,7 +189,7 @@ export async function normalize(
   if (preview.kind === "assignment") {
     const version =
       typeof values.dossierId === "string" &&
-      /^[a-f0-9-]{36}$/.test(values.dossierId)
+      uuid.safeParse(values.dossierId).success
         ? Number(
             (
               await tx.query(
@@ -257,7 +261,7 @@ export async function normalize(
   if (record) {
     let matches: Record<string, unknown>[] = [];
     if (targetId) {
-      if (!/^[a-f0-9-]{36}$/.test(targetId))
+      if (!uuid.safeParse(targetId).success)
         line.errors.push("Identité de fiche invalide.");
       else
         matches = await tx.query(

@@ -1,5 +1,8 @@
 import { CsvExport } from "./features/records/CsvExport";
-import { useCustomFields } from "./features/referential/CustomValues";
+import {
+  useCustomFields,
+  CustomFieldsStatus,
+} from "./features/referential/CustomValues";
 import { ViewControls } from "./features/records/ViewControls";
 import {
   defaultColumns,
@@ -38,7 +41,8 @@ export function Records({
   kind: RecordKind;
   user: SessionUser;
 }) {
-  const { fields: customFields } = useCustomFields(kind);
+  const custom = useCustomFields(kind);
+  const customFields = custom.fields;
   const signal = useScope();
   const [filters, setFilters] = useState<RecordListQuery>(() => {
     const raw = Object.fromEntries(
@@ -105,7 +109,13 @@ export function Records({
       {kind === "dossier" && (
         <Companies user={user} onChanged={() => setRevision((v) => v + 1)} />
       )}
-      <ViewControls query={filters} onChange={setFilters} />
+      <CustomFieldsStatus state={custom} />
+      <ViewControls
+        query={filters}
+        onChange={setFilters}
+        custom={customFields}
+        fieldsReady={!custom.loading && !custom.error}
+      />
       <div className="toolbar">
         <div className="search">
           <label className="sr-only" htmlFor="search">
@@ -186,7 +196,12 @@ export function Records({
                             (key.startsWith("custom.")
                               ? (customFields.find(
                                   (f) => "custom." + f.id === key,
-                                )?.name ?? "Champ personnalisé")
+                                )?.name ??
+                                (custom.loading
+                                  ? "Chargement du champ…"
+                                  : custom.error
+                                    ? "Champ non chargé"
+                                    : "Champ personnalisé"))
                               : key)}
                         </th>
                       ))}
