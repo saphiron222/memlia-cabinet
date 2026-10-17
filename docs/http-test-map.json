@@ -393,7 +393,7 @@
   },
   "GET /api/v1/notifications/runs": {
     "file": "apps/server/test/workflows.test.ts",
-    "test": "reminders use cabinet hour, recipient access and deterministic single in-app occurrence"
+    "test": "queued reminder failure remains visible to the current manager after the former manager is disabled with historical and current access checks"
   },
   "POST /api/v1/notifications/process": {
     "file": "apps/server/test/workflows.test.ts",

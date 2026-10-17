@@ -1608,3 +1608,207 @@ test("reminder preparation transfers missing scope to the current editor after t
   expect(runs.preparation[0].nextDate).toBe("2027-01-19");
   expect((await process()).scheduled).toBe(0);
 });
+
+test("queued reminder failure remains visible to the current manager after the former manager is disabled with historical and current access checks", async () => {
+  const { actor } = await start();
+  const oldDossier = (
+    await f.request("POST", "/records", dossier("Ancien périmètre"))
+  ).json();
+  const currentDossier = (
+    await f.request("POST", "/records", dossier("Périmètre courant"))
+  ).json();
+  const targets: { id: string }[] = [];
+  for (const d of [oldDossier, currentDossier]) {
+    const r = await f.request("POST", "/records", {
+      operationId: operationId(),
+      record: { kind: "tache", title: d.title, dossierId: d.id, data: {} },
+    });
+    expect(r.statusCode, r.body).toBe(201);
+    targets.push(r.json());
+  }
+  const created = await f.request("POST", "/users", {
+    operationId: operationId(),
+    name: "Gestionnaire du suivi",
+    email: "followup@example.test",
+    password: "MotDePasseFictif123!",
+    permissions: [
+      { action: "manage_users", kind: "*", dossierId: null },
+      { action: "read", kind: "*", dossierId: null },
+    ],
+  });
+  expect(created.statusCode, created.body).toBe(201);
+  const nextId = created.json().id;
+  const login = await f.request(
+    "POST",
+    "/login",
+    { email: "followup@example.test", password: "MotDePasseFictif123!" },
+    "",
+  );
+  const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+  const { JobRunner } = await import("../src/jobs/runner.js");
+  const { Reminders } = await import("../src/notifications/reminders.js");
+  const { saveModel } = await import("../src/workflows/service.js");
+  const { effectiveUser } = await import("../src/identity/service.js");
+  const id = operationId();
+  let originalJobId = "";
+  await f.maintainDatabase(async (db) => {
+    const jobs = new JobRunner(db);
+    const reminders = new Reminders(
+      db,
+      jobs,
+      () => new Date("2026-10-17T10:00:00Z"),
+      () => "2026-10-17",
+      "Europe/Paris",
+    );
+    const next = await db.transaction(async (tx) =>
+      effectiveUser(
+        tx,
+        (
+          await tx.query("SELECT * FROM cabinet_users WHERE id=$1", [nextId])
+        )[0]!,
+      ),
+    );
+    const content = {
+      kind: "reminder" as const,
+      name: "Suivi déjà engagé",
+      targetIds: [targets[0]!.id],
+      recipientIds: [nextId],
+      event: "schedule" as const,
+      message: "Fictif",
+      hour: "09:00",
+      enabled: true,
+      rule: {
+        ...monthly,
+        frequency: "monthly" as const,
+        start: "2026-10-01",
+        end: "2026-12-31",
+        nominalDay: 17,
+      },
+    };
+    await db.transaction((tx) =>
+      saveModel(
+        tx,
+        actor,
+        { operationId: operationId(), id, expectedVersion: 0, model: content },
+        new Date("2026-10-17T06:00:00Z"),
+      ),
+    );
+    expect(
+      (await db.transaction((tx) => reminders.process(tx, actor))).scheduled,
+    ).toBe(1);
+    const pending = await db.transaction((tx) =>
+      reminders.list(tx, actor, id, 0),
+    );
+    expect(pending.items).toHaveLength(1);
+    expect(pending.items[0]!.job.state).toBe("queued");
+    originalJobId = pending.items[0]!.job.id;
+    await db.transaction(async (tx) => {
+      await saveModel(
+        tx,
+        next,
+        {
+          operationId: operationId(),
+          id,
+          expectedVersion: 1,
+          model: { ...content, targetIds: [targets[1]!.id] },
+        },
+        new Date("2026-10-17T10:00:00Z"),
+      );
+      await tx.query("UPDATE cabinet_users SET active=false WHERE id=$1", [
+        actor.id,
+      ]);
+    });
+    for (let i = 0; i < 2; i++)
+      expect(
+        (await db.transaction((tx) => reminders.process(tx, next))).scheduled,
+      ).toBe(0);
+    for (let i = 0; i < 3; i++) await jobs.tick();
+    await jobs.stop();
+    const stored = await db.query(
+      "SELECT id,state,error,actor_id,input FROM cabinet_jobs WHERE resource_key=$1",
+      ["reminder:" + id],
+    );
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({
+      id: originalJobId,
+      state: "failed",
+      actor_id: actor.id,
+    });
+    expect(stored[0]!.error).toBeTruthy();
+    expect((stored[0]!.input as any).date).toBe("2026-10-17");
+    expect(
+      await db.query(
+        "SELECT id FROM cabinet_notifications WHERE recipient_id=$1",
+        [nextId],
+      ),
+    ).toHaveLength(0);
+  });
+  const path = "/notifications/runs?modelId=" + id;
+  const response = await f.request("GET", path, undefined, cookie);
+  expect(response.statusCode, response.body).toBe(200);
+  const run = response.json();
+  expect(run.items).toHaveLength(1);
+  expect(run.items[0]).toMatchObject({
+    date: "2026-10-17",
+    modelVersion: 1,
+    job: { id: originalJobId, state: "failed", attempts: 3 },
+  });
+  expect(run.items[0].job.error).toBeTruthy();
+  expect(run.nextOffset).toBeNull();
+  expect(run.preparation.find((p: any) => p.modelVersion === 1)).toMatchObject({
+    complete: true,
+    actorId: nextId,
+  });
+  // Preparation is distinct from execution: retaining a prepared cursor must not hide the failed job.
+  expect(
+    (
+      await f.request(
+        "POST",
+        "/notifications/process",
+        { operationId: operationId() },
+        cookie,
+      )
+    ).json().scheduled,
+  ).toBe(0);
+  for (const readable of [currentDossier.id, oldDossier.id]) {
+    await f.maintainDatabase((db) =>
+      db.transaction(async (tx) => {
+        await tx.query(
+          "UPDATE cabinet_users SET permissions=$1::jsonb WHERE id=$2",
+          [
+            JSON.stringify([
+              { action: "manage_users", kind: "*", dossierId: null },
+              { action: "read", kind: "*", dossierId: readable },
+            ]),
+            nextId,
+          ],
+        );
+      }),
+    );
+    const denied = await f.request("GET", path, undefined, cookie);
+    expect(denied.statusCode, denied.body).toBe(404);
+    expect(denied.json()).not.toHaveProperty("items");
+    expect(denied.json()).not.toHaveProperty("nextOffset");
+    expect(denied.body).not.toContain(originalJobId);
+  }
+  await f.maintainDatabase((db) =>
+    db.transaction(async (tx) => {
+      expect(
+        await tx.query(
+          "SELECT id,actor_id FROM cabinet_jobs WHERE resource_key=$1",
+          ["reminder:" + id],
+        ),
+      ).toEqual([{ id: originalJobId, actor_id: actor.id }]);
+      await tx.query(
+        "UPDATE cabinet_users SET permissions=$1::jsonb WHERE id=$2",
+        [
+          JSON.stringify([{ action: "read", kind: "*", dossierId: null }]),
+          nextId,
+        ],
+      );
+    }),
+  );
+  expect(
+    (await f.request("GET", path, undefined, cookie)).json().items[0].job,
+  ).toMatchObject({ id: originalJobId, state: "failed" });
+});

@@ -104,23 +104,27 @@ export class Reminders {
     modelId: string,
     offset: number,
   ) {
-    await this.authorize(tx, actor, await loadModel(tx, modelId));
+    const current = await loadModel(tx, modelId);
+    await this.authorize(tx, actor, current);
+    // The current manager follows retained jobs; execution still belongs to the original actor.
     const rows = await tx.query(
-      "SELECT id FROM cabinet_jobs WHERE actor_id=$1 AND kind='workflow-reminder' AND resource_key=$2 ORDER BY created_at DESC,id OFFSET $3 LIMIT 51",
-      [actor.id, "reminder:" + modelId, offset],
+      "SELECT id FROM cabinet_jobs WHERE (actor_id=$1 OR $4::boolean) AND kind='workflow-reminder' AND resource_key=$2 ORDER BY created_at DESC,id OFFSET $3 LIMIT 51",
+      [actor.id, "reminder:" + modelId, offset, current.actorId === actor.id],
     );
     const items = [];
-    for (const row of rows.slice(0, 50)) {
+    for (const row of rows) {
       const run = await this.jobs.get(tx, String(row.id));
       const input = z
         .object({ model: WorkflowModelSchema, date: z.iso.date() })
         .parse(run.input);
       await this.authorize(tx, actor, input.model);
-      items.push({
-        date: input.date,
-        modelVersion: input.model.version,
-        job: run.job,
-      });
+      // Authorize the lookahead row too, before revealing another page exists.
+      if (items.length < 50)
+        items.push({
+          date: input.date,
+          modelVersion: input.model.version,
+          job: run.job,
+        });
     }
     const prep = await tx.query(
       "SELECT content FROM cabinet_reminder_preparation WHERE actor_id=$1 AND model_id=$2 ORDER BY model_version DESC OFFSET $3 LIMIT 50",
