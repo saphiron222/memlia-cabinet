@@ -1,3 +1,4 @@
+import { Navigation, pageContext } from "./interface/Navigation";
 import { Production } from "./features/production/Production";
 import { Workflows } from "./features/workflows/Workflows";
 import { Notifications } from "./features/workflows/Notifications";
@@ -296,6 +297,7 @@ function Cabinet({
   } = useAccountSettings();
   const { info: installation } = useInstallation();
   const [page, setPage] = useState<Page>(route),
+    [hash, setHash] = useState(location.hash),
     [systemDark, setSystemDark] = useState(
       () => matchMedia("(prefers-color-scheme: dark)").matches,
     ),
@@ -309,7 +311,7 @@ function Cabinet({
   const collapsed = account?.preferences.sidebarCollapsed ?? false;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
-    const change = () => setPage(route());
+    const change = () => { setPage(route()); setHash(location.hash); };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
@@ -344,62 +346,7 @@ function Cabinet({
           <span className="brand-mark">m</span>
           {!collapsed && <strong>Memlia Cabinet</strong>}
         </div>
-        <nav aria-label="Navigation principale">
-          {(
-            [
-              "accueil",
-              "dossier",
-              "contact",
-              "tache",
-              "production",
-              "calendrier",
-              "notifications",
-              "obligation",
-              "fiscal",
-              "documents",
-              "collectes",
-              "compte",
-              "imports",
-              "administration",
-            ] as Page[]
-          ).map((p) => {
-            const Icon = icons[p];
-            const title =
-              p === "production"
-                ? "Production"
-                : p === "calendrier"
-                  ? "Calendrier"
-                  : p === "notifications"
-                    ? "Notifications"
-                    : p === "fiscal"
-                      ? "Fiscalité"
-                      : p === "compte"
-                        ? "Mon compte"
-                        : p === "imports"
-                          ? "Reprise"
-                          : p === "administration"
-                            ? "Administration"
-                            : p === "accueil"
-                              ? "Accueil"
-                              : p === "documents"
-                                ? "Documents"
-                                : p === "collectes"
-                                  ? "Collectes"
-                                  : labels[p];
-            return (
-              <a
-                key={p}
-                href={"#" + p}
-                aria-label={title}
-                aria-current={page === p ? "page" : undefined}
-                title={collapsed ? title : undefined}
-              >
-                <Icon size={16} aria-hidden />
-                {!collapsed && title}
-              </a>
-            );
-          })}
-        </nav>
+        <Navigation hash={hash} collapsed={collapsed} />
         <div className="sidebar-bottom">
           {!collapsed && (
             <div className="user-name" title={user.email}>
@@ -412,6 +359,7 @@ function Cabinet({
             aria-label={
               collapsed ? "Déplier la navigation" : "Replier la navigation"
             }
+            aria-expanded={!collapsed}
             disabled={settingsBusy || !account}
             onClick={() => void saveSettings({ sidebarCollapsed: !collapsed })}
           >
@@ -458,6 +406,7 @@ function Cabinet({
       </aside>
       <main id="main" className="main">
         <header className="app-header">
+          <span className="breadcrumb-context">{pageContext(page)} <span aria-hidden> / </span></span>
           <h1 ref={heading} tabIndex={-1}>
             {page === "production"
               ? "Production"

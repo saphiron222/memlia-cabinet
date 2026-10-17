@@ -1,0 +1,12 @@
+{
+  "status": "Implementation in progress; final receipt pending",
+  "composition": "Memlia independently composed React/CSS. Plane application/Propel AGPL code and stylesheets are not distributed.",
+  "references": [
+    {"project":"Plane","revision":"879ce8b5c6b4fe21efff4789a7062747f46d6383","license":"AGPL-3.0-only","role":"Observed navigation, header, table and contextual peek composition","files":["apps/web/components/sidebar/sidebar-navigation.tsx","apps/web/components/core/app-header.tsx","packages/constants/src/sidebar.ts","apps/web/components/issues/issue-layouts/spreadsheet/spreadsheet-table.tsx","apps/web/components/issues/peek-overview/root.tsx"],"adaptations":"Native Memlia routes, account preferences, permissions and commands; 250px sidebar/44px header; compact grouped navigation."},
+    {"project":"Propel","version":"0.7.3","license":"AGPL-3.0-only","role":"Selected documented design values, no stylesheet copied","files":["dist/styles/variables.css"],"adaptations":"Plane action accent, neutral active navigation, semantic states; no upstream component implementation."},
+    {"project":"Twenty","revision":"e7743ba77003f3eab957cfcca8e760d383cde550","role":"Observed typed tables and properties; existing MIT UI subset remains unchanged","manifest":"../packages/ui/PROVENANCE.json"},
+    {"project":"cal.diy","revision":"54343aa685ae8f33159d2f485ec4a57bad5c574a","role":"Observed field/section/calendar composition, no application code copied","files":["packages/ui/components/form/inputs/TextField.tsx","packages/features/settings/appDir/SettingsHeader.tsx","packages/features/calendars/components/DatePicker.tsx"],"adaptations":"32px fields, short sections, date navigation using canonical Memlia dates."}
+  ],
+  "fonts":"../apps/web/public/fonts/provenance.json",
+  "visualOrigins":"Published official Plane navigation, side-peek and workspace-views images; retained exact Twenty Storybook table. Published Plane/Cal imagery is not an exact pinned runtime comparison."
+}
