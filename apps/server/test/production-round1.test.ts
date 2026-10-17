@@ -1039,3 +1039,202 @@ test.each(["population", "document"])(
     ).toBe(409);
   },
 );
+
+test.each([2, 102])(
+  "N2 legacy dedup uses actual retained source v%s despite stale expectedVersion and preserves the journal",
+  async (sourceVersion) => {
+    const d = await start(),
+      other = (
+        await f.request("POST", "/records", dossier("Source historique"))
+      ).json(),
+      unrelated = (
+        await f.request(
+          "POST",
+          "/records",
+          dossier("Version sans correspondance"),
+        )
+      ).json();
+    let m = await model({
+      kind: "custom",
+      name: "Ancienne déduplication",
+      target: "dossier",
+      population: [d.id],
+      rule: {
+        frequency: "yearly",
+        start: "2026-01-01",
+        end: "2027-12-31",
+        nominalDay: 15,
+        lastDay: false,
+        weekDay: 1,
+      },
+    });
+    const p = await person(["read", "create"]);
+    const firstInput = {
+      operationId: operationId(),
+      expectedVersion: 1,
+      target: { kind: "dossier", id: d.id, label: d.title },
+      period: "2026",
+    };
+    const first = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      firstInput,
+      p.cookie,
+    );
+    expect(first.statusCode, first.body).toBe(200);
+    while (m.version < sourceVersion) {
+      m = await model(
+        {
+          ...m.model,
+          population:
+            m.version + 1 === sourceVersion
+              ? [d.id, other.id]
+              : m.version + 1 === sourceVersion - 1
+                ? [d.id]
+                : [d.id, unrelated.id],
+          rule: {
+            ...m.model.rule,
+            nominalDay: m.version + 1 >= sourceVersion - 1 ? 20 : 18,
+          },
+        },
+        m.id,
+        m.version,
+      );
+    }
+    const input = { ...firstInput, operationId: operationId() };
+    const dedup = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      input,
+      p.cookie,
+    );
+    expect(dedup.statusCode, dedup.body).toBe(200);
+    expect(dedup.json()).toEqual(first.json());
+    const { idempotent } = await import("../src/storage/operations.js");
+    const { ProductionRowCreateSchema } = await import("@memlia/contracts");
+    let journal: unknown;
+    await f.maintainDatabase(async (db) =>
+      db.transaction(async (tx) => {
+        await tx.query(
+          "DELETE FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+          [p.user.id, input.operationId],
+        );
+        await idempotent(
+          tx,
+          p.user,
+          input.operationId,
+          {
+            productionRow: {
+              modelId: m.id,
+              i: ProductionRowCreateSchema.parse(input),
+              dueDate: "2026-01-20",
+            },
+          },
+          async () => dedup.json(),
+        );
+        journal = await tx.query(
+          "SELECT fingerprint,result FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+          [p.user.id, input.operationId],
+        );
+      }),
+    );
+    // The effective source is neither expectedVersion nor the current model now.
+    m = await model(
+      {
+        ...m.model,
+        population: [d.id],
+        rule: { ...m.model.rule, nominalDay: 25 },
+      },
+      m.id,
+      m.version,
+    );
+    const deniedUnrelated = await f.request("PUT", `/records/${unrelated.id}`, {
+      operationId: operationId(),
+      expectedVersion: unrelated.version,
+      record: {
+        kind: "dossier",
+        title: unrelated.title,
+        confidential: true,
+        data: unrelated.data,
+      },
+    });
+    expect(deniedUnrelated.statusCode, deniedUnrelated.body).toBe(200);
+    const retry = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      input,
+      p.cookie,
+    );
+    expect(retry.statusCode, retry.body).toBe(200);
+    expect(retry.json()).toEqual(dedup.json());
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/models/${m.id}/rows`,
+          undefined,
+          p.cookie,
+        )
+      ).json().items,
+    ).toHaveLength(1);
+    expect(
+      (
+        await f.request(
+          "POST",
+          `/production/models/${m.id}/rows`,
+          { ...input, period: "2027" },
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(409);
+    await f.maintainDatabase(async (db) => {
+      expect(
+        await db.query(
+          "SELECT fingerprint,result FROM cabinet_operations WHERE actor_id=$1 AND operation_id=$2",
+          [p.user.id, input.operationId],
+        ),
+      ).toEqual(journal);
+    });
+    const restricted = await f.request("PUT", `/records/${other.id}`, {
+      operationId: operationId(),
+      expectedVersion: other.version,
+      record: {
+        kind: "dossier",
+        title: other.title,
+        confidential: true,
+        data: other.data,
+      },
+    });
+    expect(restricted.statusCode, restricted.body).toBe(200);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/models/${m.id}`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/production/rows/${first.json().id}`,
+          undefined,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(200);
+    expect(
+      (
+        await f.request(
+          "POST",
+          `/production/models/${m.id}/rows`,
+          input,
+          p.cookie,
+        )
+      ).statusCode,
+    ).toBe(404);
+  },
+);

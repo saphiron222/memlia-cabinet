@@ -632,19 +632,11 @@ export async function createProductionRow(
       error.code !== "OPERATION_CONFLICT"
     )
       throw error;
-    // Older manual journals included a derived date (or null before derivation).
-    // Verify those exact fingerprints against the requested source version; never rewrite them.
-    const source = await loadProductionModel(tx, modelId, i.expectedVersion);
-    await modelAccess(tx, actor, source);
-    if (source.model.kind !== "custom") throw error;
-    const dates = [
-      productionOccurrenceDate(source.model.rule!, i.period),
-      null,
-    ];
-    let replay: ProductionRow | undefined;
-    for (const date of new Set(dates)) {
+    // Legacy deduplication derived the date from the then-current model, even
+    // with a stale expectedVersion. Its journal does not retain that version.
+    const replayDate = async (date: string | null) => {
       try {
-        replay = await idempotent(
+        return await idempotent<ProductionRow>(
           tx,
           actor,
           i.operationId,
@@ -653,13 +645,45 @@ export async function createProductionRow(
             throw error;
           },
         );
-        break;
       } catch (legacyError) {
         if (
           !(legacyError instanceof ApiFault) ||
           legacyError.code !== "OPERATION_CONFLICT"
         )
           throw legacyError;
+        return undefined;
+      }
+    };
+    // The pre-derivation format has no source date to recover. Current command
+    // scope and returned row/model/history still pass the guards on both sides.
+    let replay = await replayDate(null);
+    if (!replay) {
+      let after = 0;
+      let matchedDate: string | undefined;
+      // Keyset pages bound memory; the captured current version bounds the scan.
+      // Do not truncate retained history or guess a source from row timestamps.
+      while (after < m.version) {
+        const page = await tx.query(
+          "SELECT version,content FROM cabinet_production_model_versions WHERE id=$1 AND version>$2 AND version<=$3 ORDER BY version LIMIT 100",
+          [modelId, after, m.version],
+        );
+        if (!page.length) break;
+        for (const entry of page) {
+          const source = ProductionModelSchema.parse(entry.content);
+          if (source.model.kind !== "custom") continue;
+          const date = productionOccurrenceDate(source.model.rule!, i.period);
+          if (!date || (matchedDate && date !== matchedDate)) continue;
+          const candidate: ProductionRow | undefined =
+            replay ?? (await replayDate(date));
+          if (!candidate) continue;
+          // Several versions can yield the same legacy fingerprint. Authorize
+          // every compatible version; a later allowed version must not hide a
+          // now-forbidden possible source of the original retained operation.
+          await modelAccess(tx, actor, source);
+          replay = candidate;
+          matchedDate = date;
+        }
+        after = Number(page.at(-1)!.version);
       }
     }
     if (!replay) throw error;
