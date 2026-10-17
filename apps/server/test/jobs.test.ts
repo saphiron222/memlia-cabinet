@@ -177,3 +177,126 @@ it("lease expirée : un ancien travailleur ne peut engager ni résultat ni check
     await f.close();
   }
 });
+it.each([
+  { units: 498, expired: false, state: "completed", attempts: 1 },
+  { units: 499, expired: false, state: "failed", attempts: 3 },
+  { units: 498, expired: true, state: "completed", attempts: 2 },
+] as const)(
+  "journal saturé : $units unités, expiration=$expired, terminaison $state et ressource libérée",
+  async ({ units, expired, state, attempts }) => {
+    const f = await fixture();
+    try {
+      const actor = await f.setup();
+      const d = (await f.request("POST", "/records", dossier())).json();
+      await f.maintainDatabase(async (db) => {
+        let clock = new Date("2026-10-17T00:00:00Z");
+        const first = new JobRunner(db, () => clock);
+        const second = new JobRunner(db, () => clock);
+        const saturated = deferred(),
+          release = deferred();
+        await db.query(
+          "CREATE TABLE fixture_job_units (unit integer PRIMARY KEY)",
+        );
+        const definition: JobDefinition<
+          z.infer<typeof Input>,
+          { count: number },
+          z.infer<typeof Result>
+        > = {
+          kind: "test-event-limit",
+          input: Input,
+          checkpoint: z
+            .object({ count: z.number().int().min(0).max(499) })
+            .strict(),
+          result: Result,
+          initial: { count: 0 },
+          scope: (i) => ({
+            dossierId: i.dossierId,
+            resourceKey: "saturated-account",
+          }),
+          authorize: async () => {},
+          execute: async (i, c) => {
+            if (i.value === "following") return { value: i.value };
+            for (let count = c.checkpoint.count + 1; count <= units; count++) {
+              await c.commit(
+                { count },
+                "unit",
+                "Unité fictive durable.",
+                async (tx) => {
+                  await tx.query("INSERT INTO fixture_job_units VALUES($1)", [
+                    count,
+                  ]);
+                },
+              );
+            }
+            if (expired && c.attempt === 1) {
+              saturated.resolve();
+              await release.promise;
+            }
+            return { value: i.value };
+          },
+        };
+        const queue = first.register(definition);
+        second.register(definition);
+        const id = await db.transaction((tx) =>
+          queue.enqueue(tx, actor, operationId(), {
+            dossierId: d.id,
+            value: "full",
+          }),
+        );
+        try {
+          const execution = first.tick();
+          if (expired) {
+            await saturated.promise;
+            clock = new Date(clock.getTime() + 61_000);
+            try {
+              expect(await second.tick()).toBe(true);
+            } finally {
+              release.resolve();
+              await execution;
+            }
+          } else {
+            await execution;
+            for (let attempt = 1; attempt < attempts; attempt++)
+              expect(await first.tick()).toBe(true);
+          }
+          const result = await db.transaction((tx) => first.get(tx, id));
+          expect(result.job.state).toBe(state);
+          expect(result.job.attempts).toBe(attempts);
+          expect(result.checkpoint).toEqual({ count: 498 });
+          expect(result.job.events).toHaveLength(500);
+          expect(result.job.events.at(-1)?.code).toBe("unit");
+          expect(result.result).toEqual(
+            state === "completed" ? { value: "full" } : null,
+          );
+          expect(
+            await db.query(
+              "SELECT COUNT(*)::integer AS count, MAX(unit) AS last FROM fixture_job_units",
+            ),
+          ).toEqual([{ count: 498, last: 498 }]);
+          const next = await db.transaction((tx) =>
+            queue.enqueue(tx, actor, operationId(), {
+              dossierId: d.id,
+              value: "following",
+            }),
+          );
+          expect(await first.tick()).toBe(true);
+          expect(
+            (await db.transaction((tx) => first.get(tx, next))).job.state,
+          ).toBe("completed");
+          clock = new Date(clock.getTime() + 61_000);
+          expect(await first.tick()).toBe(false);
+          expect(await second.tick()).toBe(false);
+          expect((await db.transaction((tx) => first.get(tx, id))).job).toEqual(
+            result.job,
+          );
+        } finally {
+          release.resolve();
+          await first.stop();
+          await second.stop();
+        }
+      });
+    } finally {
+      await f.close();
+    }
+  },
+);

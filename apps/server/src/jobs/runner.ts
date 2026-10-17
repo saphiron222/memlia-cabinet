@@ -137,7 +137,13 @@ export class JobRunner {
             "UPDATE cabinet_jobs SET result=$1::jsonb,state='completed',owner=NULL,lease_until=NULL,updated_at=$2,error=NULL WHERE id=$3",
             [JSON.stringify(result), this.now(), job.id],
           );
-          await this.event(tx, job.id, "completed", "Traitement terminé.");
+          await this.event(
+            tx,
+            job.id,
+            "completed",
+            "Traitement terminé.",
+            "omit",
+          );
         });
       },
     });
@@ -195,13 +201,19 @@ export class JobRunner {
     id: string,
     code: string,
     message: string,
+    onFull: "reject" | "omit" = "reject",
   ) {
     const rows = await tx.query(
       "SELECT COALESCE(MAX(sequence),0)+1 AS next FROM cabinet_job_events WHERE job_id=$1",
       [id],
     );
     const sequence = Number(rows[0]!.next);
-    if (sequence > 500) fail(409, "EVENT_LIMIT", "Limite du journal atteinte.");
+    if (sequence > 500) {
+      // Control transitions must remain durable when the bounded journal is full.
+      // Business commits still reject, rolling back work and checkpoint together.
+      if (onFull === "omit") return;
+      fail(409, "EVENT_LIMIT", "Limite du journal atteinte.");
+    }
     const event = JobEventSchema.parse({
       sequence,
       at: this.now().toISOString(),
@@ -306,6 +318,7 @@ export class JobRunner {
         row.attempts
           ? "Reprise au dernier point durable."
           : "Exécution démarrée.",
+        "omit",
       );
       return { ...row, attempts: row.attempts + 1 };
     });
@@ -365,6 +378,7 @@ export class JobRunner {
             : retry
               ? "Interruption ; nouvelle tentative prévue."
               : "Échec après trois tentatives.",
+          "omit",
         );
       });
     } finally {
