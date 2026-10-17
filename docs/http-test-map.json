@@ -106,5 +106,53 @@
   "GET /api/v1/collections/:id": {
     "file": "apps/server/test/collections.test.ts",
     "test": "CFE fictive : identité, période, référence et original GED durable sans doublon"
+  },
+  "GET /api/v1/administration/users": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "PUT /api/v1/administration/users/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "GET /api/v1/administration/roles": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "POST /api/v1/administration/roles": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "PUT /api/v1/administration/roles/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "GET /api/v1/administration/groups": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "POST /api/v1/administration/groups": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "PUT /api/v1/administration/groups/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/administration/assignments/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "lot partiellement autorisé : seul le dossier accessible change ; pièce, recherche et ancien rejeu sont révoqués"
+  },
+  "POST /api/v1/administration/assignments": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "lot partiellement autorisé : seul le dossier accessible change ; pièce, recherche et ancien rejeu sont révoqués"
+  },
+  "GET /api/v1/capabilities/records": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/capabilities/create": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
   }
 }

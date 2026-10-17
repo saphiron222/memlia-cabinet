@@ -1,3 +1,4 @@
+import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@memlia/ui";
 import {
@@ -151,6 +152,7 @@ export function Collections({ user }: { user: SessionUser }) {
     [runId, setRunId] = useState(() =>
       sessionStorage.getItem("memlia-collection-" + user.id),
     );
+  const rights = useRecordCapabilities(dossiers.map((d) => d.id));
   useEffect(() => {
     void request("/collections/catalogue", CollectionCatalogueSchema, signal)
       .then(setCatalogue)
@@ -266,7 +268,10 @@ export function Collections({ user }: { user: SessionUser }) {
           {catalogue.fixture.identity.service}.
         </p>
       )}
-      <ErrorSummary errors={errors} message={error || undefined} />
+      <ErrorSummary
+        errors={errors}
+        message={error || rights.error || undefined}
+      />
       {error && (
         <Button
           onClick={() => {
@@ -311,14 +316,7 @@ export function Collections({ user }: { user: SessionUser }) {
           >
             <option value="">Choisir un dossier</option>
             {dossiers
-              .filter((d) =>
-                user.permissions.some(
-                  (p) =>
-                    p.action === "update" &&
-                    (p.kind === "*" || p.kind === "dossier") &&
-                    (!p.dossierId || p.dossierId === d.id),
-                ),
-              )
+              .filter((d) => rights.grants[d.id]?.includes("update"))
               .map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.title}
@@ -374,7 +372,9 @@ export function Collections({ user }: { user: SessionUser }) {
             type="submit"
             variant="solid"
             loading={busy}
-            disabled={!!running}
+            disabled={
+              !!running || !rights.grants[dossierId]?.includes("update")
+            }
           >
             Lancer la simulation
           </Button>

@@ -1,3 +1,7 @@
+import {
+  useRecordCapabilities,
+  useCreationCapabilities,
+} from "./features/administration/capabilities";
 import { stateLabels } from "./RecordLabels";
 import { RecordComparison } from "./RecordComparison";
 import { Documents } from "./Documents";
@@ -83,21 +87,27 @@ export function RecordEditor({
     [checkLabel, setCheckLabel] = useState(""),
     [lookupError, setLookupError] = useState("");
   const operation = useRef<{ signature: string; id: string } | null>(null);
+  const rights = useRecordCapabilities(saved ? [saved.id] : []);
+  const proposed = useCreationCapabilities(
+    kind,
+    draft.dossierId,
+    draft.confidential,
+    saved?.id,
+  );
   const can = (
     action: SessionUser["permissions"][number]["action"],
     scope = kind === "dossier" ? saved?.id : draft.dossierId,
-  ) =>
-    user.permissions.some(
-      (p) =>
-        p.action === action &&
-        (p.kind === "*" || p.kind === kind) &&
-        (p.dossierId === null || p.dossierId === scope),
-    );
-  // Editing the persisted record must remain possible while its proposed
-  // dossier changes. The server separately authorizes the destination on save.
+  ) => {
+    if (
+      saved &&
+      scope === (saved.kind === "dossier" ? saved.id : saved.dossierId)
+    )
+      return rights.grants[saved.id]?.includes(action) ?? false;
+    return proposed.actions.includes(action);
+  };
   const editable = saved
-    ? can("update", saved.kind === "dossier" ? saved.id : saved.dossierId)
-    : user.permissions.some(
+    ? (rights.grants[saved.id]?.includes("update") ?? false)
+    : [...user.permissions, ...user.scopedPermissions].some(
         (p) => p.action === "create" && (p.kind === "*" || p.kind === kind),
       );
   useEffect(() => {
@@ -144,7 +154,7 @@ export function RecordEditor({
     }
     if (
       kind === "tache" &&
-      user.permissions.some(
+      [...user.permissions, ...user.scopedPermissions].some(
         (p) =>
           p.action === "manage_users" && p.kind === "*" && p.dossierId === null,
       )
@@ -298,7 +308,10 @@ export function RecordEditor({
               void runSave();
             }}
           >
-            <ErrorSummary errors={errors} message={fault || undefined} />
+            <ErrorSummary
+              errors={errors}
+              message={fault || rights.error || proposed.error || undefined}
+            />
             {conflict && (
               <section className="conflict">
                 <p>
@@ -677,7 +690,10 @@ export function RecordEditor({
                 type="submit"
                 variant="solid"
                 loading={busy}
-                disabled={conflict}
+                disabled={
+                  conflict ||
+                  !proposed.actions.includes(saved ? "update" : "create")
+                }
               >
                 Enregistrer
               </Button>

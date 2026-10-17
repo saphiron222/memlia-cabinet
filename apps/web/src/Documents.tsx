@@ -1,3 +1,4 @@
+import { useRecordCapabilities } from "./features/administration/capabilities";
 import { useEffect, useRef, useState } from "react";
 import { Button, Checkbox, Input } from "@memlia/ui";
 import {
@@ -46,12 +47,16 @@ export function Documents({
     [editing, setEditing] = useState(false),
     [previous, setPrevious] = useState<Document | undefined>(),
     [revision, setRevision] = useState(0);
-  const canUpload = user.permissions.some(
-    (p) =>
-      p.action === "update" &&
-      (p.kind === "*" || p.kind === "dossier") &&
-      (!dossier || !p.dossierId || p.dossierId === dossier.id),
-  );
+  const rights = useRecordCapabilities([
+    ...(dossier ? [dossier.id] : []),
+    ...(items ?? []).map((d) => d.dossierId),
+  ]);
+  const canUpload = dossier
+    ? (rights.grants[dossier.id]?.includes("update") ?? false)
+    : [...user.permissions, ...user.scopedPermissions].some(
+        (p) =>
+          p.action === "update" && (p.kind === "*" || p.kind === "dossier"),
+      );
   useEffect(() => {
     const epoch = ++generation.current;
     const controller = new AbortController();
@@ -104,7 +109,7 @@ export function Documents({
         </label>
         {canUpload && <Button onClick={() => open()}>Ajouter une pièce</Button>}
       </div>
-      <ErrorSummary message={error || undefined} />
+      <ErrorSummary message={error || rights.error || undefined} />
       {error && (
         <Button onClick={() => setRevision((n) => n + 1)}>Réessayer</Button>
       )}
@@ -163,12 +168,7 @@ export function Documents({
                     </td>
                     <td>
                       <div className="document-actions">
-                        {user.permissions.some(
-                          (p) =>
-                            p.action === "export" &&
-                            (p.kind === "*" || p.kind === "dossier") &&
-                            (!p.dossierId || p.dossierId === doc.dossierId),
-                        ) && (
+                        {rights.grants[doc.dossierId]?.includes("export") && (
                           <Button
                             size="sm"
                             aria-label={`Télécharger ${doc.filename} v${doc.version}`}
@@ -188,12 +188,7 @@ export function Documents({
                             Télécharger
                           </Button>
                         )}
-                        {user.permissions.some(
-                          (p) =>
-                            p.action === "update" &&
-                            (p.kind === "*" || p.kind === "dossier") &&
-                            (!p.dossierId || p.dossierId === doc.dossierId),
-                        ) && (
+                        {rights.grants[doc.dossierId]?.includes("update") && (
                           <Button
                             size="sm"
                             aria-label={`Nouvelle version de ${doc.filename} v${doc.version}`}
@@ -260,6 +255,10 @@ function UploadForm({
     [errors, setErrors] = useState<Errors>({}),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const rights = useRecordCapabilities([
+    ...dossiers.map((d) => d.id),
+    ...(dossierId ? [dossierId] : []),
+  ]);
   useEffect(() => {
     form.current?.querySelector<HTMLElement>("select,input")?.focus();
     if (!dossier && !previous) {
@@ -371,7 +370,10 @@ function UploadForm({
           ? "Nouvelle version de " + previous.filename
           : "Ajouter une pièce"}
       </h3>
-      <ErrorSummary errors={errors} message={error || undefined} />
+      <ErrorSummary
+        errors={errors}
+        message={error || rights.error || undefined}
+      />
       {previous ? (
         <p>Rattachée au même dossier, version {previous.version + 1}.</p>
       ) : dossier ? (
@@ -386,14 +388,7 @@ function UploadForm({
         >
           <option value="">Choisir un dossier</option>
           {dossiers
-            .filter((d) =>
-              user.permissions.some(
-                (p) =>
-                  p.action === "update" &&
-                  (p.kind === "*" || p.kind === "dossier") &&
-                  (!p.dossierId || p.dossierId === d.id),
-              ),
-            )
+            .filter((d) => rights.grants[d.id]?.includes("update"))
             .map((d) => (
               <option key={d.id} value={d.id}>
                 {d.title}
@@ -426,19 +421,19 @@ function UploadForm({
           disabled={
             !!previous ||
             (!confidential &&
-              !user.permissions.some(
-                (p) =>
-                  p.action === "confidential" &&
-                  (p.kind === "*" || p.kind === "dossier") &&
-                  (!p.dossierId || p.dossierId === dossierId),
-              ))
+              !rights.grants[dossierId]?.includes("confidential"))
           }
           onCheckedChange={setConfidential}
         />
         Pièce confidentielle
       </label>
       <div className="actions">
-        <Button type="submit" variant="solid" loading={busy}>
+        <Button
+          type="submit"
+          variant="solid"
+          loading={busy}
+          disabled={!rights.grants[dossierId]?.includes("update")}
+        >
           Conserver la pièce
         </Button>
         <Button onClick={onClose}>Annuler l’ajout</Button>

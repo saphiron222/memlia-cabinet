@@ -241,7 +241,7 @@ export async function backup(options) {
     const migrations = (
       await db.query("SELECT version FROM schema_migrations ORDER BY version")
     ).rows.map((r) => r.version);
-    if (migrations.join(",") !== "1,2,3,4")
+    if (!["1,2,3,4", "1,2,3,4,5"].includes(migrations.join(",")))
       fail("Version de schéma non prise en charge.");
     const documents = (
       await db.query("SELECT id,content FROM cabinet_documents ORDER BY id")
@@ -285,7 +285,7 @@ export async function backup(options) {
     const manifest = {
       format: 1,
       application: "0.1.0",
-      schema: 4,
+      schema: migrations.at(-1),
       postgresMajor: 17,
       serverVersion: version,
       pgClientVersion,
@@ -326,7 +326,7 @@ export async function validateBackup(root) {
   );
   if (
     manifest.format !== 1 ||
-    manifest.schema !== 4 ||
+    ![4, 5].includes(manifest.schema) ||
     manifest.application !== "0.1.0" ||
     manifest.postgresMajor !== 17 ||
     !Array.isArray(manifest.files) ||

@@ -8,7 +8,7 @@ import {
 } from "@memlia/contracts";
 import type { Connection, Database } from "../storage/database.js";
 import { idempotent } from "../storage/operations.js";
-import { asUser } from "../identity/service.js";
+import { effectiveUser } from "../identity/service.js";
 import { fail } from "../errors.js";
 export interface JobContext<C> {
   id: string;
@@ -89,7 +89,7 @@ export class JobRunner {
         [job.actor_id],
       );
       if (!users[0]) fail(403, "FORBIDDEN", "Utilisateur désactivé.");
-      const actor = asUser(users[0]);
+      const actor = await effectiveUser(tx, users[0]);
       const input = bounded(definition.input, job.input);
       await definition.authorize(tx, actor, input);
       return actor;
@@ -160,7 +160,11 @@ export class JobRunner {
           [actor.id],
         );
         if (!users[0]) fail(403, "FORBIDDEN", "Utilisateur désactivé.");
-        await definition.authorize(tx, asUser(users[0]), input);
+        await definition.authorize(
+          tx,
+          await effectiveUser(tx, users[0]),
+          input,
+        );
         const gates = await tx.query(
           "SELECT paused FROM cabinet_job_gate WHERE id=1",
         );

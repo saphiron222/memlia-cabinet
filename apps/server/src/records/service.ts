@@ -10,7 +10,7 @@ import {
 import type { Connection } from "../storage/database.js";
 import { fail } from "../errors.js";
 import { idempotent } from "../storage/operations.js";
-import { hasPermission, requireAccess } from "./permissions.js";
+import { scopedPermission, requireAccess } from "./permissions.js";
 export async function loadRecord(
   tx: Connection,
   id: string,
@@ -76,12 +76,13 @@ export async function saveRecord(
       previous,
     );
   else if (
-    !hasPermission(
+    !(await scopedPermission(
+      tx,
       user,
       "create",
       input.record.kind,
       input.record.dossierId ?? null,
-    )
+    ))
   )
     fail(403, "FORBIDDEN", "Création non autorisée.");
   const result = await idempotent(

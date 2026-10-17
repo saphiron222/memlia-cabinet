@@ -1,3 +1,4 @@
+import { availablePermissions } from "../administration/access.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import {
@@ -49,7 +50,7 @@ export function registerRecordRoutes(
               "audit",
             ] as Action[]
           ).filter((action) =>
-            actor.permissions.some(
+            availablePermissions(actor).some(
               (p) => p.action === action && (p.kind === "*" || p.kind === kind),
             ),
           ),
@@ -86,7 +87,7 @@ export function registerRecordRoutes(
       const actor = await user(tx, req);
       const query = RecordListQuerySchema.parse(req.query);
       if (
-        !actor.permissions.some(
+        !availablePermissions(actor).some(
           (p) =>
             p.action === "read" &&
             (!query.kind || p.kind === "*" || p.kind === query.kind),
@@ -107,7 +108,7 @@ export function registerRecordRoutes(
       const actor = await user(tx, req);
       const query = RecordListQuerySchema.parse(req.query);
       if (
-        !actor.permissions.some(
+        !availablePermissions(actor).some(
           (p) =>
             p.action === "export" &&
             (!query.kind || p.kind === "*" || p.kind === query.kind),
@@ -238,7 +239,7 @@ export function registerRecordRoutes(
   app.get("/api/v1/dashboard", async (req) =>
     db.transaction(async (tx) => {
       const actor = await user(tx, req);
-      if (!actor.permissions.some((p) => p.action === "read"))
+      if (!availablePermissions(actor).some((p) => p.action === "read"))
         fail(403, "FORBIDDEN", "Lecture non autorisée.");
       const records = (await listRecords(tx, actor)).filter(
         (r) => !r.data.archived,

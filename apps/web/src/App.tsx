@@ -1,3 +1,4 @@
+import { Administration } from "./features/administration/Administration";
 import { Collections } from "./Collections";
 import { Documents } from "./Documents";
 import { Home, Records } from "./RecordScreens";
@@ -221,8 +222,14 @@ function Auth({
     </main>
   );
 }
-type Page = "accueil" | "documents" | "collectes" | RecordKind;
+type Page =
+  | "administration"
+  | "accueil"
+  | "documents"
+  | "collectes"
+  | RecordKind;
 const icons = {
+  administration: IconUsers,
   collectes: IconDownload,
   documents: IconDownload,
   accueil: IconHome,
@@ -240,6 +247,7 @@ function route(): Page {
     "obligation",
     "documents",
     "collectes",
+    "administration",
   ].includes(hash)
     ? (hash as Page)
     : "accueil";
@@ -306,17 +314,20 @@ function Cabinet({
               "obligation",
               "documents",
               "collectes",
+              "administration",
             ] as Page[]
           ).map((p) => {
             const Icon = icons[p];
             const title =
-              p === "accueil"
-                ? "Accueil"
-                : p === "documents"
-                  ? "Documents"
-                  : p === "collectes"
-                    ? "Collectes"
-                    : labels[p];
+              p === "administration"
+                ? "Administration"
+                : p === "accueil"
+                  ? "Accueil"
+                  : p === "documents"
+                    ? "Documents"
+                    : p === "collectes"
+                      ? "Collectes"
+                      : labels[p];
             return (
               <a
                 key={p}
@@ -386,18 +397,22 @@ function Cabinet({
       <main id="main" className="main">
         <header className="app-header">
           <h1 ref={heading} tabIndex={-1}>
-            {page === "accueil"
-              ? "Accueil"
-              : page === "documents"
-                ? "Documents"
-                : page === "collectes"
-                  ? "Collectes"
-                  : labels[page]}
+            {page === "administration"
+              ? "Administration"
+              : page === "accueil"
+                ? "Accueil"
+                : page === "documents"
+                  ? "Documents"
+                  : page === "collectes"
+                    ? "Collectes"
+                    : labels[page]}
           </h1>
           <span className="muted">Cabinet partagé</span>
         </header>
         <ErrorSummary message={fault || undefined} />
-        {page === "accueil" ? (
+        {page === "administration" ? (
+          <Administration user={user} />
+        ) : page === "accueil" ? (
           <Home key={page} />
         ) : page === "collectes" ? (
           <Collections user={user} />

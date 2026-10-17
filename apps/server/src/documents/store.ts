@@ -1,3 +1,4 @@
+import { assignmentScope } from "../administration/access.js";
 import { randomUUID, createHash } from "node:crypto";
 import { mkdir, open, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
@@ -14,10 +15,11 @@ import {
   type SessionUser,
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
-import { asUser } from "../identity/service.js";
+import { effectiveUser } from "../identity/service.js";
 import {
   requireAccess,
   hasPermission,
+  scopedPermission,
   canAccess,
 } from "../records/permissions.js";
 import { loadRecord } from "../records/service.js";
@@ -108,7 +110,7 @@ export class DocumentStore {
     );
     if (!rows[0])
       fail(401, "SESSION_REQUIRED", "Utilisateur inactif ou inconnu.");
-    return asUser(rows[0]);
+    return effectiveUser(tx, rows[0]);
   }
   async authorize(tx: Connection, actor: SessionUser, input: DocumentInput) {
     const current = await this.actor(tx, actor),
@@ -119,7 +121,13 @@ export class DocumentStore {
     await requireAccess(tx, current, "update", parent);
     if (
       input.confidential &&
-      !hasPermission(current, "confidential", "dossier", parent.id)
+      !(await scopedPermission(
+        tx,
+        current,
+        "confidential",
+        "dossier",
+        parent.id,
+      ))
     )
       fail(404, "NOT_FOUND", "Ressource inaccessible.");
     if (input.previousVersionId) {
@@ -223,7 +231,13 @@ export class DocumentStore {
     return (
       (await canAccess(tx, actor, "read", parent)) &&
       (!document.confidential ||
-        hasPermission(actor, "confidential", "dossier", parent.id))
+        (await scopedPermission(
+          tx,
+          actor,
+          "confidential",
+          "dossier",
+          parent.id,
+        )))
     );
   }
   private async read(
@@ -294,7 +308,7 @@ export class DocumentStore {
         (id): id is string =>
           id !== null && hasPermission(current, action, "dossier", id),
       );
-      return `d.dossier_id = ANY(${parameter(dossierIds)}::uuid[])`;
+      return `(d.dossier_id = ANY(${parameter(dossierIds)}::uuid[]) OR ${assignmentScope(current.id, action, "dossier", "d.dossier_id", parameter)})`;
     };
     const where = [
       scope("read"),

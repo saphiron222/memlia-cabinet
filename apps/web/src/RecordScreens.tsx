@@ -92,9 +92,10 @@ export function Records({
     [exporting, setExporting] = useState(false);
   const generation = useRef(0);
   const can = (action: SessionUser["permissions"][number]["action"]) =>
-    user.permissions.some(
-      (p) => p.action === action && (p.kind === "*" || p.kind === kind),
-    );
+    (action === "create" && kind === "dossier"
+      ? user.permissions
+      : [...user.permissions, ...user.scopedPermissions]
+    ).some((p) => p.action === action && (p.kind === "*" || p.kind === kind));
   const query = queryString({
     kind,
     q,

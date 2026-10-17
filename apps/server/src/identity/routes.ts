@@ -1,3 +1,4 @@
+import { requireAdministrator } from "../administration/access.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
@@ -101,35 +102,11 @@ export function registerUserRoutes(
                 "VERSION_CONFLICT",
                 "Cet utilisateur a changé. Rechargez-le avant de modifier.",
               );
-            const manager = (permissions: unknown) =>
-              SessionUserSchema.shape.permissions
-                .parse(permissions)
-                .some(
-                  (p) =>
-                    p.action === "manage_users" &&
-                    p.kind === "*" &&
-                    p.dossierId === null,
-                );
-            if (
-              existing[0].active &&
-              manager(existing[0].permissions) &&
-              (!input.active || !manager(input.permissions))
-            ) {
-              const others = await tx.query(
-                "SELECT * FROM cabinet_users WHERE id<>$1 AND active=true",
-                [id],
-              );
-              if (!others.some((row) => manager(row.permissions)))
-                fail(
-                  409,
-                  "LAST_ADMINISTRATOR",
-                  "Conserver un administrateur actif.",
-                );
-            }
             const rows = await tx.query(
               "UPDATE cabinet_users SET active=$2,permissions=$3::jsonb,version=version+1 WHERE id=$1 RETURNING *",
               [id, input.active, JSON.stringify(input.permissions)],
             );
+            await requireAdministrator(tx);
             if (!input.active)
               await tx.query("DELETE FROM cabinet_sessions WHERE user_id=$1", [
                 id,

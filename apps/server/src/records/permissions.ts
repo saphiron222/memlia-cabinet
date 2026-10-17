@@ -1,3 +1,4 @@
+import { assignmentScope } from "../administration/access.js";
 import type {
   Action,
   CabinetRecord,
@@ -30,10 +31,11 @@ export async function canAccess(
   record: CabinetRecord,
 ): Promise<boolean> {
   const scope = record.kind === "dossier" ? record.id : record.dossierId;
-  if (!hasPermission(user, action, record.kind, scope)) return false;
+  if (!(await scopedPermission(tx, user, action, record.kind, scope)))
+    return false;
   if (
     record.confidential &&
-    !hasPermission(user, "confidential", record.kind, scope)
+    !(await scopedPermission(tx, user, "confidential", record.kind, scope))
   )
     return false;
   if (record.dossierId) {
@@ -44,9 +46,15 @@ export async function canAccess(
     if (!rows[0]) return false;
     const parent = rows[0].content as CabinetRecord;
     if (
-      !hasPermission(user, "read", "dossier", parent.id) ||
+      !(await scopedPermission(tx, user, "read", "dossier", parent.id)) ||
       (parent.confidential &&
-        !hasPermission(user, "confidential", "dossier", parent.id))
+        !(await scopedPermission(
+          tx,
+          user,
+          "confidential",
+          "dossier",
+          parent.id,
+        )))
     )
       return false;
   }
@@ -60,4 +68,28 @@ export async function requireAccess(
 ) {
   if (!(await canAccess(tx, user, action, record)))
     fail(404, "NOT_FOUND", "Ressource inaccessible.");
+}
+
+export async function scopedPermission(
+  tx: Connection,
+  user: SessionUser,
+  action: Action,
+  kind: RecordKind,
+  dossierId: string | null,
+) {
+  if (hasPermission(user, action, kind, dossierId)) return true;
+  if (!dossierId) return false;
+  const params: unknown[] = [dossierId];
+  const predicate = assignmentScope(
+    user.id,
+    action,
+    kind,
+    "$1::uuid",
+    (value) => {
+      params.push(value);
+      return "$" + params.length;
+    },
+  );
+  const rows = await tx.query(`SELECT ${predicate} AS allowed`, params);
+  return rows[0]?.allowed === true;
 }

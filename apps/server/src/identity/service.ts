@@ -1,3 +1,7 @@
+import {
+  globalRolePermissions,
+  scopedRolePermissions,
+} from "../administration/access.js";
 import { randomUUID } from "node:crypto";
 import {
   SessionUserSchema,
@@ -64,7 +68,7 @@ export async function authenticate(
     [digest(token), now],
   );
   if (!rows[0]) fail(401, "SESSION_REQUIRED", "Session expirée ou révoquée.");
-  return asUser(rows[0]);
+  return effectiveUser(tx, rows[0]);
 }
 export async function login(tx: Connection, email: string, password: string) {
   const rows = await tx.query("SELECT * FROM cabinet_users WHERE email=$1", [
@@ -80,7 +84,7 @@ export async function login(tx: Connection, email: string, password: string) {
     !row.active
   )
     fail(401, "INVALID_CREDENTIALS", "Identifiants incorrects.");
-  return asUser(row);
+  return effectiveUser(tx, row);
 }
 export async function issueSession(
   tx: Connection,
@@ -93,4 +97,22 @@ export async function issueSession(
     [digest(token), user.id, new Date(now.getTime() + 8 * 60 * 60 * 1000)],
   );
   return token;
+}
+
+export async function effectiveUser(
+  tx: Connection,
+  row: Record<string, unknown>,
+): Promise<SessionUser> {
+  const direct = asUser(row);
+  const unique = (grants: SessionUser["permissions"]) => [
+    ...new Map(grants.map((p) => [JSON.stringify(p), p])).values(),
+  ];
+  return {
+    ...direct,
+    permissions: unique([
+      ...direct.permissions,
+      ...(await globalRolePermissions(tx, direct.id)),
+    ]),
+    scopedPermissions: unique(await scopedRolePermissions(tx, direct.id)),
+  };
 }

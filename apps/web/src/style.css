@@ -543,3 +543,44 @@ textarea {
 .collections > p {
   margin-bottom: 16px;
 }
+
+.administration {
+  padding: var(--spacing-6, 24px);
+}
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(300px, 3fr);
+  gap: 24px;
+  padding-top: 24px;
+}
+.admin-layout > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.admin-layout form {
+  max-width: 700px;
+}
+.administration fieldset {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid var(--border-color-medium);
+}
+.admin-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+@media (max-width: 700px) {
+  .admin-layout {
+    grid-template-columns: 1fr;
+  }
+}

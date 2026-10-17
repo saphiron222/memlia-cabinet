@@ -1,3 +1,5 @@
+import { registerCapabilitiesRoutes } from "./administration/capabilities.js";
+import { registerAdministrationRoutes } from "./administration/routes.js";
 import { createCabinetCalendar } from "./civil-date.js";
 import { LoginThrottle } from "./identity/login-throttle.js";
 import { registerWeb } from "./web.js";
@@ -270,6 +272,8 @@ export async function createApplication(options: ApplicationOptions) {
   });
   registerRecordRoutes(app, { db, now, user }, civilDate);
   registerUserRoutes(app, { db, now, user });
+  registerAdministrationRoutes(app, { db, now, user });
+  registerCapabilitiesRoutes(app, { db, now, user });
   const documents = new DocumentStore(options.dataDirectory);
   registerDocumentRoutes(app, { db, now, user }, documents);
   registerCollectionRoutes(

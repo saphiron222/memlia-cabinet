@@ -19,7 +19,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 4)
+  if (version > 5)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -38,6 +38,12 @@ export async function migrate(connection: Connection): Promise<void> {
   if (version < 3) await migrateDocumentSearch(connection);
   if (version < 4)
     for (const statement of jobMigration
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(statement);
+  if (version < 5)
+    for (const statement of administrationMigration
       .split(";")
       .map((s) => s.trim())
       .filter(Boolean))
@@ -112,4 +118,16 @@ CREATE TABLE cabinet_collection_observations (identity text PRIMARY KEY, dossier
 CREATE TABLE cabinet_collection_links (job_id uuid NOT NULL REFERENCES cabinet_jobs(id), identity text NOT NULL REFERENCES cabinet_collection_observations(identity), PRIMARY KEY(job_id,identity));
 CREATE TABLE cabinet_collection_snapshots (job_id uuid NOT NULL REFERENCES cabinet_jobs(id), page integer NOT NULL, content jsonb NOT NULL, PRIMARY KEY(job_id,page));
 INSERT INTO schema_migrations(version) VALUES (4);
+`;
+
+const administrationMigration = `
+CREATE TABLE cabinet_roles (id uuid PRIMARY KEY, content jsonb NOT NULL);
+CREATE TABLE cabinet_groups (id uuid PRIMARY KEY, content jsonb NOT NULL);
+CREATE TABLE cabinet_memberships (group_id uuid NOT NULL REFERENCES cabinet_groups(id), user_id uuid NOT NULL REFERENCES cabinet_users(id), PRIMARY KEY(group_id,user_id));
+CREATE INDEX cabinet_memberships_user ON cabinet_memberships(user_id,group_id);
+CREATE TABLE cabinet_user_roles (user_id uuid NOT NULL REFERENCES cabinet_users(id), role_id uuid NOT NULL REFERENCES cabinet_roles(id), PRIMARY KEY(user_id,role_id));
+CREATE TABLE cabinet_assignments (dossier_id uuid NOT NULL REFERENCES cabinet_records(id), subject_kind text NOT NULL CHECK(subject_kind IN ('user','team','site')), subject_id uuid NOT NULL, role_id uuid NOT NULL REFERENCES cabinet_roles(id), PRIMARY KEY(dossier_id,subject_kind,subject_id));
+CREATE INDEX cabinet_assignments_subject ON cabinet_assignments(subject_kind,subject_id,dossier_id);
+CREATE TABLE cabinet_assignment_versions (dossier_id uuid PRIMARY KEY REFERENCES cabinet_records(id), version integer NOT NULL);
+INSERT INTO schema_migrations(version) VALUES (5);
 `;
