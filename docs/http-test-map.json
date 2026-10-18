@@ -558,5 +558,13 @@
   "GET /api/v1/time/entities": {
     "file": "apps/server/test/time.test.ts",
     "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/timers/:id/abandon": {
+    "file": "apps/server/test/time-review.test.ts",
+    "test": "review I8 an overdue timer can be abandoned with an audited reason, then restarted and its period closed"
+  },
+  "GET /api/v1/time/catalog/:kind": {
+    "file": "apps/server/test/time-review.test.ts",
+    "test": "review I5 bounded searchable catalogs resolve and select users and inactive natures beyond 200"
   }
 }

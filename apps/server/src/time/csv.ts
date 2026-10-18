@@ -38,7 +38,7 @@ export class TimeCsv {
       authorize: async (tx, actor, i) => {
         requireGlobal(actor, "export");
         await report(tx, actor, { ...i.query, limit: 1 }, "export");
-        await this.assertRows(tx, actor, i.exportId);
+        await assertTimeCsvRows(tx, actor, i.exportId);
       },
       execute: async (i, ctx) => {
         while (!ctx.checkpoint.complete) {
@@ -83,28 +83,6 @@ export class TimeCsv {
       },
     }).enqueue;
   }
-  async assertRows(tx: Connection, actor: SessionUser, exportId: string) {
-    let after: string | null = null;
-    while (true) {
-      const rows: Record<string, unknown>[] = await tx.query(
-        "SELECT id,content FROM cabinet_time_csv_rows WHERE export_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",
-        [exportId, after],
-      );
-      if (!rows.length) break;
-      for (const r of rows) {
-        const e = TimeEntitySchema.parse(r.content);
-        await authorize(tx, actor, e, "export");
-        const current = await load(tx, actor, e.id);
-        if (current.version !== e.version)
-          fail(
-            409,
-            "EXPORT_CHANGED",
-            "Une saisie de la sortie a changé. Régénérez.",
-          );
-      }
-      after = String(rows.at(-1)!.id);
-    }
-  }
   async start(
     tx: Connection,
     actor: SessionUser,
@@ -141,7 +119,7 @@ export class TimeCsv {
     requireGlobal(actor, "export");
     const i = input.parse(j.input);
     await report(tx, actor, { ...i.query, limit: 1 }, "export");
-    await this.assertRows(tx, actor, i.exportId);
+    await assertTimeCsvRows(tx, actor, i.exportId);
     return {
       id,
       job: j.job,
@@ -197,5 +175,32 @@ export class TimeCsv {
       lines.map((line) => line.map(csvCell).join(";")).join("\r\n") +
       "\r\n"
     );
+  }
+}
+
+export async function assertTimeCsvRows(
+  tx: Connection,
+  actor: SessionUser,
+  exportId: string,
+) {
+  let after: string | null = null;
+  while (true) {
+    const rows: Record<string, unknown>[] = await tx.query(
+      "SELECT id,content FROM cabinet_time_csv_rows WHERE export_id=$1 AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",
+      [exportId, after],
+    );
+    if (!rows.length) break;
+    for (const r of rows) {
+      const e = TimeEntitySchema.parse(r.content);
+      await authorize(tx, actor, e, "export");
+      const current = await load(tx, actor, e.id);
+      if (current.version !== e.version)
+        fail(
+          409,
+          "EXPORT_CHANGED",
+          "Une saisie de la sortie a changé. Régénérez.",
+        );
+    }
+    after = String(rows.at(-1)!.id);
   }
 }

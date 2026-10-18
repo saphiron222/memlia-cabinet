@@ -4,6 +4,7 @@ import {
   TimeEntitySchema,
   TimerStartSchema,
   TimerStopSchema,
+  TimerAbandonSchema,
   type SessionUser,
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
@@ -130,5 +131,50 @@ export async function stopTimer(
   await authorize(tx, actor, result);
   if (result.data.kind === "timer" && result.data.entryId)
     await load(tx, actor, result.data.entryId);
+  return result;
+}
+
+export async function abandonTimer(
+  tx: Connection,
+  actor: SessionUser,
+  id: string,
+  i: z.infer<typeof TimerAbandonSchema>,
+  now: Date,
+) {
+  const timer = await load(tx, actor, id);
+  if (timer.data.kind !== "timer" || timer.data.userId !== actor.id)
+    fail(404, "NOT_FOUND", "Chronomètre inaccessible.");
+  const result = await idempotent(
+    tx,
+    actor,
+    i.operationId,
+    { abandonTimer: id, ...i },
+    async () => {
+      if (
+        timer.version !== i.expectedVersion ||
+        timer.data.kind !== "timer" ||
+        timer.data.stoppedAt
+      )
+        fail(
+          409,
+          "TIMER_STOPPED",
+          "Ce chronomètre a déjà changé ou est arrêté.",
+        );
+      return store(tx, {
+        ...timer,
+        version: timer.version + 1,
+        actorId: actor.id,
+        updatedAt: now.toISOString(),
+        data: {
+          ...timer.data,
+          stoppedAt: now.toISOString(),
+          entryId: null,
+          abandonReason: i.reason,
+        },
+      });
+    },
+  );
+  await authorize(tx, actor, result);
+  await load(tx, actor, id);
   return result;
 }

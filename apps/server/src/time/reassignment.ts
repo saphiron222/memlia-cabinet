@@ -19,21 +19,18 @@ import { calculateWorkload } from "./workload.js";
 import { requireGlobal } from "../records/permissions.js";
 import { fail } from "../errors.js";
 import { idempotent } from "../storage/operations.js";
-export async function previewReassignment(
+async function authorizeReassignment(
   tx: Connection,
   actor: SessionUser,
-  i: z.infer<typeof TimeReassignmentSchema>,
+  current: import("@memlia/contracts").TimeEntity,
+  weights: { userId: string; weight: number }[],
 ) {
-  requireGlobal(actor, "time_manage");
-  const current = await load(tx, actor, i.allocationId);
   if (current.data.kind !== "allocation" && current.data.kind !== "assignment")
-    fail(400, "INVALID_ALLOCATION", "Affectation de charge attendue.");
-  if (current.version !== i.expectedVersion)
-    fail(409, "VERSION_CONFLICT", "Affectation modifiée. Rechargez.");
+    fail(400, "INVALID_ALLOCATION", "Affectation attendue.");
   if (current.data.kind === "assignment") {
     const r = await loadRecord(tx, current.data.dossierId);
     await requireAccess(tx, actor, "assign", r);
-    if (i.weights.length !== 1)
+    if (weights.length !== 1)
       fail(
         400,
         "SINGLE_ROLE_ASSIGNMENT",
@@ -47,6 +44,19 @@ export async function previewReassignment(
     await loadProductionRow(tx, actor, current.data.target.id, "assign");
     await loadProductionRow(tx, actor, current.data.target.id, "update");
   }
+}
+export async function previewReassignment(
+  tx: Connection,
+  actor: SessionUser,
+  i: z.infer<typeof TimeReassignmentSchema>,
+) {
+  requireGlobal(actor, "time_manage");
+  const current = await load(tx, actor, i.allocationId);
+  if (current.data.kind !== "allocation" && current.data.kind !== "assignment")
+    fail(400, "INVALID_ALLOCATION", "Affectation de charge attendue.");
+  if (current.version !== i.expectedVersion)
+    fail(409, "VERSION_CONFLICT", "Affectation modifiée. Rechargez.");
+  await authorizeReassignment(tx, actor, current, i.weights);
   const proposed = {
     ...current,
     version: current.version + 1,
@@ -65,13 +75,31 @@ export async function previewReassignment(
           },
   };
   await authorize(tx, actor, proposed);
-  const q = TimeQuerySchema.parse({ from: i.from, to: i.to });
+  const dossierId =
+    current.data.kind === "assignment"
+      ? current.data.dossierId
+      : current.data.target.kind === "record"
+        ? (await loadRecord(tx, current.data.target.id)).dossierId
+        : (await loadProductionRow(tx, actor, current.data.target.id)).scope
+            ?.id;
+  const priorUsers =
+    current.data.kind === "assignment"
+      ? [current.data.userId]
+      : current.data.weights.map((w) => w.userId);
+  const q = {
+    ...TimeQuerySchema.parse({
+      from: i.from,
+      to: i.to,
+      ...(dossierId ? { dossierId } : {}),
+    }),
+    userIds: [...new Set([...priorUsers, ...i.weights.map((w) => w.userId)])],
+  };
   const before = await calculateWorkload(tx, actor, q),
     after = await calculateWorkload(tx, actor, q, proposed);
-  const config = await entities(tx, actor),
-    sourceVersions: Record<string, number> = Object.fromEntries(
-      config.map((e) => [e.id, e.version]),
-    );
+  const sourceVersions: Record<string, number> = {
+    ...before.sourceVersions,
+    ...after.sourceVersions,
+  };
   for (const row of before.rows)
     Object.assign(sourceVersions, row.sourceVersions);
   return { before, after, sourceVersions };
@@ -88,6 +116,7 @@ export async function commitReassignment(
   const current = await load(tx, actor, i.allocationId);
   if (current.data.kind !== "allocation" && current.data.kind !== "assignment")
     fail(400, "INVALID_ALLOCATION", "Affectation attendue.");
+  await authorizeReassignment(tx, actor, current, i.weights);
   const result = await idempotent(
     tx,
     actor,

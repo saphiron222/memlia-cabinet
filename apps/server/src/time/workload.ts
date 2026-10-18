@@ -1,7 +1,10 @@
+import { workloadPeople } from "./workload-users.js";
+import { productionStages } from "./production-plan.js";
 import { z } from "zod";
 import {
   CabinetRecordSchema,
   ProductionRowSchema,
+  ProductionModelSchema,
   WorkloadSchema,
   WorkloadRowSchema,
   type TimeEntity,
@@ -15,6 +18,7 @@ import {
   period,
   readsOthers,
   scopeCte,
+  report,
 } from "./service.js";
 import { fail } from "../errors.js";
 type Row = z.infer<typeof WorkloadRowSchema>;
@@ -48,7 +52,7 @@ function split(total: number, weights: { userId: string; weight: number }[]) {
 export async function calculateWorkload(
   tx: Connection,
   actor: SessionUser,
-  q: TimeQuery & { roleId?: string },
+  q: TimeQuery & { roleId?: string; userIds?: string[] },
   override?: TimeEntity,
 ) {
   period(q);
@@ -63,12 +67,42 @@ export async function calculateWorkload(
           { action: "time_read", kind: "*", dossierId: null },
         ],
       };
-  const baseConfig = await entities(tx, calculationActor);
-  const config = (
-    override
-      ? baseConfig.map((e) => (e.id === override.id ? override : e))
-      : baseConfig
-  ).filter((e) => e.data.kind !== "entry" && e.data.kind !== "timer");
+  const userParams: unknown[] = readsOthers(actor) ? [] : [actor.id];
+  const userFilters = [readsOthers(actor) ? "TRUE" : "id=$1"];
+  if (q.userId) {
+    userParams.push(q.userId);
+    userFilters.push(`id=$${userParams.length}::uuid`);
+  }
+  if (q.userIds) {
+    userParams.push(q.userIds);
+    userFilters.push(`id=ANY($${userParams.length}::uuid[])`);
+  }
+  if (q.groupId) {
+    userParams.push(q.groupId);
+    userFilters.push(
+      `EXISTS(SELECT 1 FROM cabinet_memberships m WHERE m.user_id=cabinet_users.id AND m.group_id=$${userParams.length}::uuid)`,
+    );
+  }
+  if (!q.userId && !q.userIds && (q.dossierId || q.recordId || q.roleId))
+    userFilters.push(
+      workloadPeople(q, (v) => {
+        userParams.push(v);
+        return "$" + userParams.length;
+      }),
+    );
+  const users = await tx.query(
+    `SELECT id,name,active FROM cabinet_users WHERE ${userFilters.join(" AND ")} ORDER BY name LIMIT 201`,
+    userParams,
+  );
+  if (users.length > 200)
+    fail(
+      422,
+      "PERIOD_TOO_LARGE",
+      "Filtrez par équipe ou site (200 personnes maximum).",
+    );
+  const selectedUsers = users.map((u) => String(u.id));
+  const narrowedUsers =
+    !!q.userId || !!q.userIds || !!q.groupId || !readsOthers(actor);
   const days = dates(q.from, q.to),
     params: unknown[] = [];
   const p = (v: unknown) => {
@@ -76,8 +110,24 @@ export async function calculateWorkload(
     return "$" + params.length;
   };
   const cte = scopeCte(actor, p);
+  const objectUsers = (
+    alias: string,
+    param: (v: unknown) => string,
+    canonical: string,
+  ) =>
+    `(${!narrowedUsers} OR ${canonical} OR EXISTS(SELECT 1 FROM cabinet_time a WHERE a.kind='allocation' AND a.content->'data'->'target'->>'id'=${alias}.id::text AND a.content->'data'->>'from'<=${param(q.to)} AND COALESCE(a.content->'data'->>'to','9999-12-31')>=${param(q.from)} AND EXISTS(SELECT 1 FROM jsonb_array_elements(a.content->'data'->'weights') w WHERE w->>'userId'=ANY(${param(selectedUsers)}::text[]))))`;
+  const recordFilters = [
+    q.recordId ? `r.id=${p(q.recordId)}::uuid` : "TRUE",
+    q.dossierId ? `r.content->>'dossierId'=${p(q.dossierId)}` : "TRUE",
+    q.roleId ? "FALSE" : "TRUE",
+    objectUsers(
+      "r",
+      p,
+      `COALESCE(r.content->'data'->'assigneeIds','[]'::jsonb) ?| ${p(selectedUsers)}::text[]`,
+    ),
+  ];
   const scopeRecords = await tx.query(
-    `${cte} SELECT r.content FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND r.kind IN('tache','obligation') AND r.content->'data'->>'dueDate'>=${p(q.from)} AND r.content->'data'->>'dueDate'<=${p(q.to)} ORDER BY r.id LIMIT 10001`,
+    `${cte} SELECT r.content FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND r.kind IN('tache','obligation') AND NOT EXISTS(SELECT 1 FROM cabinet_production_rows represented WHERE represented.record_id=r.id) AND ${recordFilters.join(" AND ")} AND r.content->'data'->>'dueDate'>=${p(q.from)} AND r.content->'data'->>'dueDate'<=${p(q.to)} ORDER BY r.id LIMIT 10001`,
     params,
   );
   if (scopeRecords.length > 10000)
@@ -87,12 +137,58 @@ export async function calculateWorkload(
       prodParams.push(v);
       return "$" + prodParams.length;
     };
+  const productionFilters = [
+    q.recordId ? `p.record_id=${pp(q.recordId)}::uuid` : "TRUE",
+    q.dossierId
+      ? `(p.content->'scope'->>'id'=${pp(q.dossierId)} OR p.content->'scope'->>'dossierId'=${pp(q.dossierId)})`
+      : "TRUE",
+    q.roleId
+      ? `EXISTS(SELECT 1 FROM cabinet_production_model_versions mv CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND c->>'requiredRoleId'=${pp(q.roleId)})`
+      : "TRUE",
+    objectUsers(
+      "p",
+      pp,
+      `EXISTS(SELECT 1 FROM cabinet_production_model_versions mv CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND COALESCE(c->>'assigneeId',mv.content->'model'->>'assigneeId',(SELECT v.content->>'assigneeId' FROM cabinet_production_row_versions v WHERE v.id=p.id AND v.version=1))=ANY(${pp(selectedUsers)}::text[]))`,
+    ),
+  ];
   const prod = await tx.query(
-    `${scopeCte(actor, pp)} SELECT p.content FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND p.content->>'dueDate'>=${pp(q.from)} AND p.content->>'dueDate'<=${pp(q.to)} ORDER BY p.id LIMIT 10001`,
+    `${scopeCte(actor, pp)} SELECT p.content FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND ${productionFilters.join(" AND ")} AND EXISTS(SELECT 1 FROM cabinet_production_model_versions mv WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND (EXISTS(SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE (c->>'plannedDate'>=${pp(q.from)} AND c->>'plannedDate'<=${pp(q.to)}) OR (mv.content->'model'->>'kind'<>'custom' AND c->>'frequency'<>'once' AND substring(p.content->>'period',1,4) BETWEEN substring(${pp(q.from)}::text,1,4) AND substring(${pp(q.to)}::text,1,4))) OR EXISTS(SELECT 1 FROM cabinet_production_row_versions first WHERE first.id=p.id AND first.version=1 AND first.content->>'dueDate'>=${pp(q.from)} AND first.content->>'dueDate'<=${pp(q.to)}))) ORDER BY p.id LIMIT 10001`,
     prodParams,
   );
   if (prod.length > 10000)
     fail(422, "PERIOD_TOO_LARGE", "Réduisez la période de charge.");
+  const objectIds = [...scopeRecords, ...prod].map((x) =>
+    String((x.content as { id: string }).id),
+  );
+  const dossierIds = [
+    ...scopeRecords.map((x) => CabinetRecordSchema.parse(x.content).dossierId),
+    ...prod.map((x) => ProductionRowSchema.parse(x.content).scope?.id),
+  ].filter(Boolean);
+  const baseConfig = await entities(
+    tx,
+    calculationActor,
+    undefined,
+    "read",
+    undefined,
+    {
+      where: (p) => {
+        const data = "t.content->'data'",
+          within = `(${data}->>'from' IS NULL OR (${data}->>'from'<=${p(q.to)} AND COALESCE(${data}->>'to','9999-12-31')>=${p(q.from)}))`;
+        const fixedScope = [
+          q.recordId ? "FALSE" : "TRUE",
+          q.dossierId ? `${data}->>'dossierId'=${p(q.dossierId)}` : "TRUE",
+          q.roleId ? `${data}->>'roleId'=${p(q.roleId)}` : "TRUE",
+          narrowedUsers
+            ? `EXISTS(SELECT 1 FROM cabinet_time ass WHERE ass.kind='assignment' AND ass.content->'data'->>'dossierId'=${data}->>'dossierId' AND ass.content->'data'->>'roleId'=${data}->>'roleId' AND ass.content->'data'->>'userId'=ANY(${p(selectedUsers)}::text[]) AND ass.content->'data'->>'from'<=${p(q.to)} AND COALESCE(ass.content->'data'->>'to','9999-12-31')>=${p(q.from)})`
+            : "TRUE",
+        ].join(" AND ");
+        return `${within} AND (CASE t.kind WHEN 'plan' THEN (${data}->>'level'='cabinet' OR ${data}->>'targetId'=ANY(${p([...objectIds, ...dossierIds])}::text[])) WHEN 'allocation' THEN ${data}->'target'->>'id'=ANY(${p(objectIds)}::text[]) WHEN 'capacity' THEN (${data}->>'userId' IS NULL OR ${data}->>'userId'=ANY(${p(selectedUsers)}::text[])) WHEN 'forfait' THEN (${fixedScope}) WHEN 'assignment' THEN (${fixedScope}) ELSE FALSE END)`;
+      },
+    },
+  );
+  const config = override
+    ? baseConfig.map((e) => (e.id === override.id ? override : e))
+    : baseConfig;
   const rows: Row[] = [];
   const allocation = (
     target: { kind: "record" | "production"; id: string },
@@ -175,79 +271,103 @@ export async function calculateWorkload(
       (q.recordId && r.recordId !== q.recordId)
     )
       continue;
-    const plan =
-      config.find(
-        (e) =>
-          e.data.kind === "plan" &&
-          e.data.level === "production" &&
-          e.data.targetId === r.id &&
-          e.data.minutes !== null,
-      ) ??
-      config.find(
+    const plans = config.filter(
+      (e) => e.data.kind === "plan" && e.data.minutes !== null,
+    );
+    const overridePlan = plans.find(
+      (e) =>
+        e.data.kind === "plan" &&
+        e.data.level === "production" &&
+        e.data.targetId === r.id,
+    );
+    const inherited =
+      plans.find(
         (e) =>
           e.data.kind === "plan" &&
           e.data.level === "dossier" &&
-          e.data.targetId === dossierId &&
-          e.data.minutes !== null,
+          e.data.targetId === dossierId,
       ) ??
-      config.find(
-        (e) =>
-          e.data.kind === "plan" &&
-          e.data.level === "cabinet" &&
-          e.data.minutes !== null,
-      );
-    const target = { kind: "production" as const, id: r.id },
-      a = allocation(target, r.dueDate!);
+      plans.find((e) => e.data.kind === "plan" && e.data.level === "cabinet");
     const frozen = await tx.query(
       "SELECT content FROM cabinet_production_model_versions WHERE id=$1 AND version=$2",
       [r.modelId, r.modelVersion],
     );
-    const model = frozen[0]?.content as
-      | { model?: { columns?: { plannedMinutes: number | null }[] } }
-      | undefined;
-    const values =
-      model?.model?.columns
-        ?.map((c) => c.plannedMinutes)
-        .filter((n): n is number => n !== null && n !== undefined) ?? [];
-    const planned =
-      plan?.data.kind === "plan"
-        ? plan.data.minutes
-        : values.length
-          ? values.reduce((s, n) => s + n, 0)
-          : null;
-    const component =
-      plan?.data.kind === "plan" ? plan.data.component : "variable";
-    const weights =
-      a?.data.kind === "allocation"
-        ? a.data.weights
-        : r.assigneeId
-          ? [{ userId: r.assigneeId, weight: 1 }]
-          : [];
-    for (const part of split(
-      component === "fixed" ? 0 : (planned ?? 0),
-      weights,
-    ))
-      rows.push({
-        key: `production:${r.id}:${part.userId}`,
-        target,
-        label: r.target.label,
-        dossierId,
-        userId: part.userId,
-        roleId: null,
-        component,
-        plannedMinutes: planned === null ? null : part.minutes,
-        realizedSeconds: 0,
-        provenance: plan
-          ? `Prévision ${plan.id}, version ${plan.version}`
-          : `Configuration de production gelée, version ${r.modelVersion}`,
-        sourceVersions: {
-          [r.id]: r.version,
-          ...(plan ? { [plan.id]: plan.version } : {}),
-          ...(a ? { [a.id]: a.version } : {}),
-        },
-        from: r.dueDate!,
-        to: r.dueDate!,
-      });
+    const model = ProductionModelSchema.parse(frozen[0]?.content).model;
+    if (model.kind === "stage_type") continue;
+    const first = await tx.query(
+      "SELECT content FROM cabinet_production_row_versions WHERE id=$1 ORDER BY version LIMIT 1",
+      [r.id],
+    );
+    const stages = productionStages(
+      r,
+      ProductionRowSchema.parse(first[0]?.content),
+      model,
+    );
+    // A line override is a total, apportioned over all frozen stage periods, then date-filtered.
+    const overrideShares =
+      overridePlan?.data.kind === "plan"
+        ? split(
+            overridePlan.data.minutes!,
+            stages.map((s) => ({
+              userId: s.key,
+              weight: Math.max(1, s.minutes ?? 0),
+            })),
+          )
+        : [];
+    for (const stage of stages) {
+      if (stage.date < q.from || stage.date > q.to) continue;
+      const plan =
+        overridePlan ?? (stage.minutes === null ? inherited : undefined);
+      const planned = overridePlan
+        ? (overrideShares.find((s) => s.userId === stage.key)?.minutes ?? 0)
+        : (stage.minutes ??
+          (inherited?.data.kind === "plan" ? inherited.data.minutes : null));
+      const component =
+        plan?.data.kind === "plan" ? plan.data.component : "variable";
+      const target = { kind: "production" as const, id: r.id },
+        a = allocation(target, stage.date);
+      const weights =
+        a?.data.kind === "allocation"
+          ? a.data.weights
+          : stage.userId
+            ? [{ userId: stage.userId, weight: 1 }]
+            : [];
+      for (const part of split(
+        component === "fixed" ? 0 : (planned ?? 0),
+        weights,
+      ))
+        rows.push({
+          key: `production:${r.id}:${stage.key}:${part.userId}`,
+          target,
+          label:
+            r.target.label + (stage.column ? " · " + stage.column.name : ""),
+          dossierId,
+          userId: part.userId,
+          roleId: stage.column?.requiredRoleId ?? null,
+          component,
+          plannedMinutes: planned === null ? null : part.minutes,
+          realizedSeconds: 0,
+          provenance:
+            (overridePlan
+              ? "Surcharge de ligne répartie proportionnellement entre étapes et périodes gelées."
+              : stage.minutes !== null
+                ? "Prévision explicite de l’étape gelée."
+                : plan
+                  ? "Prévision héritée."
+                  : "Prévision inconnue.") +
+            (a
+              ? " Répartition explicite datée."
+              : " Porteur de l’étape gelée."),
+          sourceVersions: {
+            [r.id]: r.version,
+            [r.modelId]: r.modelVersion,
+            ...(plan ? { [plan.id]: plan.version } : {}),
+            ...(a ? { [a.id]: a.version } : {}),
+          },
+          from: stage.date,
+          to: stage.date,
+        });
+    }
   }
   if (!q.recordId)
     for (const f of config) {
@@ -354,7 +474,27 @@ export async function calculateWorkload(
       }
     }
   // Actual attribution is the author of the entry, never rewritten by a new allocation.
-  const actual = await entities(tx, actor, "entry", "read", q);
+  const actual: TimeEntity[] = [];
+  for (const actualQuery of q.roleId
+    ? []
+    : q.userIds
+      ? q.userIds.map((userId) => ({ ...q, userId }))
+      : [q])
+    for (let offset = 0; ; offset += 100) {
+      const page = await report(tx, actor, {
+        ...actualQuery,
+        offset,
+        limit: 100,
+      });
+      actual.push(...page.entries);
+      if (!page.hasMore) break;
+      if (actual.length >= 20000)
+        fail(
+          422,
+          "PERIOD_TOO_LARGE",
+          "Réduisez le périmètre des temps réalisés.",
+        );
+    }
   for (const e of actual) {
     if (e.data.kind !== "entry" || e.data.date < q.from || e.data.date > q.to)
       continue;
@@ -386,13 +526,15 @@ export async function calculateWorkload(
       matching = rows.find(
         (r) =>
           r.target?.kind === target.kind &&
-          target.kind !== "free" &&
+          target.kind === "record" &&
           r.target.kind !== "free" &&
           r.target.id === target.id &&
           r.userId === d.userId,
       );
-    if (matching) matching.realizedSeconds += d.seconds;
-    else
+    if (matching) {
+      matching.realizedSeconds += d.seconds;
+      matching.sourceVersions[e.id] = e.version;
+    } else
       rows.push({
         key: "actual:" + e.id,
         target,
@@ -409,24 +551,6 @@ export async function calculateWorkload(
         to: d.date,
       });
   }
-  const userParams: unknown[] = readsOthers(actor) ? [] : [actor.id];
-  const userFilters = ["active=true", readsOthers(actor) ? "TRUE" : "id=$1"];
-  if (q.groupId) {
-    userParams.push(q.groupId);
-    userFilters.push(
-      `EXISTS(SELECT 1 FROM cabinet_memberships m WHERE m.user_id=cabinet_users.id AND m.group_id=$${userParams.length}::uuid)`,
-    );
-  }
-  const users = await tx.query(
-    `SELECT id,name FROM cabinet_users WHERE ${userFilters.join(" AND ")} ORDER BY name LIMIT 201`,
-    userParams,
-  );
-  if (users.length > 200)
-    fail(
-      422,
-      "PERIOD_TOO_LARGE",
-      "Filtrez par équipe ou site (200 personnes maximum).",
-    );
   const ids = new Set(users.map((u) => String(u.id)));
   const visible = rows.filter(
     (r) =>
@@ -465,6 +589,8 @@ export async function calculateWorkload(
       return {
         id: u.id,
         name: u.name,
+        active: u.active,
+        unknownPlans: own.filter((r) => r.plannedMinutes === null).length,
         capacityMinutes: unknown ? null : capacity,
         capacitySource: unknown
           ? "unknown"
@@ -473,7 +599,10 @@ export async function calculateWorkload(
             : "cabinet",
         plannedMinutes: planned,
         realizedSeconds: own.reduce((s, r) => s + r.realizedSeconds, 0),
-        overloadMinutes: unknown ? null : Math.max(0, planned - capacity),
+        overloadMinutes:
+          unknown || own.some((r) => r.plannedMinutes === null)
+            ? null
+            : Math.max(0, planned - capacity),
       };
     });
   return WorkloadSchema.parse({
@@ -481,6 +610,19 @@ export async function calculateWorkload(
     to: q.to,
     rows: visible,
     people,
+    sourceVersions: Object.fromEntries(
+      config
+        .filter(
+          (e) =>
+            readsOthers(actor) ||
+            ((!("userId" in e.data) ||
+              !e.data.userId ||
+              e.data.userId === actor.id) &&
+              (e.data.kind !== "allocation" ||
+                e.data.weights.every((w) => w.userId === actor.id))),
+        )
+        .map((e) => [e.id, e.version]),
+    ),
     unknownPlans: visible.filter((r) => r.plannedMinutes === null).length,
   });
 }

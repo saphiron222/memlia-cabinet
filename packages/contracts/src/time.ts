@@ -104,6 +104,7 @@ export const TimeDataSchema = z.discriminatedUnion("kind", [
       startedAt: z.iso.datetime(),
       stoppedAt: z.iso.datetime().nullable(),
       entryId: nullableId,
+      abandonReason: z.string().trim().min(1).max(300).optional(),
     })
     .strict(),
   z
@@ -210,6 +211,9 @@ export const TimerStartSchema = z
 export const TimerStopSchema = z
   .object({ operationId: id, expectedVersion: z.number().int().positive() })
   .strict();
+export const TimerAbandonSchema = TimerStopSchema.extend({
+  reason: z.string().trim().min(1).max(300),
+});
 export const WorkloadRowSchema = z.object({
   key: z.string(),
   target: TimeLinkSchema.nullable(),
@@ -233,6 +237,8 @@ export const WorkloadSchema = z.object({
     z.object({
       id,
       name: z.string(),
+      active: z.boolean(),
+      unknownPlans: z.number().int().min(0),
       capacityMinutes: z.number().int().nullable(),
       capacitySource: z.string(),
       plannedMinutes: z.number().int(),
@@ -241,8 +247,15 @@ export const WorkloadSchema = z.object({
     }),
   ),
   unknownPlans: z.number().int(),
+  sourceVersions: z.record(z.string(), z.number().int()),
 });
 export const TimeOptionsSchema = z.object({
+  hasMore: z.object({
+    users: z.boolean(),
+    roles: z.boolean(),
+    groups: z.boolean(),
+    natures: z.boolean(),
+  }),
   roles: z.array(z.object({ id: z.uuid(), name: z.string() })).max(200),
   groups: z
     .array(
@@ -327,4 +340,12 @@ export const TimeCsvRunSchema = z.object({
   id: z.uuid(),
   job: JobSchema,
   parts: z.number().int().default(0),
+});
+
+export const TimeCatalogSchema = z.object({
+  items: z
+    .array(z.object({ id: z.uuid(), name: z.string(), active: z.boolean() }))
+    .max(100),
+  hasMore: z.boolean(),
+  offset: z.number().int().nonnegative(),
 });

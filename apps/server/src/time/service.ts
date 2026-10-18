@@ -56,7 +56,7 @@ export function fullScope(
 ) {
   return `(${scope(actor, p, s, action)} AND NOT EXISTS(SELECT 1 FROM cabinet_time_history h WHERE h.id=(${s}->>'id')::uuid AND NOT ${scope(actor, p, "h.content", action)}))`;
 }
-export async function entities(
+async function entityRows(
   tx: Connection,
   actor: SessionUser,
   kind?: string,
@@ -66,6 +66,10 @@ export async function entities(
     active?: "true" | "false";
     userId?: string;
     referenceId?: string;
+    where?: (p: (v: unknown) => string) => string;
+    offset?: number;
+    limit?: number;
+    count?: boolean;
   },
 ) {
   const params: unknown[] = [],
@@ -77,6 +81,7 @@ export async function entities(
     filter = fullScope(actor, p, "t.content", action);
   const selected = selection
     ? [
+        selection.where ? selection.where(p) : "TRUE",
         selection.active
           ? `t.kind='timer' AND (t.content->'data'->>'stoppedAt' IS NULL)=${p(selection.active === "true")}`
           : "TRUE",
@@ -89,12 +94,49 @@ export async function entities(
       ].join(" AND ")
     : "TRUE";
   const rows = await tx.query(
-    `${cte} SELECT t.content FROM cabinet_time t WHERE ${filter} AND ${selected}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT 20001`,
+    `${cte} SELECT t.content${selection?.count ? ", count(*) OVER() AS total" : ""} FROM cabinet_time t WHERE ${filter} AND ${selected}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT ${p(selection?.limit ?? 20001)} OFFSET ${p(selection?.offset ?? 0)}`,
     params,
   );
   if (rows.length > 20000)
     fail(422, "PERIOD_TOO_LARGE", "Réduisez le périmètre de configuration.");
-  return rows.map((r) => TimeEntitySchema.parse(r.content));
+  return rows;
+}
+export async function entities(...args: Parameters<typeof entityRows>) {
+  return (await entityRows(...args)).map((r) =>
+    TimeEntitySchema.parse(r.content),
+  );
+}
+export async function entityPage(
+  tx: Connection,
+  actor: SessionUser,
+  kind: string | undefined,
+  selection: NonNullable<Parameters<typeof entityRows>[5]>,
+) {
+  const offset = selection.offset ?? 0;
+  const rows = await entityRows(tx, actor, kind, "read", undefined, {
+    ...selection,
+    limit: 100,
+    count: true,
+  });
+  const first =
+    rows[0] ??
+    (offset > 0
+      ? (
+          await entityRows(tx, actor, kind, "read", undefined, {
+            ...selection,
+            offset: 0,
+            limit: 1,
+            count: true,
+          })
+        )[0]
+      : undefined);
+  const total = Number(first?.total ?? 0);
+  return {
+    items: rows.map((r) => TimeEntitySchema.parse(r.content)),
+    total,
+    offset,
+    hasMore: offset + rows.length < total,
+  };
 }
 export async function load(tx: Connection, actor: SessionUser, id: string) {
   const params: unknown[] = [id],
@@ -237,6 +279,17 @@ export async function save(
   if (i.data.kind === "period") requireGlobal(actor, "time_lock");
   else if (i.data.kind !== "entry") requireGlobal(actor, "time_manage");
   else if (i.data.userId !== actor.id) requireGlobal(actor, "time_manage");
+  const prior = i.expectedVersion
+    ? (
+        await tx.query(
+          "SELECT content FROM cabinet_time_history WHERE id=$1 AND version=$2",
+          [i.id, i.expectedVersion],
+        )
+      )[0]?.content
+    : null;
+  for (const owner of [old, prior ? TimeEntitySchema.parse(prior) : null])
+    if (owner?.data.kind === "entry" && owner.data.userId !== actor.id)
+      requireGlobal(actor, "time_manage");
   const candidate = TimeEntitySchema.parse({
     id: i.id,
     version: i.expectedVersion + 1,
@@ -290,7 +343,29 @@ export async function save(
           "allocation",
         ].includes(d.kind)
       ) {
-        const same = (await entities(tx, actor, d.kind))
+        const identity =
+          d.kind === "plan"
+            ? { level: d.level, targetId: d.targetId }
+            : d.kind === "rate" || d.kind === "capacity"
+              ? { userId: d.userId }
+              : d.kind === "forfait"
+                ? { dossierId: d.dossierId, roleId: d.roleId }
+                : d.kind === "assignment"
+                  ? {
+                      dossierId: d.dossierId,
+                      roleId: d.roleId,
+                      userId: d.userId,
+                    }
+                  : d.kind === "allocation"
+                    ? { target: d.target }
+                    : {};
+        const same = (
+          await entities(tx, actor, d.kind, "read", undefined, {
+            where: (p) =>
+              `t.id<>${p(i.id)}::uuid AND t.content->'data' @> ${p(JSON.stringify(identity))}::jsonb${range(d) ? ` AND t.content->'data'->>'from'<=${p(range(d)!.to)} AND COALESCE(t.content->'data'->>'to','9999-12-31')>=${p(range(d)!.from)}` : ""}`,
+            limit: 1,
+          })
+        )
           .filter((e) => e.id !== i.id)
           .filter((e) => {
             const a = e.data;
@@ -342,7 +417,12 @@ export async function rateAt(
   userId: string,
   date: string,
 ) {
-  const rates = (await entities(tx, actor, "rate")).filter(
+  const rates = (
+    await entities(tx, actor, "rate", "read", undefined, {
+      where: (p) =>
+        `(t.content->'data'->>'userId' IS NULL OR t.content->'data'->>'userId'=${p(userId)}) AND t.content->'data'->>'from'<=${p(date)} AND (t.content->'data'->>'to' IS NULL OR t.content->'data'->>'to'>=${p(date)})`,
+    })
+  ).filter(
     (e) =>
       e.data.kind === "rate" &&
       (e.data.userId === null || e.data.userId === userId) &&
@@ -372,7 +452,12 @@ export async function effectivePlan(
 ) {
   const r = await loadRecord(tx, recordId);
   await requireAccess(tx, actor, "read", r);
-  const plans = plansInput ?? (await entities(tx, actor, "plan"));
+  const plans =
+    plansInput ??
+    (await entities(tx, actor, "plan", "read", undefined, {
+      where: (p) =>
+        `(t.content->'data'->>'level'='cabinet' OR t.content->'data'->>'targetId'=ANY(${p([r.id, r.kind === "dossier" ? r.id : r.dossierId].filter(Boolean))}::text[]))`,
+    }));
   const explicit = (level: string, targetId: string | null) =>
     plans.find(
       (e) =>
@@ -455,7 +540,7 @@ export async function report(
     await requireAccess(tx, actor, action, await loadRecord(tx, q.dossierId));
     const dossier = p(q.dossierId);
     filters.push(
-      `(CASE t.content->'data'->'link'->>'kind' WHEN 'record' THEN EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(t.content->'data'->'link'->>'id')::uuid AND (r.id=${dossier}::uuid OR r.content->>'dossierId'=${dossier})) WHEN 'production' THEN EXISTS(SELECT 1 FROM cabinet_production_rows pr LEFT JOIN cabinet_records related ON related.id=pr.record_id WHERE pr.id=(t.content->'data'->'link'->>'id')::uuid AND ((pr.content->'target'->>'kind'='dossier' AND pr.content->'target'->>'id'=${dossier}) OR related.content->>'dossierId'=${dossier} OR pr.content->'scope'->>'id'=${dossier})) ELSE FALSE END)`,
+      `(CASE t.content->'data'->'link'->>'kind' WHEN 'record' THEN EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(t.content->'data'->'link'->>'id')::uuid AND (r.id=${dossier}::uuid OR r.content->>'dossierId'=${dossier}::text)) WHEN 'production' THEN EXISTS(SELECT 1 FROM cabinet_production_rows pr LEFT JOIN cabinet_records related ON related.id=pr.record_id WHERE pr.id=(t.content->'data'->'link'->>'id')::uuid AND ((pr.content->'target'->>'kind'='dossier' AND pr.content->'target'->>'id'=${dossier}::text) OR related.content->>'dossierId'=${dossier}::text OR pr.content->'scope'->>'id'=${dossier}::text)) ELSE FALSE END)`,
     );
   }
   if (q.groupId)

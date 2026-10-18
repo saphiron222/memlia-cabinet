@@ -1,11 +1,16 @@
+import { catalog, CatalogQuery } from "./catalog.js";
 import { TimeCsv } from "./csv.js";
 import { TimeCsvCommandSchema } from "@memlia/contracts";
 import type { JobRunner } from "../jobs/runner.js";
 import { previewReassignment, commitReassignment } from "./reassignment.js";
 import { TimeReassignmentSchema } from "@memlia/contracts";
 import { calculateWorkload } from "./workload.js";
-import { startTimer, stopTimer } from "./timers.js";
-import { TimerStartSchema, TimerStopSchema } from "@memlia/contracts";
+import { startTimer, stopTimer, abandonTimer } from "./timers.js";
+import {
+  TimerStartSchema,
+  TimerStopSchema,
+  TimerAbandonSchema,
+} from "@memlia/contracts";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import type { RouteContext } from "../context.js";
@@ -19,6 +24,7 @@ import {
   save,
   report,
   entities,
+  entityPage,
   readsOthers,
   manages,
   targets,
@@ -143,6 +149,17 @@ export function registerTimeRoutes(
       ),
     ),
   );
+  app.post("/api/v1/time/timers/:id/abandon", async (req) =>
+    db.transaction(async (tx) =>
+      abandonTimer(
+        tx,
+        await user(tx, req),
+        z.object({ id: z.uuid() }).parse(req.params).id,
+        TimerAbandonSchema.parse(req.body),
+        now(),
+      ),
+    ),
+  );
   app.post("/api/v1/time/entities", async (req) =>
     db.transaction(async (tx) =>
       save(tx, await user(tx, req), TimeSaveSchema.parse(req.body), now()),
@@ -166,26 +183,49 @@ export function registerTimeRoutes(
       ),
     ),
   );
+  app.get("/api/v1/time/catalog/:kind", async (req) =>
+    db.transaction(async (tx) =>
+      catalog(
+        tx,
+        await user(tx, req),
+        z
+          .object({ kind: z.enum(["users", "roles", "groups", "natures"]) })
+          .parse(req.params).kind,
+        CatalogQuery.parse(req.query),
+      ),
+    ),
+  );
   app.get("/api/v1/time/options", async (req) =>
     db.transaction(async (tx) => {
       const a = await user(tx, req),
         all = readsOthers(a);
       const users = await tx.query(
-        `SELECT id,name FROM cabinet_users WHERE active=true ${all ? "" : "AND id=$1"} ORDER BY name LIMIT 200`,
+        `SELECT id,name FROM cabinet_users WHERE active=true ${all ? "" : "AND id=$1"} ORDER BY name LIMIT 201`,
         all ? [] : [a.id],
       );
+      const roles = await tx.query(
+        "SELECT id,content->>'name' name FROM cabinet_roles ORDER BY id LIMIT 201",
+      );
+      const groups = await tx.query(
+        "SELECT id,content->>'name' name,content->>'kind' kind FROM cabinet_groups ORDER BY id LIMIT 201",
+      );
+      const natures = await entities(tx, a, "nature", "read", undefined, {
+        limit: 201,
+      });
       return TimeOptionsSchema.parse({
-        roles: await tx.query(
-          "SELECT id,content->>'name' name FROM cabinet_roles ORDER BY id LIMIT 200",
-        ),
-        groups: await tx.query(
-          "SELECT id,content->>'name' name,content->>'kind' kind FROM cabinet_groups ORDER BY id LIMIT 200",
-        ),
+        roles: roles.slice(0, 200),
+        groups: groups.slice(0, 200),
+        hasMore: {
+          users: users.length > 200,
+          roles: roles.length > 200,
+          groups: groups.length > 200,
+          natures: natures.length > 200,
+        },
         canManage: manages(a),
         canReadOthers: all,
         canLock: hasPermission(a, "time_lock", "*"),
-        users,
-        natures: (await entities(tx, a, "nature")).slice(0, 200),
+        users: users.slice(0, 200),
+        natures: natures.slice(0, 200),
       });
     }),
   );
@@ -202,12 +242,7 @@ export function registerTimeRoutes(
           })
           .strict()
           .parse(req.query);
-      const all = await entities(tx, a, q.kind, "read", undefined, q);
-      return {
-        items: all.slice(q.offset, q.offset + 100),
-        total: all.length,
-        offset: q.offset,
-      };
+      return entityPage(tx, a, q.kind, q);
     }),
   );
 }
