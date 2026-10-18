@@ -59,58 +59,75 @@
 **Files:**
 - Create: `packages/ui/package.json`, `packages/ui/src/index.ts`, `packages/ui/vendor/*`, `packages/ui/PROVENANCE.json`, `packages/ui/LICENSE.twenty-ui`.
 - Create: `apps/web/package.json`, `apps/web/vite.config.ts`, `apps/web/index.html`, `apps/web/src/*`.
+- Modify: `packages/contracts/src/index.ts`, `packages/contracts/src/records.ts`, server route imports for canonical query/list schemas.
 - Test: `tests/e2e/cabinet.spec.ts`, `playwright.config.ts`.
 
 **Interfaces:**
 - Consumes the Task 1 HTTP contract and types from `@memlia/contracts`; no handwritten duplicate payload types.
+- Owns deferred M1 from Task 1 review: export `UserListSchema` and `RecordListQuerySchema` from contracts and make both server and UI consume them. Setup status exposes `requiresToken`; the form requests the local bootstrap token only for that branch, never persists it in browser storage.
 - Produces setup/login, dashboard, dossiers, contacts, tasks and obligations pages with actual list/form/detail actions, filter/search, persistent edits, task checklist/transition/history and CSV export.
 - Produces a Twenty frame: 220px navigation, 48px collapsed mode, 13px Inter, dense 32px table rows, 400px detail panel, exact light/dark CSS variables and accessible controls.
 
 - [ ] Read `docs/design-twenty.md`; vendor the declared MIT files with notices and record deliberate import adaptations. Do not copy twenty-front under a MIT claim.
 - [ ] Write/run the failing browser flow in an isolated fictitious data directory: setup, create dossier/task, edit date, close/reopen/reload, transition and export.
 - [ ] Implement shared UI primitives from real Twenty source and the connected pages. Loading, empty, validation, denied, error and conflict states must have real branches.
+- [ ] Use labelled business fields and ordinary dossier/task/obligation actions, not a JSON/schema editor as the user's form. Link field errors and a focusable error summary, restore focus on close, and discard stale in-flight responses after navigation/session change.
 - [ ] Add keyboard/form-error and theme/navigation checks; run the browser suite green and inspect screenshots visually.
 - [ ] Run strict checking and production build; commit. Do not display an unimplemented command as working.
 
 ### Task 3: GED locale avec contrôle du contenu
 
+Préparation technique : `docs/recherche-documents-locaux.md`, partie PDF/texte ; les propositions doivent encore être exercées par les tests de ce lot.
+
 **Files:**
 - Create: `packages/contracts/src/documents.ts`, `apps/server/src/documents/*`.
+- Modify: `apps/server/src/storage/migrations.ts` with an additive migration; never rewrite an already published migration.
 - Modify: `apps/server/src/app.ts`, `apps/web/src/*` for the documents view and dossier attachment section.
 - Test: `apps/server/test/documents.test.ts`, `tests/e2e/documents.spec.ts`.
 
 **Interfaces:**
 - `DocumentStore` accepts validated document bytes/stream and metadata, returns an immutable local document reference with SHA-256, size, media type, source and dossier.
 - HTTP multipart upload/list/download uses authenticated dossier scope; filenames are display values, never filesystem paths.
+- Logical documents have explicit version links independent of filenames; locally extracted supported PDF/text content is indexed for authorized search. Missing/corrupt content is distinguished from metadata visibility.
 
 - [ ] Write a failing upload/list/download round-trip test with a fictitious PDF and a second-version document.
 - [ ] Implement local temporary write, content validation and atomic commitment; retain provenance and versions.
 - [ ] Write failing tests for HTML disguised as PDF, path traversal name, forbidden dossier, interrupted file and duplicate bytes with distinct source versions.
 - [ ] Implement explicit outcomes, check that no invalid document is made definitive, and run the suite green.
+- [ ] Resolve deferred M2 from Task 1 review: preserve structured HTTP 413 for body/upload limits instead of reporting500, with a real oversized request test.
+- [ ] Add a failing two-document text search and version-chain test; extract supported local text, search only authorized documents, and return an explicit extraction/content-availability state for unsupported or damaged content. Same filenames never merge unrelated originals.
 - [ ] Connect upload/download/list to the UI; browser test and build green; commit.
+- [ ] Keep the documents page and attachment section in their own module; carry Task2 M3 by extracting screens/form responsibilities when extending them rather than increasing the two large application files.
 
 ### Task 4: Contrat de collecte et 17 simulateurs explicites
 
 **Files:**
 - Create: `packages/contracts/src/collections.ts`, `apps/server/src/collections/*`, `apps/server/fixtures/*`.
+- Create: `packages/contracts/src/jobs.ts`, `apps/server/src/jobs/*` for the shared local durable job runner used by collection and later heavy operations.
 - Modify: server routes and web collections page.
 - Test: `apps/server/test/collections.test.ts`, `tests/e2e/collections.spec.ts`.
 
 **Interfaces:**
 - `runCollection(input: CollectionInput): Promise<CollectionResult>` behind the local job interface; result status, requested/observed coverage, records, artifacts, events, errors and checkpoint follow the spec.
+- Task1 supplies Database and the transactional operation journal, not a scheduler. This task owns the common job queue, lease/checkpoint/event persistence and restart behavior; later document/mail operations reuse it.
 - Connector IDs are exactly the 17 IDs in the archived collector catalogue. Real adapters remain unavailable until final validation; simulated mode is explicit in request, result and UI.
 - Consumes `DocumentStore` from Task 3; no second document writer.
+- `DocumentStore.prepare` runs outside the transaction; `commit(tx, actor, prepared, now)` joins the collector transaction, followed by `discard` in `finally`. Persist the document UUID, not an installation path; a document operation ID differs from the enclosing job command ID. The prepared handle is instance-local and must be recreated after restart or rollback.
 
 - [ ] Write a failing contract test for a nominal fictitious CFE acquisition with the right dossier/period/reference and stored PDF.
 - [ ] Implement common execution/journal/checkpoint and adapter registration from fictitious scenarios, not live portal guesses.
+- [ ] Preserve simulated provenance on normalized observations and GED artifacts as well as request/result/UI; simulated output cannot silently become a real source observation in downstream fiscal workflows.
 - [ ] Add one meaningful variation per source family: debt apurement without payment, new message plus missing PJ, Urssaf multi-portfolio duplicate identity, distinct TI/PAM calendar axes, partial jedeclare recipient returns, Pennylane company versus tax source and INPI scope.
 - [ ] Add failing interruption/retry, wrong identity, absent page boundary, HTML login and real-mode-disabled tests; implement conservative complete/partial/needs-human outcomes.
 - [ ] Connect run/progress/result and proof links to the UI; test green, commit. No live portal traffic.
+- [ ] Resolve Task3 minor M1 while connecting the GED consumer: multipart metadata filename and file-part filename must use the same validated value. Cover a local filename with leading/trailing spaces through the browser upload flow.
 
 ### Task 5: Installation, CI et réception du lot
 
+Préparation technique : `docs/recherche-installation-locale.md` (images interrogées, cohérence base/GED, restauration et scénarios CI ; aucune preuve de conteneur acquise par cette recherche).
+
 **Files:**
-- Create: `deploy/compose.yaml`, `Dockerfile`, `.env.example`, `deploy/install.sh`, `deploy/backup.sh`, `deploy/restore.sh`.
+- Create: `deploy/compose.yaml`, `Dockerfile`, `.dockerignore`, `.env.example`, `deploy/install.sh`, `deploy/backup.sh`, `deploy/restore.sh`.
 - Create: `.github/workflows/ci.yml`, `scripts/verify-scope.mjs`, `docs/etat-realisation.md`.
 - Modify: `README.md`, `docs/exigences.json` implementation references.
 - Test: PostgreSQL CI service, build/container smoke and restoration tests.
@@ -120,8 +137,12 @@
 - PostgreSQL, GED and application configuration survive container recreation. Database is not exposed publicly. Initialisation uses a user-chosen password.
 
 - [ ] Write/run checks for full 171-ID retention, excluded scope, no secrets/private evidence tracked and all implemented routes mapped to real tests.
+- [ ] Reject tracked `.superpowers/` coordination journals as well as private evidence, volumes and secret files; useful local evidence remains available without force-adding ignored files.
 - [ ] Configure Linux standard-runner CI: install locked dependencies, check, unit/integration tests, actual PostgreSQL lifecycle test, web build and isolated Playwright flow. Archive only diagnostic artifacts with short retention.
+- [ ] Resolve Task2/Task3 minor build warnings: use a loader/import configuration compatible with Vite without blanket suppression, document any vendor import adaptation and refresh its hash; normalize NO_COLOR/FORCE_COLOR for parent and child test processes.
 - [ ] Implement container/compose and installer preflight; test fresh start and restart persistence. If the local Docker daemon is unavailable, report that limit and use CI evidence without claiming local container success.
+- [ ] Resolve controller Important I2 (network login after reload): the local bootstrap token is required only while `needsSetup` is true. On an initialized network installation, a fresh login must show no bootstrap field, send no bootstrap header and succeed with the user's credentials alone; preserve remote first-setup refusal without its token. Cover the reload/login path as well as setup.
+- [ ] Verify that the Docker build context excludes evidence, private captures, volumes, secrets, Git metadata and local dependency directories; ship the actual third-party notices with the compiled application.
 - [ ] Implement and verify coherent backup/restore and non-destructive preflight rules; protect paths and credentials.
 - [ ] Run the complete checks/build/browser suite; fresh review against cahier and standards, fix important findings with regression tests, then publish the branch and attach its PR.
 - [ ] Update realised/planned/CI/field statuses. The remaining lots in §13 of the cahier remain mandatory; this lot does not declare the full product complete.

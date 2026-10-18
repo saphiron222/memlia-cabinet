@@ -1,0 +1,10 @@
+{
+  "name": "saxes",
+  "version": "6.0.0",
+  "source": "https://raw.githubusercontent.com/lddubeau/saxes/211fa0ebec9b628affc09219199639887174bfc3/LICENSE",
+  "registry": "https://registry.npmjs.org/saxes/6.0.0",
+  "gitHead": "211fa0ebec9b628affc09219199639887174bfc3",
+  "integrity": "sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==",
+  "metadataSha256": "32052572b41c2a890ed0854798c48454cc5991dcaafe5fb1718a4253046acfd3",
+  "licenseSha256": "0fac2374380621b22e6b50451057721a9c52935b02d16d106a9f04897f061d0e"
+}

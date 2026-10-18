@@ -1,0 +1,72 @@
+name: ${COMPOSE_PROJECT_NAME:-memlia}
+services:
+  postgres:
+    image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+    user: "${MEMLIA_UID:?}:${MEMLIA_GID:?}"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: memlia
+      POSTGRES_USER: memlia_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/database-password
+    secrets: [database-password, application-password]
+    volumes:
+      - "${INSTALL_DIRECTORY:?}/postgres:/var/lib/postgresql/data"
+      - "./init-database.sql:/docker-entrypoint-initdb.d/10-memlia.sql:ro"
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U memlia -d memlia"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks: [private]
+  app:
+    image: ${MEMLIA_IMAGE:-memlia-cabinet:local}
+    build: { context: .. }
+    user: "${MEMLIA_UID:?}:${MEMLIA_GID:?}"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 120s
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database-url
+      BOOTSTRAP_TOKEN_FILE: /run/secrets/bootstrap-token
+      DATA_DIRECTORY: /data
+      CONFIG_FILE: /config/installation.json
+    secrets: [database-url, bootstrap-token]
+    volumes:
+      - "${INSTALL_DIRECTORY:?}/data:/data"
+      - "${INSTALL_DIRECTORY:?}/config:/config:ro"
+    ports: ["${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-3000}:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks: [private, frontend]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+  operations:
+    profiles: [tools]
+    image: ${MEMLIA_IMAGE:-memlia-cabinet:local}
+    user: "${MEMLIA_UID:?}:${MEMLIA_GID:?}"
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database-url
+      DATA_DIRECTORY: /data
+      CONFIG_FILE: /config/installation.json
+    secrets: [database-url]
+    volumes:
+      - "${INSTALL_DIRECTORY:?}/data:/data"
+      - "${INSTALL_DIRECTORY:?}/config:/config"
+      - "${INSTALL_DIRECTORY:?}/backups:/backups"
+    entrypoint: [node, deploy/operations.mjs]
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+networks:
+  private: { internal: true }
+  frontend: {}
+secrets:
+  database-password: { file: "${INSTALL_DIRECTORY:?}/secrets/database-password" }
+  application-password: { file: "${INSTALL_DIRECTORY:?}/secrets/application-password" }
+  database-url: { file: "${INSTALL_DIRECTORY:?}/secrets/database-url" }
+  bootstrap-token: { file: "${INSTALL_DIRECTORY:?}/secrets/bootstrap-token" }

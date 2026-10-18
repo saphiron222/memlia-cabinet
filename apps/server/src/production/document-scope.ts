@@ -1,0 +1,6 @@
+/** All original links, including earlier versions, remain protected after editing. */
+export const productionDocumentIdsSql = (recordId: string) =>
+  `SELECT DISTINCT piece.id FROM cabinet_production_row_versions history CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(history.content->'documentIds','[]'::jsonb) || jsonb_path_query_array(history.content,'$.cells[*].documentIds[*]') || jsonb_path_query_array(history.content,'$.observations[*].documentIds[*]') || jsonb_path_query_array(history.content,'$.deposit.attempts[*].documentIds[*]') || jsonb_path_query_array(history.content,'$.deposit.attempts[*].receiptDocumentId ? (@ != null)')) piece(id) WHERE history.id=${recordId}`;
+
+export const productionSnapshotDocumentIdsSql = (value: string) =>
+  `jsonb_array_elements_text(COALESCE(${value}->'documentIds','[]'::jsonb) || jsonb_path_query_array(${value},'$.cells[*].documentIds[*]') || jsonb_path_query_array(${value},'$.observations[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].documentIds[*]') || jsonb_path_query_array(${value},'$.deposit.attempts[*].receiptDocumentId ? (@ != null)'))`;

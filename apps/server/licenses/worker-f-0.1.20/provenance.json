@@ -1,0 +1,21 @@
+{
+  "name": "worker-f",
+  "version": "0.1.20",
+  "source": "https://registry.npmjs.org/worker-f/0.1.20",
+  "tarball": "https://registry.npmjs.org/worker-f/-/worker-f-0.1.20.tgz",
+  "integrity": "sha512-7z5K5z4x++FykhpDTfriT/dOu7CmSap9BBv38DVFU3CD38obopq+DoFH75yBV3butpGm+OeqR9BKdSvYJSnUfQ==",
+  "gitHead": "32742a0f8a57f19968c73539a09ecb3606efa3f9",
+  "metadataSha256": "24536cca0ce76126bfb178912928c480529f05ce387c59021e0ac693d21fa7ac",
+  "embeddedSource": "commonjs/createWorkerFunctionTests.js",
+  "embeddedSourceSha256": "dce7922119deb1a80eaa0e1a009eca02782b79062cc6ce0da0cb959d4d256bb3",
+  "babelLicenseSource": "https://raw.githubusercontent.com/babel/babel/a0690e39ea63cdcc3d9282ece739e6677c83ad6e/packages/babel-helpers/LICENSE",
+  "mitReferenceSource": "https://raw.githubusercontent.com/spdx/license-list-data/v3.26.0/text/MIT.txt",
+  "qualification": "Assemblage documentaire local limité à cette version. Aucun copyright worker-f inventé ; auteur conservé dans les métadonnées originales. La licence Babel liée ne prouve pas la révision exacte du helper. Aucune garantie de suffisance juridique.",
+  "files": {
+    "BABEL-EMBEDDED-NOTICE.txt": "00db16645af95f7180e8995c55092b35c32873553226899511457778ab056578",
+    "package.json": "24536cca0ce76126bfb178912928c480529f05ce387c59021e0ac693d21fa7ac",
+    "BABEL-LICENSE": "4be9d87b56a306293223b490c0d0b245e9e94f39884147bf051a6c7b825aeb30",
+    "MIT-REFERENCE.txt": "397e9015718e08966d9bce1464b898483d1757b4f122409bda018dad4fd92c2b"
+  },
+  "mitReferenceFormatting": "Espaces de fin de ligne retirés dans la référence locale ; texte et espaces réservés conservés."
+}

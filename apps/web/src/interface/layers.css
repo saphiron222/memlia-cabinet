@@ -1,0 +1,2 @@
+/* Establish order before component imports: base resets must not override Twenty. */
+@layer theme, base, twenty-ui, components, utilities;

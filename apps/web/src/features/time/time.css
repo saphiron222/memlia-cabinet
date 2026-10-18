@@ -1,0 +1,275 @@
+.time-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.time-toolbar,
+.time-report-bar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.time-toolbar .field,
+.time-report-bar .field {
+  margin: 0;
+  min-width: 140px;
+  max-width: 280px;
+  flex: 1;
+}
+.time-toolbar button {
+  flex-shrink: 0;
+}
+.time-table-scroll {
+  overflow: auto;
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: 6px;
+  max-width: 100%;
+}
+.time-table-scroll table {
+  min-width: 750px;
+  width: 100%;
+}
+.time-table-scroll td,
+.time-table-scroll th {
+  padding: 9px 12px;
+  white-space: nowrap;
+}
+.time-number {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.time-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  border-block: 1px solid var(--t-border-color-medium);
+  padding: 16px 4px;
+  margin: 16px 0;
+}
+.time-metrics dt {
+  color: var(--t-font-color-secondary);
+  font-size: 12px;
+}
+.time-metrics dd {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.time-properties {
+  display: grid;
+  grid-template-columns: minmax(100px, 150px) 1fr;
+  gap: 10px 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--t-border-color-medium);
+}
+.time-properties dt {
+  color: var(--t-font-color-secondary);
+}
+.time-properties dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.time-entry-form,
+.time-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.time-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.time-link-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.time-running {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-warning-500, #b7791f);
+  border-radius: 6px;
+}
+.time-settings {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 16px;
+}
+.time-settings aside {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+}
+.time-settings aside button {
+  justify-content: flex-start;
+}
+.time-week-hours {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.time-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--t-background-primary);
+  padding-block: 12px;
+  border-top: 1px solid var(--t-border-color-medium);
+}
+.time-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 12px;
+}
+.time-section-heading h2 {
+  font-size: 16px;
+  margin: 0;
+}
+.time-overload {
+  color: var(--text-error, #b42318);
+  font-weight: 600;
+}
+.time-balanced {
+  color: var(--t-font-color-secondary);
+}
+.time-tag {
+  font-size: 12px;
+  border: 1px solid var(--t-border-color-medium);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.time-report .actions {
+  flex-wrap: nowrap;
+}
+.time-report .time-report-bar {
+  justify-content: space-between;
+}
+.time-report .time-report-bar .field {
+  flex: 0 1 260px;
+}
+#task-time .time-toolbar {
+  align-items: end;
+}
+#task-time .time-entry-form {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--t-border-color-medium);
+}
+@media (max-width: 1000px) {
+  .time-settings {
+    grid-template-columns: 1fr;
+  }
+  .time-settings aside {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .time-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .time-metrics {
+    gap: 20px;
+  }
+  .time-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+.time-workspace > *,
+.time-workspace section,
+.time-report {
+  min-width: 0;
+  max-width: 100%;
+}
+.time-toolbar .field,
+.time-report-bar .field {
+  width: auto;
+  flex-basis: 180px;
+}
+.time-table-scroll {
+  width: 100%;
+  box-sizing: border-box;
+}
+.time-table-scroll:focus-visible {
+  outline: 2px solid var(--t-font-color-primary);
+  outline-offset: 2px;
+}
+.time-workspace .time-toolbar {
+  margin: 0;
+}
+.time-workspace .time-report-bar {
+  margin-top: 0;
+}
+.time-dossier-filter {
+  max-width: 380px;
+}
+@media (max-width: 1000px) {
+  .time-workspace {
+    padding: 16px;
+  }
+  .time-toolbar .field {
+    max-width: 100%;
+    flex-basis: 190px;
+  }
+}
+
+.time-workspace .time-toolbar select,
+.time-workspace .time-toolbar input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.time-workspace .work-tabs button[aria-selected="true"] {
+  color: var(--t-font-color-primary);
+}
+.time-table-frame {
+  min-width: 0;
+  max-width: 100%;
+}
+.time-scroll-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+.time-catalog {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+  flex: 1 1 220px;
+}
+.time-catalog .field {
+  min-width: 0;
+}
+.time-catalog input,
+.time-catalog select {
+  width: 100%;
+  min-width: 0;
+}
+.time-running form {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.time-running form .field {
+  flex: 1 0 100%;
+  min-width: 0;
+}

@@ -1,0 +1,6 @@
+# Proxy HTTPS administré par le cabinet, certificat et clé existants.
+# Adapter le nom et les chemins ; aucune CA ni compte externe créé par Memlia.
+memlia.cabinet.example {
+  tls /chemin/certificat.pem /chemin/cle.pem
+  reverse_proxy 127.0.0.1:3000
+}

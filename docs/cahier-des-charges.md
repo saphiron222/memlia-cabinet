@@ -1,12 +1,12 @@
 # Memlia Cabinet — cahier des charges complet
 
-Version 1, 17 octobre 2026. Le cadrage fonctionnel a été validé par Kevin. Le présent document rend cette décision exploitable pour la construction : il conserve le périmètre complet, précise les contrats, organise les lots et sépare les choix techniques du constructeur des décisions de produit déjà prises.
+Version 2, 17 octobre 2026. Le cadrage fonctionnel a été validé par Kevin. Sa nouvelle instruction précise une application web auto-hébergée au cabinet et remplace la direction graphique Twenty seule par Plane en référence principale, complétée par Twenty et cal.diy. Le périmètre fonctionnel complet reste inchangé.
 
 ## 1. Objet et résultat attendu
 
-Memlia Cabinet est le poste de pilotage partagé du cabinet d’expertise comptable : dossiers, échéances, production, tâches, relation client, documents et collectes. L’installation, la base métier, la GED, les profils des robots et les traitements internes résident dans l’environnement du cabinet. Les postes autorisés utilisent une même installation et un historique commun.
+Memlia Cabinet est une application web partagée du cabinet d’expertise comptable : dossiers, échéances, production, tâches, relation client, documents et collectes. Une seule installation centrale dessert les navigateurs des postes autorisés. Le serveur, la base métier, la GED, les profils des robots et les traitements internes résident dans l’environnement du cabinet ; les collaborateurs partagent une même installation et un historique commun.
 
-La référence fonctionnelle est Teradion, étudiée par site public, guides, vidéo, démonstrations, compte autorisé et artefacts du client. La référence graphique est le code Twenty figé au commit `e7743ba77003f3eab957cfcca8e760d383cde550`. Le logiciel n’utilise pas le backend privé de Teradion. Les règles non observables de l’original ne deviennent pas des faits inventés : les choix Memlia sont explicitement spécifiés puis testés.
+La référence fonctionnelle est Teradion, étudiée par site public, guides, vidéo, démonstrations, compte autorisé et artefacts du client. La référence graphique suit les sources complètes de Plane, Twenty et cal.diy, avec Plane prioritaire pour la navigation et la composition des espaces, selon `design-interface.md`. Le logiciel n’utilise pas le backend privé de Teradion. Les règles non observables de l’original ne deviennent pas des faits inventés : les choix Memlia sont explicitement spécifiés puis testés.
 
 Il ne s’agit pas d’un MVP. Les lots sont un ordre de réalisation, sans suppression du périmètre. Le produit ne peut être déclaré complet qu’après couverture des exigences applicables, réception locale, installation/restauration et recette finale des connecteurs.
 
@@ -14,7 +14,7 @@ Il ne s’agit pas d’un MVP. Les lots sont un ordre de réalisation, sans supp
 
 - [Exigences et critères détaillés](exigences.json) : 171 entrées, dont dix exclues et une extension IA à décider ; identifiants conservés pour la traçabilité.
 - [Accès et protocole final des connecteurs](validation-connecteurs.md).
-- [Référence de design et matériaux réutilisés](design-twenty.md).
+- [Direction de l’interface et références retenues](design-interface.md) ; [provenance du sous-ensemble Twenty](design-twenty.md).
 - [Glossaire](../GLOSSARY.md), [sources primaires](sources.md), [index des preuves conservées](../evidence/README.md).
 
 ## 2. Périmètre et exclusions
@@ -155,7 +155,7 @@ Les simulateurs produisent exactement le même contrat normalisé et des pièces
 
 ## 9. Design et accessibilité
 
-Reprendre les sources MIT Twenty, thèmes clair/sombre intacts, Inter local 400/500/600/700, DM Mono, racine 13 px, pas de grille 4 px altérée, navigation 220 px/repli 48 px, lignes de grille 32 px et panneaux à partir de 400 px. Respecter les rayons et leur variante squircle, Display-P3, ombres, séparateurs et états.
+La direction définie dans `design-interface.md` remplace la contrainte initiale Twenty seule. Plane fournit la structure principale : navigation du cabinet, groupes métier, en-têtes, vues, barres d’actions et organisation de l’espace. Twenty fournit les références de grilles, cellules, fiches et propriétés ; cal.diy celles des calendriers, disponibilités, formulaires et paramètres. Une seule hiérarchie, une palette cohérente avec accent visible et des statuts sémantiques colorés relient ces motifs. Les dimensions et tokens viennent des sources figées et de leurs rendus observés ; les valeurs initiales Twenty restent une provenance, pas une interdiction de reprendre Plane.
 
 Les listes, tableaux, Kanban, filtres, panneaux, formulaires, modales et menus adaptent les contenus métier. Les états chargement, vide, erreur, lecture seule, sélection, focus, conflit et succès existent. Tous les contrôles affichés doivent avoir un comportement réel ; une action non construite n’est pas présentée comme opérationnelle.
 
@@ -165,7 +165,7 @@ Navigation clavier, focus visible, noms accessibles, contraste, réduction des a
 
 Choix du constructeur pour la réalisation initiale : TypeScript strict, React 19, Vite, Fastify 5 et PostgreSQL 17, sous forme de monolithe modulaire. Un contrat partagé versionné relie interface et serveur. Les règles métier n’habitent pas les composants visuels.
 
-L’installation de référence est un service local sur machine/VM Linux du cabinet avec volumes persistants et interface HTTPS. Un cabinet sous Windows peut héberger cette VM selon son infrastructure. Les clients accèdent par navigateur ou lanceur ; aucun service SaaS Memlia n’est requis. L’installation n’expose pas directement PostgreSQL ou le répertoire des profils.
+La livraison de référence est une application web auto-hébergée sur une machine ou VM du cabinet, avec services conteneurisés, volumes persistants et accès HTTPS. Une installation unique suffit pour les postes autorisés, qui utilisent leur navigateur ; aucune application de bureau Memlia n’est à installer sur chaque poste. Un cabinet sous Windows peut héberger la VM selon son infrastructure. Un accès distant éventuel reste explicitement configuré et authentifié. Aucun hébergement central Memlia n’est requis pour conserver les données ; les échanges nécessaires avec les administrations et fournisseurs restent ceux des connecteurs configurés. PostgreSQL et les profils des robots ne sont pas exposés aux navigateurs.
 
 Un adaptateur PostgreSQL embarqué PGlite peut servir aux essais/développement autonomes. Il ne vaut pas réception de l’installation multiutilisateur PostgreSQL. La CI exerce aussi le vrai PostgreSQL. Le format des pièces et les migrations sont identiques aux interfaces métier retenues.
 

@@ -1,0 +1,430 @@
+{
+  "repository": "https://github.com/twentyhq/twenty",
+  "revision": "e7743ba77003f3eab957cfcca8e760d383cde550",
+  "license": "MIT",
+  "files": [
+    {
+      "upstream": "packages/twenty-ui/src/components/input/MainButton/MainButton.module.scss",
+      "local": "vendor/src/components/input/MainButton/MainButton.module.scss",
+      "sha256Original": "c65ee21b55cbeb428f684a7dda9dc684fad2466f020d6c3c47a93865a0473be7",
+      "sha256Adapted": "c65ee21b55cbeb428f684a7dda9dc684fad2466f020d6c3c47a93865a0473be7",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/components/input/MainButton/MainButton.tsx",
+      "local": "vendor/src/components/input/MainButton/MainButton.tsx",
+      "sha256Original": "7dcf475828aa9f7f0f031af83dbc166caefaaa3a44a0d9990c6ae964c281e4ab",
+      "sha256Adapted": "7dcf475828aa9f7f0f031af83dbc166caefaaa3a44a0d9990c6ae964c281e4ab",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/feedback/Loader/Loader.module.scss",
+      "local": "vendor/src/primitives/feedback/Loader/Loader.module.scss",
+      "sha256Original": "829a2db00162ce86eba3cd8e78057b496ef381a5200f9e8e7f0fe1d6e01dcebc",
+      "sha256Adapted": "829a2db00162ce86eba3cd8e78057b496ef381a5200f9e8e7f0fe1d6e01dcebc",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/feedback/Loader/Loader.tsx",
+      "local": "vendor/src/primitives/feedback/Loader/Loader.tsx",
+      "sha256Original": "cc1712e7b6fed7f3262b12e3bf438f9164d1420da6400d98722af3e89dc320aa",
+      "sha256Adapted": "224531984d8ee4eb0b51a312959de8e744f6fd2a4bfee07ec56b7c99764c815f",
+      "adaptations": [
+        "Import direct, comportement inchangé : thème ou icônes Tabler à leur origine."
+      ]
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/feedback/Loader/types/LoaderProps.ts",
+      "local": "vendor/src/primitives/feedback/Loader/types/LoaderProps.ts",
+      "sha256Original": "cece72f621d4060638e026474b6a2eda6c5478938b764dbc2c72c9876092d273",
+      "sha256Adapted": "c36e4957b29d1d403bddbde05ace1fad6eb7dd580db6252575dd1613f2e33d03",
+      "adaptations": [
+        "Import direct vers @ui/theme/constants/MainColorNames au lieu du barrel complet."
+      ]
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/Button.module.scss",
+      "local": "vendor/src/primitives/input/Button/Button.module.scss",
+      "sha256Original": "a309edb618d54d8c5d9431e57bf348d4c808c0c2386d2e4f92917ae09b164e6e",
+      "sha256Adapted": "a309edb618d54d8c5d9431e57bf348d4c808c0c2386d2e4f92917ae09b164e6e",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/Button.tsx",
+      "local": "vendor/src/primitives/input/Button/Button.tsx",
+      "sha256Original": "223fe2005a8a2e16df6e80342cec5bef17528774a2c3cff227c8305815d7d7e3",
+      "sha256Adapted": "223fe2005a8a2e16df6e80342cec5bef17528774a2c3cff227c8305815d7d7e3",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/types/ButtonColor.ts",
+      "local": "vendor/src/primitives/input/Button/types/ButtonColor.ts",
+      "sha256Original": "4bdb74d4bea4281fa334ae9b2d6924e5c31e10cbaa0a1723a52219480f103ba5",
+      "sha256Adapted": "4bdb74d4bea4281fa334ae9b2d6924e5c31e10cbaa0a1723a52219480f103ba5",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/types/ButtonLoadingPosition.ts",
+      "local": "vendor/src/primitives/input/Button/types/ButtonLoadingPosition.ts",
+      "sha256Original": "682ea35123c40c45ba5b1bfa03d081c54b287f5f782e1ebc8efb7ee4398e38fc",
+      "sha256Adapted": "682ea35123c40c45ba5b1bfa03d081c54b287f5f782e1ebc8efb7ee4398e38fc",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/types/ButtonProps.ts",
+      "local": "vendor/src/primitives/input/Button/types/ButtonProps.ts",
+      "sha256Original": "c5eebd90d7cd88d78888990f2082344ed7ae04270e52546c427b41ec779c79ad",
+      "sha256Adapted": "c5eebd90d7cd88d78888990f2082344ed7ae04270e52546c427b41ec779c79ad",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/types/ButtonSize.ts",
+      "local": "vendor/src/primitives/input/Button/types/ButtonSize.ts",
+      "sha256Original": "b621c5eb17b79e91781728ec8584815d515a5bb3885e79c08bda0dac538fa1bb",
+      "sha256Adapted": "b621c5eb17b79e91781728ec8584815d515a5bb3885e79c08bda0dac538fa1bb",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Button/types/ButtonVariant.ts",
+      "local": "vendor/src/primitives/input/Button/types/ButtonVariant.ts",
+      "sha256Original": "7c5a2c01334e171f1a866319de09f839a03df944a1ef9933a2785e8518256a8d",
+      "sha256Adapted": "7c5a2c01334e171f1a866319de09f839a03df944a1ef9933a2785e8518256a8d",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/ButtonGroup/internal/ButtonGroupContext.ts",
+      "local": "vendor/src/primitives/input/ButtonGroup/internal/ButtonGroupContext.ts",
+      "sha256Original": "151c583e8dc999fdf86f1ad1644b798449e5a4985451e2537a18995327295c68",
+      "sha256Adapted": "151c583e8dc999fdf86f1ad1644b798449e5a4985451e2537a18995327295c68",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/Checkbox.module.scss",
+      "local": "vendor/src/primitives/input/Checkbox/Checkbox.module.scss",
+      "sha256Original": "96ab7e5fa5eca17bf3b29b2084c49d76a3a33f98737855f7280d858acaba46af",
+      "sha256Adapted": "96ab7e5fa5eca17bf3b29b2084c49d76a3a33f98737855f7280d858acaba46af",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/Checkbox.tsx",
+      "local": "vendor/src/primitives/input/Checkbox/Checkbox.tsx",
+      "sha256Original": "0743f00d1f28ec895cfea8a85e46ea6820e86bbe2b71242d5d09f2efa6ab7f2e",
+      "sha256Adapted": "0743f00d1f28ec895cfea8a85e46ea6820e86bbe2b71242d5d09f2efa6ab7f2e",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/internal/CheckboxComponent.tsx",
+      "local": "vendor/src/primitives/input/Checkbox/internal/CheckboxComponent.tsx",
+      "sha256Original": "8978d7ddb6d93e53fc9c53fa2047be0ec4b94d05e870ca36e27dbc4a2d5f5d79",
+      "sha256Adapted": "14ef701c434df4bda305d6938cd92089b1db4b703285f6edde14804e4cf06cbd",
+      "adaptations": [
+        "Import direct IconCheck et IconMinus depuis @tabler/icons-react, origine amont."
+      ]
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/internal/CheckboxIndicator.tsx",
+      "local": "vendor/src/primitives/input/Checkbox/internal/CheckboxIndicator.tsx",
+      "sha256Original": "1dd4cf75dd12e9afb7572f28f5e667c92824084f88304ab66385ebf7b437b5ac",
+      "sha256Adapted": "1dd4cf75dd12e9afb7572f28f5e667c92824084f88304ab66385ebf7b437b5ac",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/internal/CheckboxRoot.tsx",
+      "local": "vendor/src/primitives/input/Checkbox/internal/CheckboxRoot.tsx",
+      "sha256Original": "0bd53d5129e7594478554251fc29f26c3436222499cc1917aca27c5c6867330e",
+      "sha256Adapted": "0bd53d5129e7594478554251fc29f26c3436222499cc1917aca27c5c6867330e",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxColor.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxColor.ts",
+      "sha256Original": "620584bf335c082cabade9caacfcb227f69460faa9dba5cef43da686a5fcbc62",
+      "sha256Adapted": "620584bf335c082cabade9caacfcb227f69460faa9dba5cef43da686a5fcbc62",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxIndicatorProps.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxIndicatorProps.ts",
+      "sha256Original": "cd913af3ab67ccd996093a021d1c51f226c1650cf047e58398cfe25960910de1",
+      "sha256Adapted": "cd913af3ab67ccd996093a021d1c51f226c1650cf047e58398cfe25960910de1",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxProps.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxProps.ts",
+      "sha256Original": "37142586c23a7c4077c6baf9f8fb6c08d8d4a9aec716f534d0cd0acbf724093a",
+      "sha256Adapted": "37142586c23a7c4077c6baf9f8fb6c08d8d4a9aec716f534d0cd0acbf724093a",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxRootProps.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxRootProps.ts",
+      "sha256Original": "977c70e61585e2175ede59219360f9d8f15f4962273277d161f27081337bfaf0",
+      "sha256Adapted": "977c70e61585e2175ede59219360f9d8f15f4962273277d161f27081337bfaf0",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxShape.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxShape.ts",
+      "sha256Original": "adf81bb4a2a71c45b1426e574421f18624199767d82f1e2ba1ced9aab89d742b",
+      "sha256Adapted": "adf81bb4a2a71c45b1426e574421f18624199767d82f1e2ba1ced9aab89d742b",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxSize.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxSize.ts",
+      "sha256Original": "9acaed7be5d71a266edfefd44fd478769b918936773c276b95ae5d6cbd3acbb2",
+      "sha256Adapted": "9acaed7be5d71a266edfefd44fd478769b918936773c276b95ae5d6cbd3acbb2",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Checkbox/types/CheckboxVariant.ts",
+      "local": "vendor/src/primitives/input/Checkbox/types/CheckboxVariant.ts",
+      "sha256Original": "9221bf958df6a847a8e7f39d60c2d01b8efdd5903e908d7f7aad081a790865b1",
+      "sha256Adapted": "9221bf958df6a847a8e7f39d60c2d01b8efdd5903e908d7f7aad081a790865b1",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Input/Input.module.scss",
+      "local": "vendor/src/primitives/input/Input/Input.module.scss",
+      "sha256Original": "6e2f85f60300aaaba439d9cddc682b0e4e846f28256fdad9fb0ec6e9f8409d00",
+      "sha256Adapted": "6e2f85f60300aaaba439d9cddc682b0e4e846f28256fdad9fb0ec6e9f8409d00",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Input/Input.tsx",
+      "local": "vendor/src/primitives/input/Input/Input.tsx",
+      "sha256Original": "d4526d8428f7d8e35054ef0837fef5c5a5c2adfcec5e617b0ba857a885ee9cce",
+      "sha256Adapted": "d4526d8428f7d8e35054ef0837fef5c5a5c2adfcec5e617b0ba857a885ee9cce",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/Input/types/InputProps.ts",
+      "local": "vendor/src/primitives/input/Input/types/InputProps.ts",
+      "sha256Original": "1f3681b1b6bea47b904ddd6f3b5af032fc8a9da969b1d62a66da5e03c8324fc4",
+      "sha256Adapted": "1f3681b1b6bea47b904ddd6f3b5af032fc8a9da969b1d62a66da5e03c8324fc4",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/InputGroup/internal/InputGroupContext.ts",
+      "local": "vendor/src/primitives/input/InputGroup/internal/InputGroupContext.ts",
+      "sha256Original": "62b18ff38a7155169655f6944b49619a1c44ca5d49d50e45aeb5ea036a5ad073",
+      "sha256Adapted": "62b18ff38a7155169655f6944b49619a1c44ca5d49d50e45aeb5ea036a5ad073",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/input/types/InputSize.ts",
+      "local": "vendor/src/primitives/input/types/InputSize.ts",
+      "sha256Original": "300304cbbb87c7544a06a95c6502b1b311c7d6e756756576b8b8e94b7ba6d61d",
+      "sha256Adapted": "300304cbbb87c7544a06a95c6502b1b311c7d6e756756576b8b8e94b7ba6d61d",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/Shortcut.module.scss",
+      "local": "vendor/src/primitives/typography/Shortcut/Shortcut.module.scss",
+      "sha256Original": "e25e6c3e037414a3dd0f5db11630bb4aa9cb3e899e9683e359d9a982eb5b3040",
+      "sha256Adapted": "e25e6c3e037414a3dd0f5db11630bb4aa9cb3e899e9683e359d9a982eb5b3040",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/Shortcut.tsx",
+      "local": "vendor/src/primitives/typography/Shortcut/Shortcut.tsx",
+      "sha256Original": "16575e108ee36e70ebb9c0d7fc58e24375a113bb4fbcb6bfaf3362ca592197ef",
+      "sha256Adapted": "16575e108ee36e70ebb9c0d7fc58e24375a113bb4fbcb6bfaf3362ca592197ef",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/internal/getShortcutPresentation.ts",
+      "local": "vendor/src/primitives/typography/Shortcut/internal/getShortcutPresentation.ts",
+      "sha256Original": "8c56361fe0c919f8c8a4e1b075608648fa53fbd6c68826e9f55c9aea00d2e003",
+      "sha256Adapted": "8c56361fe0c919f8c8a4e1b075608648fa53fbd6c68826e9f55c9aea00d2e003",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/types/ShortcutDefinition.ts",
+      "local": "vendor/src/primitives/typography/Shortcut/types/ShortcutDefinition.ts",
+      "sha256Original": "6dde7eea17f88454f7f3cf4423d3547c503106294b424815fd309fa0225a14b1",
+      "sha256Adapted": "6dde7eea17f88454f7f3cf4423d3547c503106294b424815fd309fa0225a14b1",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/types/ShortcutFormatOptions.ts",
+      "local": "vendor/src/primitives/typography/Shortcut/types/ShortcutFormatOptions.ts",
+      "sha256Original": "4cbca0f489f131dce89bd60044e4971b56092149376ff524749e57014c215d67",
+      "sha256Adapted": "4cbca0f489f131dce89bd60044e4971b56092149376ff524749e57014c215d67",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Shortcut/types/ShortcutProps.ts",
+      "local": "vendor/src/primitives/typography/Shortcut/types/ShortcutProps.ts",
+      "sha256Original": "6387f2b86075d06b25b2191984243387eb6973f275b6e24edff38503eea371f9",
+      "sha256Adapted": "6387f2b86075d06b25b2191984243387eb6973f275b6e24edff38503eea371f9",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Text/Text.module.scss",
+      "local": "vendor/src/primitives/typography/Text/Text.module.scss",
+      "sha256Original": "b33b956e461f50561e903fe75e04313ae5e3117c0bbb571b67605bad166147f2",
+      "sha256Adapted": "b33b956e461f50561e903fe75e04313ae5e3117c0bbb571b67605bad166147f2",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Text/Text.tsx",
+      "local": "vendor/src/primitives/typography/Text/Text.tsx",
+      "sha256Original": "ea59d3af5628fb7995516f28a4771bcc369ea5860bc04b952347b99597fa9f73",
+      "sha256Adapted": "ea59d3af5628fb7995516f28a4771bcc369ea5860bc04b952347b99597fa9f73",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Text/internal/TextTruncationProps.ts",
+      "local": "vendor/src/primitives/typography/Text/internal/TextTruncationProps.ts",
+      "sha256Original": "df3bb1cb556a051e9b3ae830cb002b8eccfcd62130d1b28a3a0d9a378fe9a265",
+      "sha256Adapted": "df3bb1cb556a051e9b3ae830cb002b8eccfcd62130d1b28a3a0d9a378fe9a265",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/primitives/typography/Text/types/TextProps.ts",
+      "local": "vendor/src/primitives/typography/Text/types/TextProps.ts",
+      "sha256Original": "1a3623cc07bc45c2483eb61989647aaa740cbd5e9abb4a59465c7f5d7e9f67b6",
+      "sha256Adapted": "1a3623cc07bc45c2483eb61989647aaa740cbd5e9abb4a59465c7f5d7e9f67b6",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/theme/themeCssVariables.ts",
+      "local": "vendor/src/theme/themeCssVariables.ts",
+      "sha256Original": "88d9bc3c62ec8608cfd9b29c56759525c4fee6b3eba90807788a7da714aa3974",
+      "sha256Adapted": "88d9bc3c62ec8608cfd9b29c56759525c4fee6b3eba90807788a7da714aa3974",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/device/getUserDevice.ts",
+      "local": "vendor/src/utilities/device/getUserDevice.ts",
+      "sha256Original": "4028f381783c6e7bc30803b0a9076e6ae0fd18612b792cb35e1f4e70f7f85b80",
+      "sha256Adapted": "4028f381783c6e7bc30803b0a9076e6ae0fd18612b792cb35e1f4e70f7f85b80",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/internal/doNotTranslate.ts",
+      "local": "vendor/src/utilities/internal/doNotTranslate.ts",
+      "sha256Original": "31c15330765af3abe1809fca25dc49485a56178d3748d82d04c1d0ea0b24da9d",
+      "sha256Adapted": "31c15330765af3abe1809fca25dc49485a56178d3748d82d04c1d0ea0b24da9d",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/internal/mergeClassNames.ts",
+      "local": "vendor/src/utilities/internal/mergeClassNames.ts",
+      "sha256Original": "3f32a53e47f8c166ad8974ba6d0957e4fe442cf7c07f78d687f54619d5ddef31",
+      "sha256Adapted": "3f32a53e47f8c166ad8974ba6d0957e4fe442cf7c07f78d687f54619d5ddef31",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/responsive/constants/MobileMediaQuery.ts",
+      "local": "vendor/src/utilities/responsive/constants/MobileMediaQuery.ts",
+      "sha256Original": "ea3abd3bb740c84ef811d52957587ad853efa27b29e0d7f92d81fe2d85449b78",
+      "sha256Adapted": "27c8855d40e61b39ff79fa011f1da8c9c18472867fd3f46bc71e39763fa36292",
+      "adaptations": [
+        "Import direct vers @ui/theme/constants/MobileViewport au lieu du barrel complet."
+      ]
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/responsive/hooks/useIsMobile.ts",
+      "local": "vendor/src/utilities/responsive/hooks/useIsMobile.ts",
+      "sha256Original": "08a22859913277e9ad69b70d70cb596cdf9aa19b1e7ea8b1928daad785dad859",
+      "sha256Adapted": "08a22859913277e9ad69b70d70cb596cdf9aa19b1e7ea8b1928daad785dad859",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/responsive/hooks/useMediaQuery.ts",
+      "local": "vendor/src/utilities/responsive/hooks/useMediaQuery.ts",
+      "sha256Original": "d67082c2559528d6ce86806ad0b1d44887f493aaa4932ff7c0a462379e833de2",
+      "sha256Adapted": "d67082c2559528d6ce86806ad0b1d44887f493aaa4932ff7c0a462379e833de2",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/responsive/internal/getMediaQueryStore.ts",
+      "local": "vendor/src/utilities/responsive/internal/getMediaQueryStore.ts",
+      "sha256Original": "bf53fe888ea132c7900c88dde236e3935da9c7e5be17f16361e7c2aa0c1803bc",
+      "sha256Adapted": "bf53fe888ea132c7900c88dde236e3935da9c7e5be17f16361e7c2aa0c1803bc",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/utilities/utils/isDefined.ts",
+      "local": "vendor/src/utilities/utils/isDefined.ts",
+      "sha256Original": "4d93aa3e40c556554a517603ebb6e69b984431b56eca18ace98b7fdfa837b3e7",
+      "sha256Adapted": "4d93aa3e40c556554a517603ebb6e69b984431b56eca18ace98b7fdfa837b3e7",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/theme/theme-light.css",
+      "local": "vendor/src/theme/theme-light.css",
+      "sha256Original": "6fa989f76ebb5614136859c2226f026cdbb9bb3c7b87ea5db6acec17bf0898d8",
+      "sha256Adapted": "6fa989f76ebb5614136859c2226f026cdbb9bb3c7b87ea5db6acec17bf0898d8",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/theme/theme-dark.css",
+      "local": "vendor/src/theme/theme-dark.css",
+      "sha256Original": "7fe237b2121cf4f714c69386c9aae8e0b60307fbf4be3e17de6ad623cb22fe77",
+      "sha256Adapted": "7fe237b2121cf4f714c69386c9aae8e0b60307fbf4be3e17de6ad623cb22fe77",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/styles/abstracts/_functions.scss",
+      "local": "vendor/src/styles/abstracts/_functions.scss",
+      "sha256Original": "aeab20bb262f3aa79d0af1be4c9d41da305d18235e044fcd51bd00da6e6a0b9c",
+      "sha256Adapted": "aeab20bb262f3aa79d0af1be4c9d41da305d18235e044fcd51bd00da6e6a0b9c",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/styles/abstracts/_mixins.scss",
+      "local": "vendor/src/styles/abstracts/_mixins.scss",
+      "sha256Original": "3d7375e82974580ae024d8438be9b95612fca1fc341ede636d5b50709449fd92",
+      "sha256Adapted": "3d7375e82974580ae024d8438be9b95612fca1fc341ede636d5b50709449fd92",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/styles/abstracts/_breakpoints.scss",
+      "local": "vendor/src/styles/abstracts/_breakpoints.scss",
+      "sha256Original": "066a516e0f2723d765940c87576f33849f449b74fee62634c1f7e747d9f02bc3",
+      "sha256Adapted": "066a516e0f2723d765940c87576f33849f449b74fee62634c1f7e747d9f02bc3",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/build-tools/wrapInTwentyUiCascadeLayer.ts",
+      "local": "vendor/build-tools/wrapInTwentyUiCascadeLayer.ts",
+      "sha256Original": "b3a6fe6c440607ad959f8160f166c9585678ffa964e0923b01ee19e453bf4853",
+      "sha256Adapted": "22b5e08303ba842e32146c5974f1cfec394ebc826db3a8859e6e561a3f354bcc",
+      "adaptations": [
+        "Explicit .ts import extensions for Node 22 native Vite config loader; cascade behavior unchanged."
+      ]
+    },
+    {
+      "upstream": "packages/twenty-ui/build-tools/twentyUiCascadeLayerName.ts",
+      "local": "vendor/build-tools/twentyUiCascadeLayerName.ts",
+      "sha256Original": "63b40e23d9d10011f6b6a7fb67a46e091be3f57596f3482bdeb99935870f5056",
+      "sha256Adapted": "63b40e23d9d10011f6b6a7fb67a46e091be3f57596f3482bdeb99935870f5056",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/LICENSE",
+      "local": "vendor/LICENSE",
+      "sha256Original": "f2c3d261cefa7be3fe81790e777f72c83083b832e653c493db0cc960e81f2b0f",
+      "sha256Adapted": "f2c3d261cefa7be3fe81790e777f72c83083b832e653c493db0cc960e81f2b0f",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/theme/constants/MainColorNames.ts",
+      "local": "vendor/src/theme/constants/MainColorNames.ts",
+      "sha256Original": "4849d2132d24a89d8ded03ae73d4f10677752c8e45a99e8b7ee32ac64a1b4066",
+      "sha256Adapted": "4849d2132d24a89d8ded03ae73d4f10677752c8e45a99e8b7ee32ac64a1b4066",
+      "adaptations": []
+    },
+    {
+      "upstream": "packages/twenty-ui/src/theme/constants/MobileViewport.ts",
+      "local": "vendor/src/theme/constants/MobileViewport.ts",
+      "sha256Original": "de5aa2d5d8330d7f2d14c1a9be0e214edb7f498abfe60ad2511717a2d064c8ca",
+      "sha256Adapted": "de5aa2d5d8330d7f2d14c1a9be0e214edb7f498abfe60ad2511717a2d064c8ca",
+      "adaptations": []
+    }
+  ]
+}

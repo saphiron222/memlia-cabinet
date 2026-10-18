@@ -1,0 +1,460 @@
+{
+  "status": "Direct source candidate; controller acceptance/CI pending",
+  "composition": "Plane community navigation, header, peek and Kanban ports; actual Propel0.7.3 elements/components/styles; Twenty native-semantic table port and unchanged59 MIT primitives; actual cal.diy Input/Calendar/SettingsHeader/PanelCard/Alert ports. Canonical Memlia controllers retained.",
+  "files": [
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "packages/constants/src/sidebar.ts",
+      "local": "apps/web/src/upstream/plane/constants.ts",
+      "sha256Original": "a655b6073597eda834ace31e91935642ec5af64b4284ac295ea9d70d563115c6",
+      "sha256Adapted": "a655b6073597eda834ace31e91935642ec5af64b4284ac295ea9d70d563115c6",
+      "adaptations": "Unmodified."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/sidebar/sidebar-navigation.tsx",
+      "local": "apps/web/src/upstream/plane/sidebar-navigation.tsx",
+      "sha256Original": "ab1b18d867000173e14d4c00a4e723efbc3e54a9def18761c7ea72c1a40360b3",
+      "sha256Adapted": "92b67705fb541fde5997eb84760ac84aad94ce905afc3d43fa4b353b38d47b32",
+      "adaptations": "Only local cn import; original JSX and class strings."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "packages/blocks/src/layout/row/helper.tsx",
+      "local": "apps/web/src/upstream/plane/row-helper.tsx",
+      "sha256Original": "2f3a34ebbdd22e256c93103a1694797d9fd96ea9d3c68f78673b8579a38a12a2",
+      "sha256Adapted": "2f3a34ebbdd22e256c93103a1694797d9fd96ea9d3c68f78673b8579a38a12a2",
+      "adaptations": "Unmodified."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "packages/blocks/src/layout/row/row.tsx",
+      "local": "apps/web/src/upstream/plane/row.tsx",
+      "sha256Original": "69ea2c835c8036c37a7d16f2a79176026fb3927b3002821a4683742ee9ba827a",
+      "sha256Adapted": "181cb18195fd6e71edd7c654c2699a1985d5da577c44ab5e2d1a4c4ebf46d1c7",
+      "adaptations": "Local helper/cn imports only."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "packages/utils/src/common.ts",
+      "local": "apps/web/src/upstream/plane/cn.ts",
+      "sha256Original": "7b2e15abec4d8884840bc1cf078499d2eadeb75dc10ef942126c16ee2903f54b",
+      "sha256Adapted": "f2c7a3cef73e6156fe72bec23a4c7fdb1b22116af039e03797d1cb7e80e1fced",
+      "adaptations": "Original customized tailwind-merge through exported cn; unrelated utilities/types removed."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/sidebar/resizable-sidebar.tsx",
+      "local": "apps/web/src/upstream/plane/resizable-sidebar.tsx",
+      "sha256Original": "4ad2b179206cceab44b96b74be437e484310d82a3d7f89a49e6421cb0fa9d87e",
+      "sha256Adapted": "010d33ae35e7f65a05008888269ec8e626773cd94e1be90657e08af4f1e3c929",
+      "adaptations": "Original resizing/collapse/peek timers and classes. Local mobile hook; French labels; inert/aria-hidden inactive copies; keyboard resize added."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/sidebar/sidebar-toggle-button.tsx",
+      "local": "apps/web/src/upstream/plane/sidebar-toggle-button.tsx",
+      "sha256Original": "e151a7e27be671399e7e111cfa362472662dac912c5f22239a6fb078cda94b0f",
+      "sha256Adapted": "b540d2054da61843fe2db03273859f94eb25c6b4d4a891fd6fc0744f392883e2",
+      "adaptations": "Original presentation branch retained; local imports and canonical props replace route/store/i18n/project identities."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/sidebar/sidebar-wrapper.tsx",
+      "local": "apps/web/src/upstream/plane/sidebar-wrapper.tsx",
+      "sha256Original": "cba50d201fbf5c12da8e157cf1fd0f24f8b5e41b3b1796def5ff744d522f8c0f",
+      "sha256Adapted": "607c1d5a138eb4ee2146ef03146081a2da85f688972f24eadc63dba9f5451934",
+      "adaptations": "Original flex/ScrollArea/spacing retained; cabinet title, footer and quick action slots replace workspace selector, projects-customization dialog and commercial badge."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/workspace/sidebar/sidebar-item.tsx",
+      "local": "apps/web/src/upstream/plane/workspace-sidebar-item.tsx",
+      "sha256Original": "af54d187cefadf6c1b6545b813ea65dcf0bdbf44c17ec11b8bce56b708a77528",
+      "sha256Adapted": "a97d6d311fe7fe84092d565e0cbda5014b8bc9409bb1dd5e8b0017014d6ef647",
+      "adaptations": "Original presentation branch retained; local imports and canonical props replace route/store/i18n/project identities."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/workspace/sidebar/sidebar-menu-items.tsx",
+      "local": "apps/web/src/upstream/plane/sidebar-menu-items.tsx",
+      "sha256Original": "fe537c40b0b655d1d0b50e6d89fe88bee479d70a24787d5ae3bcffb2a32f9fa5",
+      "sha256Adapted": "25972c5bae2388b65f20f215d5ec54325a4f45e5ac4c40ac01880a56875d4685",
+      "adaptations": "Original presentation branch retained; local imports and canonical props replace route/store/i18n/project identities."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/common/extended-app-header.tsx",
+      "local": "apps/web/src/upstream/plane/extended-app-header.tsx",
+      "sha256Original": "7d36dbee791f3368d06ac13ad6d75dc7a01cbf0c1fb7fd06c04345d07e2e2bd6",
+      "sha256Adapted": "ac0d814913b8740d3002c6e08fc89de9678a7d247691e1cf15f2f8597b97a7cd",
+      "adaptations": "Original presentation branch retained; local imports and canonical props replace route/store/i18n/project identities."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/core/app-header.tsx",
+      "local": "apps/web/src/upstream/plane/app-header.tsx",
+      "sha256Original": "88749bd0d8320350ed2d04e731a85fa193206463b4135b8333485cbb848f476c",
+      "sha256Adapted": "947d84107d2a2367b9794481e0847e7bdce386d3ca01d7469bde9de34f4a5218",
+      "adaptations": "Original presentation branch retained; local imports and canonical props replace route/store/i18n/project identities."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/workspace/sidebar/project-navigation.tsx",
+      "local": "apps/web/src/upstream/plane/project-navigation.tsx",
+      "sha256Original": "54b34854ebeef5db23e8b20a03c9dd27ae3102ad817119916dbcda886e06b021",
+      "sha256Adapted": "a5ce5a46d530979918b6082b624821516f206eb6a7b860a7d4d802e3524332b0",
+      "adaptations": "Original navigation-item rendering/classes; canonical route/allowed/active props replace project/issue/auth stores and translations."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/workspace/sidebar/projects-list-item.tsx",
+      "local": "apps/web/src/upstream/plane/projects-list-item.tsx",
+      "sha256Original": "7b3e833d9bfc70233c14371c0393dc7331794229673b601bb1e32cc45600cba0",
+      "sha256Adapted": "850f73916eb5ea489ad4da5a8f98ebc4cea4ce96b587e71c616a6b3c07eb5dca",
+      "adaptations": "Original project accordion presentation/classes/chevron/indentation retained; props replace stores, fixed cabinet groups omit drag reordering and project publication. Link and accessible chevron are separate controls."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/issues/peek-overview/view.tsx",
+      "local": "apps/web/src/upstream/plane/peek-view.tsx",
+      "sha256Original": "630a245c1d1e6d79e8959f7b007dc5ac25a0ee9f71ae3d96484737e2f2d8b561",
+      "sha256Adapted": "fb4dce4b7c605fcc4130b47bbdc398ae10424db16684540b6e65cda20dbd5633",
+      "adaptations": "Original side-peek classes and shadow; canonical content slot replaces issue-specific widgets. Native modal dialog replaces portal/keypress lifecycle, width adapts at900px."
+    },
+    {
+      "project": "Plane",
+      "revision": "879ce8b5c6b4fe21efff4789a7062747f46d6383",
+      "license": "AGPL-3.0-only",
+      "source": "apps/web/components/issues/issue-layouts/kanban/block.tsx",
+      "local": "apps/web/src/upstream/plane/kanban-card.tsx",
+      "sha256Original": "a258425e01379a6ab94694e489bc1e26f1e933fc73ac3d10f8ef3731f36432c1",
+      "sha256Adapted": "00be05c89985c3f8ac34e1ebfffdc0800bf6494d50d9a045157c66faa4972b51",
+      "adaptations": "Original kanban/block card and content classes; article replaces enclosing link so canonical move selector/open link remain separate accessible controls; no issue store or virtualizer."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/components/form/inputs/TextField.tsx",
+      "local": "apps/web/src/upstream/cal/Input.tsx",
+      "sha256Original": "5b73c38e66f0793ccad0a8e59f1735c16197f8e82a45c19d87ff9e0b74f148d0",
+      "sha256Adapted": "be23044d01d01d71d591b2e63d28bf685ed84e666409e1de901048c2ac92cc0f",
+      "adaptations": "Actual Input and inputStyles slice; standalone native input types replace full booking form dependencies. Canonical Field retains labels, validation/focus."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/classNames.ts",
+      "local": "apps/web/src/upstream/cal/classNames.ts",
+      "sha256Original": "594e597e2b638fdceacc3c849acb87d63c7ff158b31e55e66f151f1b58543d43",
+      "sha256Adapted": "5b99ed333715e7063c4cb93a000e0c95ae3d526b2f1109c70c758c466226e24c",
+      "adaptations": "Local import only."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/features/settings/appDir/SettingsHeader.tsx",
+      "local": "apps/web/src/upstream/cal/SettingsHeader.tsx",
+      "sha256Original": "22938d857efca88ccc361ddf2401d05d7f07e44d7da4efc05deccc68dfaac913",
+      "sha256Adapted": "41f8b8a46f84e767c857878d519cf89079dc503f21ecf151e1f3e64751a9e09b",
+      "adaptations": "Original header/Suspense layout, native labels/icons/Button; h2 preserves cabinet heading hierarchy."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/components/card/PanelCard.tsx",
+      "local": "apps/web/src/upstream/cal/PanelCard.tsx",
+      "sha256Original": "7e4d0101742f6142fdc285f31ed5ef59a5b400e6fd9b935cdd9ca99652e92a14",
+      "sha256Adapted": "55ab441cefd25010b9f3f06c4ae4fd84f73b193aa7ea7c56700fa339caa6b2c3",
+      "adaptations": "Original layout/collapse/aria IDs retained; locale, icons and Button adapt to current primitives. AutoAnimate hook replaced by ref, no animation obligation."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/components/form/date-range-picker/Calendar.tsx",
+      "local": "apps/web/src/upstream/cal/Calendar.tsx",
+      "sha256Original": "26bf0162e995a7eeea2147d82c6b70f4ec7282c58c956980bfd5da11319a30ce",
+      "sha256Adapted": "e9fd1ccc14fe98f83344ecf831854d267f3598bd91dac6bd27e4906e0e215cbe",
+      "adaptations": "Actual Calendar/DayPicker component. Version8 keys migrated to single resolved DayPicker10.0.2 shared with Propel. Canonical events/date/week/day components and sizes supplied as props; UTC calendar arithmetic preserves civil date strings; no bookings/availability service."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/components/button/Button.tsx",
+      "local": "apps/web/src/upstream/cal/buttonClasses.ts",
+      "sha256Original": "a165a4527dab056e5902ebcf8439e5916f8c69ee2c29ac943099ff8c3516d264",
+      "sha256Adapted": "88a8afad28c9cb9d1f0732743ca067bd71f798aa08fb4ba505a3c826dedd6e3d",
+      "adaptations": "Original buttonClasses cva slice used by Calendar; formatting only."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "packages/ui/components/alert/Alert.tsx",
+      "local": "apps/web/src/upstream/cal/Alert.tsx",
+      "sha256Original": "0a3d06e40094ce60eea2942c29a57cf68eec5c9415e036ebde444e25ecb9ce80",
+      "sha256Adapted": "c492465bbc88f9b85cf2eafb787cf63c48910a3294e51bf8a1a198094dfe0420",
+      "adaptations": "Original layout/variants; icon/classNames adapters, role/tabIndex forwarded for existing error-summary focus."
+    },
+    {
+      "project": "cal.diy",
+      "revision": "54343aa685ae8f33159d2f485ec4a57bad5c574a",
+      "license": "MIT",
+      "source": "apps/web/components/ui/AuthContainer.tsx",
+      "local": "apps/web/src/upstream/cal/AuthContainer.tsx",
+      "sha256Original": "ca136e756115c25a90e1cb5844a6824889ce0bb4ccf8f19b2f785450d6f77a15",
+      "sha256Adapted": "160372b1459e0fadbe57f0b751385544b64b488369745c2c7cea170e63b0b23a",
+      "adaptations": "Original container/heading/footer/loading structure; local brand and Loader; outer main landmark instead of div."
+    },
+    {
+      "project": "Twenty",
+      "revision": "e7743ba77003f3eab957cfcca8e760d383cde550",
+      "license": "AGPLv3 with Twenty Application Exception; original LICENSE retained",
+      "source": "packages/twenty-front/src/modules/ui/layout/table/components/Table.tsx",
+      "local": "apps/web/src/upstream/twenty/Table.tsx",
+      "sha256Original": "9063683b53422713b565c932f79565e0db1321e7d1af67bf4c808ac087629bb8",
+      "sha256Adapted": "f02423b78d2ca351e8c97b0d8253d23202401b6815eb461b3d2bb52edc380ff8",
+      "adaptations": "Styled component declarations/attributes translated to native semantic table components and table.css; Linaria interpolation becomes CSS variables; grid/flex becomes table layout to preserve merged fiscal cells/column semantics. No object-store/backend copied; default36px rows adapt mixed cabinet controls. This is a structural port, not an unchanged Twenty table."
+    },
+    {
+      "project": "Twenty",
+      "revision": "e7743ba77003f3eab957cfcca8e760d383cde550",
+      "license": "AGPLv3 with Twenty Application Exception; original LICENSE retained",
+      "source": "packages/twenty-front/src/modules/ui/layout/table/components/TableRow.tsx",
+      "local": "apps/web/src/upstream/twenty/Table.tsx",
+      "sha256Original": "470981e40f3d2d54b199800049033fff232c0f1e36d330cfd984fe2726799c90",
+      "sha256Adapted": "f02423b78d2ca351e8c97b0d8253d23202401b6815eb461b3d2bb52edc380ff8",
+      "adaptations": "Styled component declarations/attributes translated to native semantic table components and table.css; Linaria interpolation becomes CSS variables; grid/flex becomes table layout to preserve merged fiscal cells/column semantics. No object-store/backend copied; default36px rows adapt mixed cabinet controls. This is a structural port, not an unchanged Twenty table."
+    },
+    {
+      "project": "Twenty",
+      "revision": "e7743ba77003f3eab957cfcca8e760d383cde550",
+      "license": "AGPLv3 with Twenty Application Exception; original LICENSE retained",
+      "source": "packages/twenty-front/src/modules/ui/layout/table/components/TableCell.tsx",
+      "local": "apps/web/src/upstream/twenty/Table.tsx",
+      "sha256Original": "7105cbaca4535c1014b484a86cd8090d1f688c13f062f881fe4142fc257c96ed",
+      "sha256Adapted": "f02423b78d2ca351e8c97b0d8253d23202401b6815eb461b3d2bb52edc380ff8",
+      "adaptations": "Styled component declarations/attributes translated to native semantic table components and table.css; Linaria interpolation becomes CSS variables; grid/flex becomes table layout to preserve merged fiscal cells/column semantics. No object-store/backend copied; default36px rows adapt mixed cabinet controls. This is a structural port, not an unchanged Twenty table."
+    },
+    {
+      "project": "Twenty",
+      "revision": "e7743ba77003f3eab957cfcca8e760d383cde550",
+      "license": "AGPLv3 with Twenty Application Exception; original LICENSE retained",
+      "source": "packages/twenty-front/src/modules/ui/layout/table/components/TableHeader.tsx",
+      "local": "apps/web/src/upstream/twenty/Table.tsx",
+      "sha256Original": "e9431c4382b7757745acbf1e6b7bf096af9fd34cbb7931a48aace60315924e27",
+      "sha256Adapted": "f02423b78d2ca351e8c97b0d8253d23202401b6815eb461b3d2bb52edc380ff8",
+      "adaptations": "Styled component declarations/attributes translated to native semantic table components and table.css; Linaria interpolation becomes CSS variables; grid/flex becomes table layout to preserve merged fiscal cells/column semantics. No object-store/backend copied; default36px rows adapt mixed cabinet controls. This is a structural port, not an unchanged Twenty table."
+    }
+  ],
+  "additionalLocalFiles": [
+    {
+      "local": "apps/web/src/features/workflows/AnnualCalendar.tsx",
+      "sha256": "69fa45e3287bd70bb6239507afab8c161667f51781a5f2ec30331c97df228a8d",
+      "role": "Memlia annual composition of actual cal.diy Calendar/PanelCard and Plane KanbanCard; canonical page counts/date selection"
+    },
+    {
+      "local": "apps/web/src/features/workflows/Workflows.tsx",
+      "sha256": "ad6bcf90c82ba4050fa4b042cf9661b0741826dac3ab440be36cc30041eb04b2",
+      "role": "Canonical controller; task Weeks compose actual Cal PanelCard with Plane KanbanCard; annual uses AnnualCalendar; preserves canonical task time section in URL (Task5)"
+    },
+    {
+      "local": "apps/web/src/upstream/twenty/table.css",
+      "sha256": "067a5fb986d93a4f35a440edb9f99cc6ffd73529e8b515b1f854fc7531a30a12",
+      "role": "Translated original Twenty table component style declarations"
+    },
+    {
+      "local": "apps/web/src/upstream/plane/controls.tsx",
+      "sha256": "79c95c6f589dc72b5a03248f00625ef649a162a6c506125074f23be039c9019b",
+      "role": "Native select/textarea and existing tab behavior grafted via actual Propel render API"
+    },
+    {
+      "local": "apps/web/src/upstream/plane/platform.ts",
+      "sha256": "0c760a5caaf4e4b702531bc152974295436af98d7727df3cc4d8d16a9a9880f9",
+      "role": "Cabinet mobile media-query adapter"
+    },
+    {
+      "local": "apps/web/src/features/workflows/TaskDetail.tsx",
+      "sha256": "1b85a639b35f2914ef563d4edac385e207c30d1caa3e95e4b106ff2248666ec0",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Time.tsx",
+      "sha256": "de828575e48e52180e696b48c996a6fbfd8ffd7b85f9da44b3ae7ae10942d4df",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/TimeReport.tsx",
+      "sha256": "10a1fdf7b63f667ad3bb6b9172ae75398cd62e3f4889c71ff8525cdb26424217",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Configuration.tsx",
+      "sha256": "164cc0ccb4eff31ec230735fad8a2e867bff5c7083e0b39ae8ae1276486105c1",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Workload.tsx",
+      "sha256": "622777a662ed48d79ea7244dd15adfb9add2aa23c6aac76b4a92880b7a3e2c4b",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/shared.tsx",
+      "sha256": "579b20699ce7d4cb95f9f1a2de25ace5f17e05295a5c0ea1ab94d583b7aa9517",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/time.css",
+      "sha256": "70b1bc9a9a0a63f5de95fa912978b9beb7f3156f6b64923ae9c3f4fc59916330",
+      "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Catalog.tsx",
+      "sha256": "5a2bab44559877cdce3eff91408ba383e381b7adc4ade44462fb051249a32e75",
+      "role": "Memlia paged searchable time catalogs and historical identity resolution composed from retained Cal fields, Plane controls and Propel buttons; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/shared.tsx",
+      "sha256": "3a868e06d6e46acd1cf86cbbaedf889ca7732bdcbb9256cd13c7f254727bef55",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Models.tsx",
+      "sha256": "e2b7df583e6a3f4cf03020336beaf288f4ece89c7449d20e99cd3b15f99a7a84",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/ProspectForm.tsx",
+      "sha256": "2c277c5f668619dc57a33d94589ba3bb0c7f35e0f6c19a8444237e0ed918e506",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Relationship.tsx",
+      "sha256": "0daf8e08e45b8f28821f199eb47a8f225c996d715e352cd9fb2f812f0fd95e8e",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Reviews.tsx",
+      "sha256": "2ae17a1f2feb6351d00feea402d07a4914ed2e1c4a0b969ddd4cbb821df7a942",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/relationship.css",
+      "sha256": "dd7524f8474c936a9fdf846616b28d85248fad0efc4c2cb2df8f55845f77ac1e",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    }
+  ],
+  "packages": [
+    {
+      "name": "@makeplane/propel",
+      "version": "0.7.3",
+      "resolved": "https://registry.npmjs.org/@makeplane/propel/-/propel-0.7.3.tgz",
+      "integrity": "sha512-J1iEyCZZSPJblhBhW09lDcVj+FE+pOMPBvrREyNck7t/bhzM5Ir/6JpL+YPOt0xtuNZtH8FG1HdzaystocdNDw==",
+      "license": "AGPL-3.0-only"
+    },
+    {
+      "name": "@base-ui/react",
+      "version": "1.9.0",
+      "resolved": "https://registry.npmjs.org/@base-ui/react/-/react-1.9.0.tgz",
+      "integrity": "sha512-S8CSYosASBKtpL8SWUfS78rFElfLijiCgA7oHOK22jCJ95FULsYyKwBNFOgudt0RA+/7yNc7F81bOvQnRgbBiQ==",
+      "license": "MIT"
+    },
+    {
+      "name": "tailwindcss",
+      "version": "4.1.17",
+      "resolved": "https://registry.npmjs.org/tailwindcss/-/tailwindcss-4.1.17.tgz",
+      "integrity": "sha512-j9Ee2YjuQqYT9bbRTfTZht9W/ytp5H+jJpZKiYdP/bpnXARAuELt9ofP0lPnmHjbga7SNQIxdTAXCmtKVYjN+Q==",
+      "license": "MIT"
+    },
+    {
+      "name": "@tailwindcss/postcss",
+      "version": "4.1.17",
+      "resolved": "https://registry.npmjs.org/@tailwindcss/postcss/-/postcss-4.1.17.tgz",
+      "integrity": "sha512-+nKl9N9mN5uJ+M7dBOOCzINw94MPstNR/GtIhz1fpZysxL/4a+No64jCBD6CPN+bIHWFx3KWuu8XJRrj/572Dw==",
+      "license": "MIT"
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "resolved": "https://registry.npmjs.org/react/-/react-19.3.1.tgz",
+      "integrity": "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==",
+      "license": "MIT"
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "resolved": "https://registry.npmjs.org/react-dom/-/react-dom-19.3.1.tgz",
+      "integrity": "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==",
+      "license": "MIT"
+    },
+    {
+      "name": "react-day-picker",
+      "version": "10.0.2",
+      "resolved": "https://registry.npmjs.org/react-day-picker/-/react-day-picker-10.0.2.tgz",
+      "integrity": "sha512-QetiKtZWE9Uaw/pM/SYNv6WPYOTRnSJ2puL0GgwkmUFMIwiY0dtjH1W4B7DOVXVNQM0ZOClGpH/heOfBSzWeiA==",
+      "license": "MIT"
+    },
+    {
+      "name": "tailwind-merge",
+      "version": "3.4.0",
+      "resolved": "https://registry.npmjs.org/tailwind-merge/-/tailwind-merge-3.4.0.tgz",
+      "integrity": "sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g==",
+      "license": "MIT"
+    },
+    {
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "resolved": "https://registry.npmjs.org/class-variance-authority/-/class-variance-authority-0.7.1.tgz",
+      "integrity": "sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "clsx",
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/clsx/-/clsx-2.1.1.tgz",
+      "integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==",
+      "license": "MIT"
+    }
+  ],
+  "twentyMIT": "packages/ui/PROVENANCE.json (59 files unchanged)",
+  "fonts": "apps/web/public/fonts/provenance.json",
+  "licensing": "docs/frontend-licensing.md",
+  "surfaceMap": "docs/interface-source-map.md",
+  "visualOrigins": "Exact original Plane module harness and actual Propel0.7.3 isolated reference; official published full-page imagery is supplemental and not pinned runtime. Memlia filled screenshots remain private; no complete upstream runtime claim."
+}

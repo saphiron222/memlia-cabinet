@@ -1,0 +1,58 @@
+/* Original Propel 0.7.3 styles, compiled with the upstream-pinned Tailwind 4.1.17.
+   Tailwind base reset remains below existing unlayered Memlia styles and Twenty component styles. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "@makeplane/propel/styles";
+@source "../upstream";
+@source "./Navigation.tsx";
+@theme {
+  --font-sans: "Inter Variable", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --spacing-page-x: 1.25rem;
+}
+
+/* Scoped semantic bridges preserve Cal input selectors while adopting Plane neutral colors. */
+@utility bg-default {
+  background-color: var(--m-bg);
+}
+@utility border-default {
+  border-color: var(--m-border);
+}
+@utility border-emphasis {
+  border-color: var(--m-secondary);
+}
+@utility bg-subtle {
+  background-color: var(--m-layer);
+}
+@utility shadow-outline-gray-rested {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--m-border), transparent 60%);
+}
+@utility shadow-outline-gray-focused {
+  box-shadow: 0 0 0 2px var(--m-accent);
+}
+
+@utility text-default {
+  color: var(--m-text);
+}
+@utility text-emphasis {
+  color: var(--m-text);
+}
+@utility text-muted {
+  color: var(--m-secondary);
+}
+@utility text-subtle {
+  color: var(--m-secondary);
+}
+@utility bg-cal-muted {
+  background-color: var(--m-layer);
+}
+@utility border-muted {
+  border-color: var(--m-border);
+}
+@utility text-semantic-error {
+  color: var(--m-red);
+}
+@utility bg-semantic-error-subtle {
+  background-color: color-mix(in srgb, var(--m-red), transparent 94%);
+}

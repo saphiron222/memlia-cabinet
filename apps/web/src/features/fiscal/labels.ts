@@ -1,0 +1,183 @@
+import { z } from "zod";
+import type { FiscalEvent, FiscalDetail } from "@memlia/contracts";
+export const natureLabels: Record<string, string> = {
+  TVA: "TVA",
+  IS: "Impôt sur les sociétés",
+  CVAE: "CVAE",
+  CFE_IFER: "CFE / IFER",
+  TF: "Taxes foncières",
+  DAS2: "DAS2",
+  DSN: "DSN",
+  IRPP: "Impôt sur le revenu",
+  RCM_2777: "RCM · 2777",
+  IFU_2561: "IFU · 2561",
+  DES: "DES",
+  CUSTOM: "Obligation personnalisée",
+};
+export const eventLabels: Record<FiscalEvent["kind"], string> = {
+  client_validation: "Validation du client",
+  responsibility: "Intervenants et responsables",
+  preparation: "Préparation",
+  approval_request: "Demande d’approbation",
+  approval: "Décision locale",
+  revision: "Nouvelle version",
+  attempt: "Tentative de dépôt constatée",
+  return: "Retour de plateforme ou destinataire",
+  debt: "Photographie de dette",
+  payment: "Règlement observé",
+  apurement: "Apurement",
+  schedule: "Échéancier",
+  bank_candidate: "Candidat de rapprochement bancaire",
+  manual_mark: "Mention manuelle",
+  cancel_mark: "Annuler une mention",
+  classification: "Classement",
+  observation: "Valeur observée",
+  resolution: "Résolution d’une divergence",
+  source_freshness: "Actualité d’une source",
+  income: "Revenus individuels RCM",
+  ifu_prepare: "Préparation IFU",
+  deadlines: "Dates de suivi",
+  notice: "Avis CFE / taxe foncière",
+  evidence: "Lier des pièces GED",
+  link_task: "Lier une tâche",
+};
+export const valueLabels: Record<string, string> = {
+  reel_normal: "Réel normal",
+  reel_simplifie: "Réel simplifié",
+  franchise: "Franchise en base",
+  exonere: "Exonéré",
+  hors_champ: "Hors champ",
+  IS: "Impôt sur les sociétés",
+  IR_BIC: "Impôt sur le revenu — BIC",
+  IR_BNC: "Impôt sur le revenu — BNC",
+  IR_BA: "Impôt sur le revenu — BA",
+  autre: "Autre",
+  declaration: "Déclaration",
+  acompte_1: "Premier acompte",
+  acompte_2: "Deuxième acompte",
+  acompte_3: "Troisième acompte",
+  acompte_4: "Quatrième acompte",
+  mensuelle: "Mensuelle",
+  acompte: "Acompte",
+  solde: "Solde",
+  approximate: "Approximative",
+  manual: "Saisie manuelle",
+  simulated: "Source fictive",
+  supplier: "Source fournisseur déclarée",
+  complete: "Complète",
+  partial: "Partielle",
+  unknown: "Inconnue",
+  unavailable: "Indisponible",
+  unauthorized: "Non autorisée",
+  not_published: "Non publiée",
+  pending: "En attente",
+  accepted: "Accepté",
+  rejected: "Rejeté",
+  approved: "Approuvée localement",
+  requested: "Demandée",
+  not_requested: "Non demandée",
+  order: "Ordre enregistré",
+  validated: "Validé administrativement",
+  presented: "Présenté",
+  debit_confirmed: "Débit confirmé par une preuve",
+  settled_source: "Soldé selon la source",
+  cancelled: "Annulé",
+  payment: "Paiement",
+  remission: "Remise",
+  relief: "Dégrèvement",
+  allocation: "Imputation",
+  absent: "Absent",
+  exact: "Complet et exact",
+  masked_unique: "Masqué, candidat unique",
+  masked_ambiguous: "Masqué, plusieurs candidats",
+  low: "Faible",
+  medium: "Moyenne",
+  high: "Forte",
+  done: "Fait manuellement",
+  client_validated: "Validé par le client",
+  active: "Actif",
+  archived: "Archivé",
+  hidden: "Masqué",
+  nil: "Néant",
+  not_applicable: "Non applicable",
+  amount: "Montant suivi",
+  gross: "Montant brut",
+  net: "Montant net",
+  estimate: "Estimation",
+  referenceTurnover: "Chiffre d’affaires de référence",
+  regime: "Régime",
+  observedDueDate: "Échéance observée",
+  confirmed_zero: "Mois explicitement à zéro",
+  personne: "Personne",
+  organisation: "Organisation",
+  draft: "Projet de spécification",
+  released: "Spécification publiée",
+  inactive: "Inactif",
+  prefilled: "Déclaration préremplie",
+  receipt: "Accusé / preuve",
+  support: "Pièce justificative",
+  generated_preparation: "Préparation produite",
+  platform: "Plateforme",
+  recipient: "Destinataire",
+  a_preparer: "À préparer",
+  en_cours: "En cours",
+  preparee: "Préparée",
+  fresh: "Récente selon la politique",
+  stale: "Ancienne selon la politique",
+  open: "Divergence ouverte",
+  resolved: "Divergence résolue",
+  missing: "Valeur manquante",
+};
+export const labelValue = (value: string) => valueLabels[value] ?? value;
+
+export function fiscalFormMessage(error: unknown) {
+  return error instanceof z.ZodError
+    ? "Vérifiez les champs obligatoires, les dates et les montants à deux décimales."
+    : error instanceof Error
+      ? error.message
+      : "Cette opération n’a pas abouti.";
+}
+
+export const actionLabels: Partial<Record<FiscalEvent["kind"], string>> = {
+  client_validation: "Renseigner la réponse du client",
+  revision: "Modifier le montant",
+  manual_mark: "Ajouter une mention manuelle",
+  cancel_mark: "Annuler une mention",
+  classification: "Changer le classement",
+  responsibility: "Affecter les intervenants",
+  deadlines: "Modifier les dates",
+  attempt: "Enregistrer une tentative de dépôt",
+  return: "Ajouter un retour",
+  debt: "Ajouter une dette",
+  payment: "Ajouter un règlement",
+  apurement: "Ajouter un apurement",
+  schedule: "Renseigner un échéancier",
+  bank_candidate: "Examiner un rapprochement bancaire",
+  observation: "Ajouter une valeur observée",
+  resolution: "Résoudre une divergence",
+  source_freshness: "Actualiser la provenance",
+  evidence: "Lier des pièces",
+  notice: "Ajouter un avis et ses suites",
+  link_task: "Lier une tâche",
+  income: "Renseigner les bénéficiaires",
+  ifu_prepare: "Préparer l’IFU",
+};
+
+export function moneyLabel(value: string | null | undefined) {
+  if (value == null) return "Montant inconnu";
+  const [whole, decimal = "00"] = value.split(".");
+  return (
+    whole!.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f") + "," + decimal + " €"
+  );
+}
+
+export function fiscalAttemptLabel(
+  detail: Pick<FiscalDetail, "timeline">,
+  id: string,
+  version: number | null,
+): string {
+  const entry = detail.timeline.find(
+    (e) => e.event.kind === "attempt" && e.event.id === id,
+  );
+  return `Déclaration ${version ?? "inconnue"}${entry?.event.kind === "attempt" ? ` · ${entry.event.productionReference} · ${new Date(entry.at).toLocaleDateString("fr-FR")}` : ""}`;
+}

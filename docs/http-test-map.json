@@ -1,0 +1,626 @@
+{
+  "GET /api/v1/setup": {
+    "file": "apps/server/test/application.test.ts",
+    "test": "requires one local setup and creates no default credentials"
+  },
+  "POST /api/v1/setup": {
+    "file": "apps/server/test/application.test.ts",
+    "test": "requires one local setup and creates no default credentials"
+  },
+  "GET /api/v1/session": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "POST /api/v1/login": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "POST /api/v1/logout": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "GET /api/v1/health": {
+    "file": "apps/server/test/installation.test.ts",
+    "test": "serves compiled UI and notices from one origin without exposing files or API fallbacks"
+  },
+  "GET /*": {
+    "file": "apps/server/test/installation.test.ts",
+    "test": "serves compiled UI and notices from one origin without exposing files or API fallbacks"
+  },
+  "GET /api/v1/catalogue": {
+    "file": "apps/server/test/resources.test.ts",
+    "test": "exposes canonical catalogue, contact and obligation lifecycle, exact amounts and archival"
+  },
+  "GET /api/v1/records": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/export.csv": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/:id": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "POST /api/v1/records": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "PUT /api/v1/records/:id": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "POST /api/v1/records/:id/transition": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/records/:id/history": {
+    "file": "apps/server/test/persistence.test.ts",
+    "test": "persists dossier/task date, checklist, transitions and CSV through a fresh application"
+  },
+  "GET /api/v1/dashboard": {
+    "file": "apps/server/test/dashboard-calendar.test.ts",
+    "test": "dashboard uses the Paris civil day across midnight and DST: $today"
+  },
+  "GET /api/v1/users": {
+    "file": "apps/server/test/resources.test.ts",
+    "test": "combines dossier grants with confidentiality and refuses moving a record outside the granted dossier"
+  },
+  "POST /api/v1/users": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "PUT /api/v1/users/:id": {
+    "file": "apps/server/test/authorization.test.ts",
+    "test": "checks live permissions, confidentiality on every surface and revokes sessions"
+  },
+  "GET /api/v1/documents/catalogue": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "POST /api/v1/documents": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/documents": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/documents/:id": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "searches extracted text only in authorized documents and keeps missing/corrupt originals distinct from metadata"
+  },
+  "GET /api/v1/documents/:id/download": {
+    "file": "apps/server/test/documents.test.ts",
+    "test": "uploads a genuine PDF, preserves explicit versions and independent same-name originals across restart"
+  },
+  "GET /api/v1/collections/catalogue": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "17 adaptateurs explicites : variantes métier, axes et provenance ne créent ni déclaration ni paiement"
+  },
+  "POST /api/v1/collections": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "CFE fictive : identité, période, référence et original GED durable sans doublon"
+  },
+  "GET /api/v1/collections/:id": {
+    "file": "apps/server/test/collections.test.ts",
+    "test": "CFE fictive : identité, période, référence et original GED durable sans doublon"
+  },
+  "GET /api/v1/administration/users": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "PUT /api/v1/administration/users/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "GET /api/v1/administration/roles": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "POST /api/v1/administration/roles": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "PUT /api/v1/administration/roles/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "rôle global : nom/ordre/droits persistés et dernier administrateur protégé par toutes les éditions"
+  },
+  "GET /api/v1/administration/groups": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "POST /api/v1/administration/groups": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "PUT /api/v1/administration/groups/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/administration/assignments/:id": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "lot partiellement autorisé : seul le dossier accessible change ; pièce, recherche et ancien rejeu sont révoqués"
+  },
+  "POST /api/v1/administration/assignments": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "lot partiellement autorisé : seul le dossier accessible change ; pièce, recherche et ancien rejeu sont révoqués"
+  },
+  "GET /api/v1/capabilities/records": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/capabilities/create": {
+    "file": "apps/server/test/administration.test.ts",
+    "test": "équipe et site persistés : affectation explicite, révocation immédiate, rapport non divulguant et rejeu autorisé"
+  },
+  "GET /api/v1/administration/companies/search": {
+    "file": "apps/server/test/company-search.test.ts",
+    "test": "recherche entreprise : vrai HTTP local, sélection propose seulement, SIRET demandé distinct du siège"
+  },
+  "POST /api/v1/administration/companies/propose": {
+    "file": "apps/server/test/company-search.test.ts",
+    "test": "recherche entreprise : vrai HTTP local, sélection propose seulement, SIRET demandé distinct du siège"
+  },
+  "POST /api/v1/administration/detections/simulate": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/detections": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/detections/:id/preview": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "POST /api/v1/administration/detections/:id/decide": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "détection simulée : rapprochement stable, décision manuelle de conflit, masquer/restaurer sans doublon"
+  },
+  "GET /api/v1/administration/fields": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "GET /api/v1/administration/fields/:id/values": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "migration explicite paginée : plus de 200 valeurs, version figée et renommage sans perte"
+  },
+  "POST /api/v1/administration/fields": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "PUT /api/v1/administration/fields/:id": {
+    "file": "apps/server/test/referential.test.ts",
+    "test": "champs personnalisés : inconnu/0/false, renommage stable et migration explicite atomique"
+  },
+  "POST /api/v1/administration/exports": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id/download": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/exports/:id/parts/:part": {
+    "file": "apps/server/test/export.test.ts",
+    "test": "sortie complète : identité installation, objets archivés, références manquantes et confidentialité courante"
+  },
+  "GET /api/v1/administration/scopes": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues personnelles et périmètres : aucun partage implicite, contacts multi-dossiers et révocation"
+  },
+  "GET /api/v1/administration/installation": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "PUT /api/v1/administration/installation": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "GET /api/v1/account": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "PUT /api/v1/account": {
+    "file": "apps/server/test/settings.test.ts",
+    "test": "installation et compte : identité persistante, préférences personnelles et aucun abonnement fictif"
+  },
+  "GET /api/v1/administration/views": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "POST /api/v1/administration/views": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "PUT /api/v1/administration/views/:id": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues et tableau de bord : période, état, colonnes, tri et export du même sous-ensemble"
+  },
+  "POST /api/v1/administration/views/:id/remove": {
+    "file": "apps/server/test/views-dashboard.test.ts",
+    "test": "vues personnelles et périmètres : aucun partage implicite, contacts multi-dossiers et révocation"
+  },
+  "GET /api/v1/imports/catalogue": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "GET /api/v1/imports": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "POST /api/v1/imports/preview": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id/rows": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/imports/:id/accepted": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "PUT /api/v1/imports/:id/mapping": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "PUT /api/v1/imports/:id/selection": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "POST /api/v1/imports/:id/commit": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "POST /api/v1/imports/:id/remove": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise différée : empreinte, capacité et droits courants recontrôlés après l’aperçu"
+  },
+  "GET /api/v1/imports/:id/report.csv": {
+    "file": "apps/server/test/imports.test.ts",
+    "test": "reprise CSV : colonnes réordonnées, erreurs explicites, acceptation durable et engagement sans doublon"
+  },
+  "GET /api/v1/fiscal": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "TVA local approval keeps rejected recipient and pending recipient separate without a payment"
+  },
+  "GET /api/v1/fiscal/:id": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "accepted IS original survives rejected correction with both receipts and generic writes cannot bypass frozen fiscal content"
+  },
+  "POST /api/v1/fiscal/:id/commands": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "TVA local approval keeps rejected recipient and pending recipient separate without a payment"
+  },
+  "POST /api/v1/fiscal/generate": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal/bulk": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "occurrences follow dossier frequency and fiscal year, regenerate stably, filter and bulk prepare without universal deadlines"
+  },
+  "POST /api/v1/fiscal/:id/preparation-document": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "IFU needs beneficiary allocation and month coverage; approved aggregate becomes stale after RCM revision"
+  },
+  "GET /api/v1/fiscal/:id/responsibles": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "fiscal approval, update, assignment and transmission are separate and module withdrawal rejects cached commands"
+  },
+  "GET /api/v1/administration/exports/:id/originals.tar": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "filtered TF original lot contains principal and every suite despite same filenames and reports newly missing originals"
+  },
+  "GET /api/v1/fiscal/responsibles": {
+    "file": "apps/server/test/fiscal.test.ts",
+    "test": "CVAE reference turnover, IS amounts and fiscal person filters survive list and CSV without invented calculations"
+  },
+  "POST /api/v1/workflows/preview": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "civil recurrence preserves nominal 31 through short months, leap years, DST and past starts"
+  },
+  "GET /api/v1/workflows/models/:id/job": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "POST /api/v1/workflows/generate": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "GET /api/v1/workflows/jobs/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "durable recurrence job uses preview dates and stable task identities after restart and model revision"
+  },
+  "POST /api/v1/workflows/tasks/:id/move": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "typed stages retain stable references, exactly one final and checklist completion across generic and workflow writes"
+  },
+  "POST /api/v1/workflows/models": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "GET /api/v1/workflows/models": {
+    "file": "tests/e2e/workflows.spec.ts",
+    "test": "workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 gardent le travail après rechargement"
+  },
+  "GET /api/v1/workflows/targets/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "POST /api/v1/workflows/targets/:id/commands": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist versions freeze existing instances, preserve edits on explicit merge, and reject concurrent writes on task TVA and DAS2"
+  },
+  "GET /api/v1/workflows/calendar": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "shared calendar aggregates canonical task and fiscal IDs and obligation task creation is replay-safe"
+  },
+  "POST /api/v1/workflows/targets/:id/task": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "shared calendar aggregates canonical task and fiscal IDs and obligation task creation is replay-safe"
+  },
+  "GET /api/v1/workflows/targets/:id/people": {
+    "file": "tests/e2e/workflows.spec.ts",
+    "test": "workflows : liste Kanban semaine calendrier et détail partagé TVA DAS2 gardent le travail après rechargement"
+  },
+  "POST /api/v1/workflows/imports/preview": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist import preview isolates invalid and duplicate rows from valid models"
+  },
+  "POST /api/v1/workflows/imports/:id/commit": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "checklist exchange previews mapping and unmapped columns, requires explicit validation and persists versioned models"
+  },
+  "GET /api/v1/notifications/runs": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "queued reminder failure remains visible to the current manager after the former manager is disabled with historical and current access checks"
+  },
+  "POST /api/v1/notifications/process": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "reminder preparation catches up a missed civil date durably without duplicate after restart"
+  },
+  "GET /api/v1/notifications": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "mentions and subscriptions recheck recipient rights, preserve internal audience and notification read state after restart"
+  },
+  "GET /api/v1/notifications/preferences": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "notification preferences persist after restart"
+  },
+  "POST /api/v1/notifications/preferences": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "notification preferences persist after restart"
+  },
+  "POST /api/v1/notifications/:id": {
+    "file": "apps/server/test/workflows.test.ts",
+    "test": "mentions and subscriptions recheck recipient rights, preserve internal audience and notification read state after restart"
+  },
+  "GET /api/v1/production/calendar": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "confidential production history is filtered before pagination, calendar and export; read-only readers cannot mutate"
+  },
+  "GET /api/v1/production/people": {
+    "file": "tests/e2e/production.spec.ts",
+    "test": "production : dense bilan grid, typed detail, keyboard, concurrency, reload, model and independent IRPP followup"
+  },
+  "GET /api/v1/production/rows/:id/capabilities": {
+    "file": "tests/e2e/production.spec.ts",
+    "test": "production : dense bilan grid, typed detail, keyboard, concurrency, reload, model and independent IRPP followup"
+  },
+  "POST /api/v1/production/preview": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "POST /api/v1/production/generate": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "GET /api/v1/production/jobs/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "GET /api/v1/production/jobs/:id/results": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "custom rule generation pauses, resumes and preserves treated occurrences while reporting every selected target"
+  },
+  "POST /api/v1/production/models": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "POST /api/v1/production/models/:id/duplicate": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "GET /api/v1/production/models/:id/rows": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "GET /api/v1/production/models/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "GET /api/v1/production/models": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "annual duplication preserves ordered stable typed stages and planned dates, never prior approvals or receipts"
+  },
+  "POST /api/v1/production/models/:id/rows": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "GET /api/v1/production/rows/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "POST /api/v1/production/rows/:id/commands": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "balance generation has one canonical work identity, typed concurrent cells, role approval and independent deposit proof"
+  },
+  "POST /api/v1/production/models/:id/migrate-targets": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "process duplicate policy, column rename and explicit target migration retain row and cell identity"
+  },
+  "POST /api/v1/production/imports/preview": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "stage reprise retains mixed invalid rows in report and explicitly commits usable ordered models"
+  },
+  "POST /api/v1/production/imports/:id/commit": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "stage reprise retains mixed invalid rows in report and explicitly commits usable ordered models"
+  },
+  "POST /api/v1/production/exports": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/production/exports/:id": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/production/exports/:id/parts/:part": {
+    "file": "apps/server/test/production.test.ts",
+    "test": "followup cell periods remain independent and async CSV plus complete exit include actual typed values and historical versions"
+  },
+  "GET /api/v1/fiscal/matrix": {
+    "file": "apps/server/test/fiscal-matrix.test.ts",
+    "test": "matrix separates dossier pagination and date reference, preserving exact amounts and export filters"
+  },
+  "POST /api/v1/time/exports": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/exports/:id": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/exports/:id/parts/:part": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/targets": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "GET /api/v1/time/:id/history": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "CSV uses scoped report totals; replay and prepared result reauthorize historical dossiers and employee rights"
+  },
+  "POST /api/v1/time/reassignment/preview": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "reassignment preview changes both totals once, commit checks versions, and exit contains all time history"
+  },
+  "POST /api/v1/time/reassignment/commit": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "reassignment preview changes both totals once, commit checks versions, and exit contains all time history"
+  },
+  "POST /api/v1/time/timers/start": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/timers/:id/stop": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/entities": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/workload": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "dated forfait late activity, midmonth change, weighted role collaborators and extra task contribute once with capacity provenance"
+  },
+  "GET /api/v1/time/report": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/options": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "GET /api/v1/time/entities": {
+    "file": "apps/server/test/time.test.ts",
+    "test": "manual and timer time retain nature, explicit task link, seconds, replay safety, closed-period rate and employee privacy"
+  },
+  "POST /api/v1/time/timers/:id/abandon": {
+    "file": "apps/server/test/time-review.test.ts",
+    "test": "review I8 an overdue timer can be abandoned with an audited reason, then restarted and its period closed"
+  },
+  "GET /api/v1/time/catalog/:kind": {
+    "file": "apps/server/test/time-review.test.ts",
+    "test": "review I5 bounded searchable catalogs resolve and select users and inactive natures beyond 200"
+  },
+  "GET /api/v1/relationship/catalog/:kind": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+  },
+  "POST /api/v1/relationship/lab/reminders": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
+  },
+  "GET /api/v1/relationship/onboarding/:id/status": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "onboarding distinct manual/source fiscal steps never manufacture habilitation; missing identity and mandate block activation and expiry reopens identity"
+  },
+  "POST /api/v1/relationship/onboarding/:id/activate": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "person-owned identity with exact GED evidence unlocks activation only with examined mandate, then expiry and changed identity reopen blockers"
+  },
+  "POST /api/v1/relationship/prospects/bulk-move": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "partial bulk move preserves successes and reports stale versions without duplicating conversion"
+  },
+  "GET /api/v1/relationship/entities/:id/capabilities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
+  },
+  "POST /api/v1/relationship/entities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/entities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/entities/:id": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
+  },
+  "POST /api/v1/relationship/prospects/:id/move": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/:id/history": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
+  },
+  "GET /api/v1/relationship/:id/events": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "POST /api/v1/relationship/imports/preview": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "assisted pipeline exchange previews unmapped values, requires explicit validation and persists editable ordered model"
+  },
+  "POST /api/v1/relationship/imports/:id/commit": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "assisted pipeline exchange previews unmapped values, requires explicit validation and persists editable ordered model"
+  }
+}

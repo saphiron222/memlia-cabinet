@@ -59,3 +59,63 @@ _Avoid_ : suivi récurrent
 **Suivi récurrent** :
 Grille périodique dont les colonnes ont chacune une fréquence et un type de valeur.
 _Avoid_ : règle de tâches récurrentes
+
+**Version applicable acceptée** :
+Version d’une déclaration appuyée par les retours acceptés de ses destinataires attendus ; un correctif rejeté ne remplace pas l’initiale acceptée.
+_Avoid_ : dernière version préparée
+
+**Photographie de dette** :
+Constat daté d’une créance et de son solde, sur une portée explicitée ; il reste distinct des événements d’apurement.
+_Avoid_ : solde universel du dossier
+
+**Candidat de rapprochement** :
+Lien proposé entre une obligation et des éléments bancaires, avec motifs et confiance, qui ne prouve pas un débit.
+_Avoid_ : paiement confirmé
+
+**Préparation IFU** :
+Proposition annuelle par payeur, bénéficiaire et catégorie, reliée aux versions des données RCM et à la couverture des mois.
+_Avoid_ : somme des montants à payer des 2777
+
+**Cadence opérationnelle** :
+Politique datée d’appréciation de la fraîcheur d’une source, distincte d’une échéance fiscale ou d’un engagement du fournisseur.
+_Avoid_ : délai réglementaire
+
+**Configuration annuelle de bilan** :
+Ensemble versionné des étapes, responsables, prévisions et forfait d’une famille pour un exercice.
+_Avoid_ : bilan réalisé, preuve de dépôt
+
+**Type d’étape** :
+Liste réutilisable de statuts ordonnés, chacun avec identité, couleur, icône et caractère final.
+_Avoid_ : validation humaine, reçu officiel
+
+**Saisie de temps** :
+Durée réalisée par un utilisateur, à une date et pour une nature, reliée explicitement à un objet ou conservée sous un libellé libre.
+_Avoid_ : estimation, rapprochement implicite
+
+**Prévision de charge** :
+Durée attendue, héritée du cabinet puis du dossier ou remplacée explicitement pour une occurrence.
+_Avoid_ : durée réalisée
+
+**Forfait de charge** :
+Contribution fixe datée d’un dossier et d’un rôle, répartie selon une base de prorata et des poids explicitement choisis par le cabinet.
+_Avoid_ : règle fiscale, facturation réalisée
+
+**Capacité** :
+Durée de travail disponible selon l’horaire journalier du cabinet ou une dérogation individuelle datée.
+_Avoid_ : temps saisi, disponibilité supposée
+
+**Prospect** :
+Fiche de relation commerciale rattachée à un contact canonique, avec pipeline, température manuelle, risque manuel et missions proposées.
+_Avoid_ : dossier déjà converti, score réglementaire
+
+**Conversion CRM** :
+Création unique d’un dossier lié au contact lorsque le prospect atteint le déclencheur configuré, dans la même transaction que son événement.
+_Avoid_ : génération de devis, signature, activation du portail
+
+**Accueil client (onboarding)** :
+Matrice d’étapes typées dont les valeurs, provenances et blocages préparent l’entrée en relation.
+_Avoid_ : habilitation de portail vérifiée
+
+**Revue LAB** :
+Décision humaine justifiée de vigilance, accompagnée de preuves et d’une date de révision selon la politique explicite du cabinet.
+_Avoid_ : risque CRM, certification automatique, score sanctions

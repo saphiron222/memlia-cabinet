@@ -1,0 +1,67 @@
+name: Diagnostic Relationship PostgreSQL Linux
+on:
+  # A new workflow_dispatch workflow is not registered on the default branch.
+  # Publishing this reviewed diagnostic on this branch is its explicit trigger.
+  # The ordinary push/PR workflow remains byte-for-byte unchanged.
+  push:
+    branches: ["build/socle-partage"]
+    paths:
+      - ".github/workflows/relationship-linux-diagnostic.yml"
+      - "scripts/relationship-linux-diagnostic.mjs"
+      - "scripts/relationship-diagnostic-*"
+      - "tests/diagnostics/relationship-linux*"
+      - "apps/server/src/records/query.ts"
+      - "apps/server/src/relationship/document-scope.ts"
+      - "apps/server/src/time/**"
+      - "apps/server/src/records/access-scope.ts"
+      - "apps/server/src/documents/access.ts"
+      - "apps/server/src/documents/store.ts"
+      - "apps/server/src/production/query.ts"
+      - "apps/server/src/production/document-scope.ts"
+      - "apps/server/src/relationship/service.ts"
+      - "apps/server/test/shared-access-scope.test.ts"
+      - "apps/server/test/relationship-access-batch.test.ts"
+      - "apps/server/test/time-review.test.ts"
+permissions:
+  contents: read
+env:
+  GIT_LFS_SKIP_SMUDGE: "1"
+  NO_COLOR: "1"
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+        env:
+          POSTGRES_DB: memlia_test
+          POSTGRES_USER: memlia_test
+          POSTGRES_PASSWORD: ci-fictitious-disposable-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U memlia_test -d memlia_test"
+          --health-interval 3s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: "22.22.3", cache: npm }
+      - run: npm ci
+      - name: Eight original native witnesses including Time C1 and measured GED policy plans
+        env:
+          DATABASE_URL: postgresql://memlia_test:ci-fictitious-disposable-only@127.0.0.1:5432/memlia_test
+          EXPECTED_HEAD: ${{ github.sha }}
+          POSTGRES_SERVICE_ID: ${{ job.services.postgres.id }}
+          RELATIONSHIP_DIAGNOSTIC_DIRECTORY: var/task6/linux-diagnostic
+        run: node scripts/relationship-linux-diagnostic.mjs --fictitious
+      - name: Retain bounded fictitious diagnostic evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: relationship-linux-diagnostic-${{ github.sha }}
+          path: var/task6/linux-diagnostic/
+          retention-days: 3
+          if-no-files-found: error

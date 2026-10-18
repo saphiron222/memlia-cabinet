@@ -1,0 +1,1194 @@
+import { it, expect } from "vitest";
+import { Client } from "pg";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  rm,
+  cp,
+  symlink,
+  readdir,
+  realpath,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  backup,
+  restore,
+  validateBackup,
+} from "../../../deploy/operations.mjs";
+import { createApplication } from "../src/app.js";
+import { credentials, origin, dossier, task } from "./helpers.js";
+it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
+  "PostgreSQL 17: offline backup restores linked records, exact bytes and configuration; unsafe targets never change (%s)",
+  async (schema) => {
+    const base = new URL(process.env.DATABASE_URL!);
+    const admin = new Client({ connectionString: base.toString() });
+    await admin.connect();
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), "memlia-backup-")),
+    );
+    const names = ["source_", "target_", "occupied_"].map(
+      (prefix) => prefix + randomUUID().replaceAll("-", ""),
+    );
+    const urls: string[] = [];
+    const runtimeRole = "runtime_" + randomUUID().replaceAll("-", ""),
+      runtimePassword = randomUUID();
+    let app: Awaited<ReturnType<typeof createApplication>> | undefined;
+    try {
+      await admin.query(
+        `CREATE ROLE ${runtimeRole} LOGIN PASSWORD '${runtimePassword}' NOSUPERUSER NOCREATEDB NOCREATEROLE`,
+      );
+      for (const name of names) {
+        await admin.query(
+          `CREATE DATABASE ${name} OWNER ${runtimeRole} TEMPLATE template0`,
+        );
+        const url = new URL(base);
+        url.pathname = "/" + name;
+        url.username = runtimeRole;
+        url.password = runtimePassword;
+        urls.push(url.toString());
+      }
+      for (const [index, url] of urls.entries()) {
+        const connection = new Client({ connectionString: url });
+        await connection.connect();
+        try {
+          if (index === 0 && schema !== "public")
+            await connection.query(`CREATE SCHEMA ${schema}`);
+          await connection.query(
+            `ALTER ROLE ${runtimeRole} IN DATABASE ${new URL(url).pathname.slice(1)} SET search_path TO ${schema}, public`,
+          );
+        } finally {
+          await connection.end();
+        }
+      }
+      for (const dir of [
+        "data",
+        "restored",
+        "occupied",
+        "config-target",
+        "config-occupied",
+      ])
+        await mkdir(join(root, dir), { mode: 0o700 });
+      for (let n = 0; n < 3; n++)
+        await writeFile(join(root, `url-${n}`), urls[n]!, { mode: 0o600 });
+      const configuration = {
+        publicOrigin: origin,
+        allowHttpLoopback: true,
+        ...(schema === "public" ? {} : { cabinetTimeZone: "America/New_York" }),
+      };
+      await writeFile(
+        join(root, "config.json"),
+        JSON.stringify(configuration),
+        { mode: 0o600 },
+      );
+      const source = {
+        dataDirectory: join(root, "data"),
+        databaseUrl: urls[0]!,
+        publicOrigin: origin,
+      };
+      app = await createApplication(source);
+      const setup = await app.inject({
+        method: "POST",
+        url: "/api/v1/setup",
+        headers: { origin },
+        payload: credentials,
+      });
+      expect(setup.statusCode).toBe(201);
+      let cookie = String(setup.headers["set-cookie"]).split(";")[0]!;
+      const record = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/records",
+          headers: { origin, cookie },
+          payload: dossier("Dossier à restaurer"),
+        })
+      ).json();
+      const linked = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/records",
+          headers: { origin, cookie },
+          payload: task(record.id),
+        })
+      ).json();
+      const bytes = Buffer.from(
+        "Original fictif — montant 1234,56 — échéance 2026-10-31.",
+      );
+      const metadata = {
+        operationId: randomUUID(),
+        dossierId: record.id,
+        filename: "preuve.txt",
+        mediaType: "text/plain",
+        source: { kind: "manual", reference: "fixture-backup", version: "1" },
+      };
+      const payload = Buffer.concat([
+        Buffer.from(
+          `--piece\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n${JSON.stringify(metadata)}\r\n--piece\r\nContent-Disposition: form-data; name="file"; filename="preuve.txt"\r\nContent-Type: text/plain\r\n\r\n`,
+        ),
+        bytes,
+        Buffer.from("\r\n--piece--\r\n"),
+      ]);
+      const upload = await app.inject({
+        method: "POST",
+        url: "/api/v1/documents",
+        headers: {
+          origin,
+          cookie,
+          "content-type": "multipart/form-data; boundary=piece",
+        },
+        payload,
+      });
+      expect(upload.statusCode).toBe(201);
+      const document = upload.json();
+      const productionPost = async (
+        path: string,
+        payload: Record<string, unknown>,
+      ) => {
+        const response = await app!.inject({
+          method: "POST",
+          url: "/api/v1" + path,
+          headers: { origin, cookie },
+          payload,
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        return response.json();
+      };
+      const stageId = randomUUID();
+      const productionModel = await productionPost("/production/models", {
+        operationId: randomUUID(),
+        id: randomUUID(),
+        expectedVersion: 0,
+        model: {
+          kind: "balance",
+          name: "Bilan restauré",
+          year: 2026,
+          family: "BIC",
+          target: "dossier",
+          fee: "1234.56",
+          columns: [
+            { id: stageId, name: "Révision", type: "boolean", approval: true },
+          ],
+        },
+      });
+      const productionRow = await productionPost(
+        `/production/models/${productionModel.id}/rows`,
+        {
+          operationId: randomUUID(),
+          expectedVersion: 1,
+          target: { kind: "dossier", id: record.id, label: record.title },
+          period: "2026",
+        },
+      );
+      const productionBefore = await productionPost(
+        `/production/rows/${productionRow.id}/commands`,
+        {
+          operationId: randomUUID(),
+          expectedVersion: 1,
+          command: {
+            kind: "cell",
+            columnId: stageId,
+            period: "once",
+            value: true,
+            approve: true,
+            documentIds: [document.id],
+          },
+        },
+      );
+
+      // G1: durable generation outcomes travel through the actual offline PostgreSQL backup.
+      const generatedDossier = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/records",
+          headers: { origin, cookie },
+          payload: dossier("Périmètre restauré"),
+        })
+      ).json();
+      const generationPermissions = [
+        "read",
+        "create",
+        "update",
+        "approve",
+        "export",
+        "manage_users",
+        "confidential",
+      ].map((action) => ({ action, kind: "*", dossierId: null }));
+      const generationUserResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/users",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          name: "Gestionnaire restauration",
+          email: "restored-generation@example.test",
+          password: "MotDePasseFictif123!",
+          permissions: generationPermissions,
+        },
+      });
+      expect(
+        generationUserResponse.statusCode,
+        generationUserResponse.body,
+      ).toBe(201);
+      const generationUser = generationUserResponse.json();
+      const loginGeneration = async () => {
+        const r = await app!.inject({
+          method: "POST",
+          url: "/api/v1/login",
+          headers: { origin },
+          payload: {
+            email: generationUser.email,
+            password: "MotDePasseFictif123!",
+          },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        return String(r.headers["set-cookie"]).split(";")[0]!;
+      };
+      let generationCookie = await loginGeneration();
+      const generatedModel = await productionPost("/production/models", {
+        operationId: randomUUID(),
+        id: randomUUID(),
+        expectedVersion: 0,
+        model: {
+          kind: "balance",
+          name: "Résultats restaurés",
+          target: "dossier",
+          family: "BNC",
+          year: 2026,
+          population: [record.id, generatedDossier.id],
+          columns: [{ id: stageId, name: "Trace historique", type: "boolean" }],
+        },
+      });
+      const generated = await app.inject({
+        method: "POST",
+        url: "/api/v1/production/generate",
+        headers: { origin, cookie: generationCookie },
+        payload: {
+          operationId: randomUUID(),
+          modelId: generatedModel.id,
+          from: "2026-01-01",
+          to: "2026-12-31",
+        },
+      });
+      expect(generated.statusCode, generated.body).toBe(202);
+      const generationId = generated.json().jobId;
+      let generationJob;
+      for (let n = 0; n < 200; n++) {
+        generationJob = await app.inject({
+          url: `/api/v1/production/jobs/${generationId}`,
+          headers: { cookie: generationCookie },
+        });
+        if (["completed", "failed"].includes(generationJob.json().state)) break;
+        await new Promise((r) => setTimeout(r, 30));
+      }
+      expect(generationJob!.json().state, generationJob!.body).toBe(
+        "completed",
+      );
+      const generationBefore = (
+        await app.inject({
+          url: `/api/v1/production/jobs/${generationId}/results`,
+          headers: { cookie: generationCookie },
+        })
+      ).json();
+      expect(generationBefore.items).toHaveLength(2);
+      expect(
+        generationBefore.items.every((r: any) => r.state === "created"),
+      ).toBe(true);
+      const historyRow = generationBefore.items.find(
+        (r: any) => r.targetId === record.id,
+      ).rowId;
+      const secretMetadata = {
+        ...metadata,
+        operationId: randomUUID(),
+        confidential: true,
+      };
+      const secretUpload = await app.inject({
+        method: "POST",
+        url: "/api/v1/documents",
+        headers: {
+          origin,
+          cookie,
+          "content-type": "multipart/form-data; boundary=secret",
+        },
+        payload: Buffer.from(
+          `--secret\r\nContent-Disposition: form-data; name="metadata"\r\n\r\n${JSON.stringify(secretMetadata)}\r\n--secret\r\nContent-Disposition: form-data; name="file"; filename="preuve.txt"\r\nContent-Type: text/plain\r\n\r\nOriginal confidentiel fictif\r\n--secret--\r\n`,
+        ),
+      });
+      expect(secretUpload.statusCode, secretUpload.body).toBe(201);
+      for (const [version, documentIds] of [
+        [1, [secretUpload.json().id]],
+        [2, []],
+      ] as const)
+        await productionPost(`/production/rows/${historyRow}/commands`, {
+          operationId: randomUUID(),
+          expectedVersion: version,
+          command: {
+            kind: "cell",
+            columnId: stageId,
+            period: "once",
+            value: true,
+            documentIds,
+          },
+        });
+
+      const fiscalCreated = await app.inject({
+        method: "POST",
+        url: "/api/v1/fiscal",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          dossierId: record.id,
+          title: "IS fiscal à restaurer",
+          nature: "IS",
+          period: {
+            start: "2025-07-01",
+            end: "2026-06-30",
+            campaign: "2026",
+            subtype: "solde",
+          },
+          amount: "100.00",
+        },
+      });
+      expect(fiscalCreated.statusCode, fiscalCreated.body).toBe(201);
+      const fiscal = fiscalCreated.json();
+      const fiscalChanged = await app.inject({
+        method: "POST",
+        url: `/api/v1/fiscal/${fiscal.record.id}/commands`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: fiscal.record.version,
+          event: {
+            kind: "evidence",
+            documentIds: [document.id],
+            purpose: "support",
+            reason: "Preuve fiscale fictive à restaurer",
+          },
+        },
+      });
+      expect(fiscalChanged.statusCode, fiscalChanged.body).toBe(200);
+      const fiscalBefore = fiscalChanged.json();
+      const workflowModel = (
+        await app.inject({
+          method: "POST",
+          url: "/api/v1/workflows/models",
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            id: randomUUID(),
+            expectedVersion: 0,
+            model: {
+              kind: "checklist",
+              name: "Checklist restaurée",
+              targetKinds: ["tache", "IS"],
+              items: [{ id: randomUUID(), label: "Vérifier la pièce" }],
+            },
+          },
+        })
+      ).json();
+      const workBefore = [];
+      for (const targetId of [linked.id, fiscal.record.id]) {
+        const applied = await app.inject({
+          method: "POST",
+          url: `/api/v1/workflows/targets/${targetId}/commands`,
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            expectedVersion: 0,
+            command:
+              targetId === linked.id
+                ? { kind: "checklist", items: linked.data.checklist }
+                : { kind: "instantiate", modelId: workflowModel.id },
+          },
+        });
+        expect(applied.statusCode, applied.body).toBe(200);
+        const commented = await app.inject({
+          method: "POST",
+          url: `/api/v1/workflows/targets/${targetId}/commands`,
+          headers: { origin, cookie },
+          payload: {
+            operationId: randomUUID(),
+            expectedVersion: applied.json().version,
+            command: {
+              kind: "comment",
+              text: "Commentaire interne conservé",
+              mentions: [],
+              audience: "internal",
+            },
+          },
+        });
+        expect(commented.statusCode, commented.body).toBe(200);
+        workBefore.push(commented.json());
+      }
+
+      const reminderId = randomUUID();
+      const reminderSaved = await app.inject({
+        method: "POST",
+        url: "/api/v1/workflows/models",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          id: reminderId,
+          expectedVersion: 0,
+          model: {
+            kind: "reminder",
+            name: "Point de reprise sauvegardé",
+            targetIds: [linked.id],
+            recipientIds: [setup.json().user.id],
+            event: "schedule",
+            message: "Fictif",
+            hour: "23:59",
+            enabled: true,
+            rule: {
+              frequency: "monthly",
+              start: "2026-01-01",
+              end: "2030-12-31",
+              nominalDay: 17,
+              lastDay: false,
+              weekDay: 1,
+            },
+          },
+        },
+      });
+      expect(reminderSaved.statusCode, reminderSaved.body).toBe(200);
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/api/v1/notifications/process",
+            headers: { origin, cookie },
+            payload: { operationId: randomUUID() },
+          })
+        ).statusCode,
+      ).toBe(202);
+      const preparationBefore = (
+        await app.inject({
+          method: "GET",
+          url: "/api/v1/notifications/runs?modelId=" + reminderId,
+          headers: { cookie },
+        })
+      ).json().preparation;
+      expect(preparationBefore).toHaveLength(1);
+      const timeSave = async (
+        data: Record<string, unknown>,
+        prior?: { id: string; version: number },
+      ) => {
+        const r = await app!.inject({
+          method: "POST",
+          url: "/api/v1/time/entities",
+          headers: { origin, cookie },
+          payload: {
+            id: prior?.id ?? randomUUID(),
+            expectedVersion: prior?.version ?? 0,
+            operationId: randomUUID(),
+            data,
+          },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        return r.json();
+      };
+      const timeRoleResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/administration/roles",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          name: "Rôle temps sauvegardé",
+          order: 10,
+          permissions: [],
+        },
+      });
+      expect(timeRoleResponse.statusCode, timeRoleResponse.body).toBe(201);
+      const timeRole = timeRoleResponse.json();
+      const timeActor = setup.json().user.id,
+        timeNature = await timeSave({
+          kind: "nature",
+          name: "Nature restaurée",
+          active: true,
+        });
+      const timeSaved = [timeNature];
+      for (const data of [
+        {
+          kind: "plan",
+          level: "occurrence",
+          targetId: linked.id,
+          minutes: 120,
+          component: "variable",
+        },
+        {
+          kind: "capacity",
+          userId: null,
+          from: "2026-01-01",
+          to: null,
+          dailyMinutes: [420, 420, 420, 420, 420, 0, 0],
+        },
+        {
+          kind: "rate",
+          userId: null,
+          from: "2026-01-01",
+          to: null,
+          hourlyAmount: "99.99",
+          currency: "EUR",
+        },
+        {
+          kind: "forfait",
+          dossierId: record.id,
+          roleId: timeRole.id,
+          from: "2026-01-01",
+          to: null,
+          activityStart: "2026-01-01",
+          monthlyMinutes: 310,
+          amount: "1250.01",
+          currency: "EUR",
+          prorating: "calendar_days",
+          policyVersion: 1,
+        },
+        {
+          kind: "assignment",
+          dossierId: record.id,
+          roleId: timeRole.id,
+          userId: timeActor,
+          from: "2026-01-01",
+          to: null,
+          weight: 1,
+          policyVersion: 1,
+        },
+        {
+          kind: "allocation",
+          target: { kind: "record", id: linked.id },
+          from: "2026-01-01",
+          to: null,
+          weights: [{ userId: timeActor, weight: 1 }],
+          policyVersion: 1,
+        },
+        {
+          kind: "entry",
+          userId: timeActor,
+          date: "2026-10-17",
+          natureId: timeNature.id,
+          link: { kind: "record", id: linked.id },
+          seconds: 1234,
+          source: "manual",
+          timerId: null,
+          rate: null,
+        },
+        {
+          kind: "period",
+          from: "2025-01-01",
+          to: "2025-12-31",
+          closed: true,
+          reason: "Clôture fictive historique",
+        },
+      ])
+        timeSaved.push(await timeSave(data));
+      const timeTimer = await app.inject({
+        method: "POST",
+        url: "/api/v1/time/timers/start",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          date: "2026-10-17",
+          natureId: timeNature.id,
+          link: { kind: "record", id: linked.id },
+        },
+      });
+      expect(timeTimer.statusCode, timeTimer.body).toBe(200);
+      timeSaved.push(timeTimer.json());
+      const timeCsv = await app.inject({
+        method: "POST",
+        url: "/api/v1/time/exports",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          query: { from: "2026-10-01", to: "2026-10-31" },
+        },
+      });
+      expect(timeCsv.statusCode, timeCsv.body).toBe(202);
+      const timeCsvId = timeCsv.json().id;
+      for (let i = 0; i < 200; i++) {
+        const r = await app.inject({
+          url: "/api/v1/time/exports/" + timeCsvId,
+          headers: { cookie },
+        });
+        if (r.json().job?.state === "completed") break;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      const timeCsvBefore = await app.inject({
+        url: "/api/v1/time/exports/" + timeCsvId + "/parts/1",
+        headers: { cookie },
+      });
+      expect(timeCsvBefore.statusCode, timeCsvBefore.body).toBe(200);
+      timeSaved.push(
+        await timeSave(
+          { kind: "nature", name: "Nature restaurée", active: false },
+          timeNature,
+        ),
+      );
+      const timeBefore = [];
+      for (const e of timeSaved)
+        timeBefore.push(
+          (
+            await app.inject({
+              url: "/api/v1/time/" + e.id + "/history",
+              headers: { cookie },
+            })
+          ).json(),
+        );
+      const timeReportBefore = (
+        await app.inject({
+          url:
+            "/api/v1/time/report?from=2026-10-01&to=2026-10-31&recordId=" +
+            linked.id,
+          headers: { cookie },
+        })
+      ).json();
+      const relationshipSaved: { id: string; version: number; data: any }[] =
+        [];
+      const relationshipSave = async (
+        data: Record<string, unknown>,
+        previous?: { id: string; version: number },
+      ) => {
+        const response = await app!.inject({
+          method: "POST",
+          url: "/api/v1/relationship/entities",
+          headers: { origin, cookie },
+          payload: {
+            id: previous?.id ?? randomUUID(),
+            expectedVersion: previous?.version ?? 0,
+            operationId: randomUUID(),
+            data,
+          },
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        return response.json();
+      };
+      const relationshipStage = randomUUID();
+      const relationshipPipeline = await relationshipSave({
+        kind: "pipeline",
+        name: "Pipeline restauré",
+        stages: [
+          {
+            id: relationshipStage,
+            name: "Accueil",
+            color: "green",
+            icon: "check",
+            final: true,
+          },
+        ],
+        conversionStageId: relationshipStage,
+      });
+      relationshipSaved.push(relationshipPipeline);
+      const relationshipContactResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/records",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          record: {
+            kind: "contact",
+            title: "Prospect restauré",
+            data: { contactType: "organisation" },
+          },
+        },
+      });
+      expect(relationshipContactResponse.statusCode).toBe(201);
+      const relationshipProspect = await relationshipSave({
+        kind: "prospect",
+        contactId: relationshipContactResponse.json().id,
+        pipelineId: relationshipPipeline.id,
+        stageId: relationshipStage,
+        identity: "future_company",
+        temperature: "warm",
+        proposedFee: "1200.25",
+      });
+      relationshipSaved.push(
+        await relationshipSave(
+          { ...relationshipProspect.data, notes: "Révision conservée" },
+          relationshipProspect,
+        ),
+      );
+      const relationshipPolicy = await relationshipSave({
+        kind: "lab_policy",
+        name: "Politique restaurée",
+        periodDays: 90,
+        reason: "Décision cabinet fictive",
+      });
+      relationshipSaved.push(relationshipPolicy);
+      relationshipSaved.push(
+        await relationshipSave({
+          kind: "lab",
+          dossierId: record.id,
+          level: "standard",
+          reason: "Examen humain restauré",
+          role: "Responsable",
+          observedOn: "2026-10-18",
+          decisionOn: "2026-10-18",
+          nextReviewOn: "2027-01-16",
+          policyId: relationshipPolicy.id,
+          policyVersion: 1,
+          evidence: [
+            {
+              documentId: document.id,
+              version: document.version,
+              sha256: document.sha256,
+              origin: "manual",
+              reference: "Spécimen",
+              acquiredOn: "2026-10-18",
+              scope: "Examen",
+              result: "examined",
+            },
+          ],
+        }),
+      );
+      const relationshipBefore = [];
+      for (const entity of relationshipSaved)
+        relationshipBefore.push(
+          (
+            await app.inject({
+              url: "/api/v1/relationship/" + entity.id + "/history",
+              headers: { cookie },
+            })
+          ).json(),
+        );
+      const relationshipEvents = (
+        await app.inject({
+          url: "/api/v1/relationship/" + relationshipProspect.id + "/events",
+          headers: { cookie },
+        })
+      ).json();
+      const options = {
+        dataDirectory: source.dataDirectory,
+        configFile: join(root, "config.json"),
+        urlFile: join(root, "url-0"),
+        backupDirectory: join(root, "backup"),
+      };
+      const invalidConfig = join(root, "invalid-config.json");
+      await writeFile(
+        invalidConfig,
+        JSON.stringify({ ...configuration, cabinetTimeZone: "Invalid/Zone" }),
+        { mode: 0o600 },
+      );
+      await expect(
+        backup({ ...options, configFile: invalidConfig }),
+      ).rejects.toThrow("Fuseau du cabinet invalide");
+      await expect(backup(options)).rejects.toThrow("Arrêter et drainer");
+      expect(await readdir(root)).not.toContain("backup");
+      await app.close();
+      app = undefined;
+      await expect(
+        backup({ ...options, pgDump: "/missing/pg_dump" }),
+      ).rejects.toThrow("indisponible");
+      expect(await readdir(root)).not.toContain("backup");
+      await backup(options);
+      await validateBackup(options.backupDirectory);
+      const target = {
+        ...options,
+        dataDirectory: join(root, "restored"),
+        configFile: join(root, "config-target", "installation.json"),
+        urlFile: join(root, "url-1"),
+      };
+      await writeFile(join(target.dataDirectory, "sentinel"), "untouched", {
+        mode: 0o600,
+      });
+      await expect(restore(target)).rejects.toThrow("non vide");
+      expect(
+        await readFile(join(target.dataDirectory, "sentinel"), "utf8"),
+      ).toBe("untouched");
+      await rm(join(target.dataDirectory, "sentinel"));
+      const occupied = new Client({ connectionString: urls[2] });
+      await occupied.connect();
+      await occupied.query("SET search_path TO public");
+      await occupied.query("CREATE TABLE sentinel(value text)");
+      await occupied.query("INSERT INTO sentinel VALUES('untouched')");
+      try {
+        await expect(
+          restore({
+            ...target,
+            dataDirectory: join(root, "occupied"),
+            configFile: join(root, "config-occupied", "installation.json"),
+            urlFile: join(root, "url-2"),
+          }),
+        ).rejects.toThrow("non vierge");
+        expect((await occupied.query("SELECT * FROM sentinel")).rows).toEqual([
+          { value: "untouched" },
+        ]);
+        await occupied.query("DROP TABLE sentinel");
+        await occupied.query("CREATE TYPE sentinel_type AS ENUM ('untouched')");
+        await expect(
+          restore({
+            ...target,
+            dataDirectory: join(root, "occupied"),
+            configFile: join(root, "config-occupied", "installation.json"),
+            urlFile: join(root, "url-2"),
+          }),
+        ).rejects.toThrow("non vierge");
+        expect(
+          (await occupied.query("SELECT 'untouched'::sentinel_type AS value"))
+            .rows,
+        ).toEqual([{ value: "untouched" }]);
+      } finally {
+        await occupied.end();
+      }
+      for (const mutation of [
+        "hash",
+        "parent",
+        "symlink",
+        "extra",
+        "duplicate",
+        "version",
+      ]) {
+        const corrupted = join(root, "bad-" + mutation);
+        await cp(options.backupDirectory, corrupted, { recursive: true });
+        const file = join(corrupted, "manifest.json"),
+          manifest = JSON.parse(await readFile(file, "utf8"));
+        if (mutation === "hash")
+          await writeFile(join(corrupted, "documents", document.id), "altered");
+        if (mutation === "parent") manifest.files[0].path = "../escape";
+        if (mutation === "symlink") {
+          await rm(join(corrupted, "documents", document.id));
+          await symlink(
+            join(root, "config.json"),
+            join(corrupted, "documents", document.id),
+          );
+        }
+        if (mutation === "extra")
+          await writeFile(join(corrupted, "extra"), "extra");
+        if (mutation === "duplicate") manifest.files.push(manifest.files[0]);
+        if (mutation === "version") manifest.schema = 999;
+        await writeFile(file, JSON.stringify(manifest));
+        await expect(
+          restore({ ...target, backupDirectory: corrupted }),
+        ).rejects.toThrow();
+        expect(await readdir(target.dataDirectory)).toEqual([]);
+      }
+      const catalogQuery =
+        "SELECT schemaname,relname,last_analyze FROM pg_stat_all_tables WHERE schemaname IN ('pg_catalog','information_schema') ORDER BY schemaname,relname";
+      const before = new Client({ connectionString: urls[1] });
+      await before.connect();
+      const catalogBefore = (await before.query(catalogQuery)).rows;
+      await before.end();
+      const restored = spawnSync(
+        process.execPath,
+        ["deploy/operations.mjs", "restore", target.backupDirectory],
+        {
+          env: {
+            ...process.env,
+            DATABASE_URL_FILE: target.urlFile,
+            DATA_DIRECTORY: target.dataDirectory,
+            CONFIG_FILE: target.configFile,
+          },
+          encoding: "utf8",
+        },
+      );
+      expect(restored.status, restored.stderr).toBe(0);
+      expect(restored.stdout + restored.stderr).not.toMatch(
+        /warning|permission denied|pg_catalog/i,
+      );
+      const verification = new Client({ connectionString: urls[1] });
+      await verification.connect();
+      try {
+        expect(
+          (
+            await verification.query(
+              "SELECT rolsuper,rolcreatedb,rolcreaterole FROM pg_roles WHERE rolname=current_user",
+            )
+          ).rows,
+        ).toEqual([
+          { rolsuper: false, rolcreatedb: false, rolcreaterole: false },
+        ]);
+        for (const functionName of [
+          "cabinet_relationship_document_allowed_v12",
+          "cabinet_relationship_document_allowed_v13",
+          "cabinet_work_document_allowed_v14",
+        ])
+          expect(
+            (
+              await verification.query(
+                "SELECT p.prosecdef,p.provolatile,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=$1 AND p.proname=$2",
+                [schema, functionName],
+              )
+            ).rows,
+          ).toEqual([
+            {
+              prosecdef: false,
+              provolatile: "s",
+              proconfig: [`search_path=${schema}, pg_catalog`],
+            },
+          ]);
+        const analyzed = (
+          await verification.query(
+            "SELECT schemaname,relname,last_analyze IS NOT NULL AS analyzed FROM pg_stat_all_tables WHERE schemaname=$1",
+            [schema],
+          )
+        ).rows;
+        expect(analyzed.length).toBeGreaterThan(0);
+        expect(analyzed.every((row) => row.analyzed)).toBe(true);
+        expect((await verification.query(catalogQuery)).rows).toEqual(
+          catalogBefore,
+        );
+      } finally {
+        await verification.end();
+      }
+      expect(JSON.parse(await readFile(target.configFile, "utf8"))).toEqual(
+        configuration,
+      );
+      app = await createApplication({
+        dataDirectory: target.dataDirectory,
+        databaseUrl: urls[1]!,
+        publicOrigin: origin,
+      });
+      const logged = await app.inject({
+        method: "POST",
+        url: "/api/v1/login",
+        headers: { origin },
+        payload: { email: credentials.email, password: credentials.password },
+      });
+      expect(logged.statusCode).toBe(200);
+      cookie = String(logged.headers["set-cookie"]).split(";")[0]!;
+      for (let i = 0; i < relationshipSaved.length; i++) {
+        const response = await app.inject({
+          url: "/api/v1/relationship/" + relationshipSaved[i]!.id + "/history",
+          headers: { cookie },
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        expect(response.json()).toEqual(relationshipBefore[i]);
+      }
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/relationship/" + relationshipProspect.id + "/events",
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(relationshipEvents);
+      const timeCsvAfter = await app.inject({
+        url: "/api/v1/time/exports/" + timeCsvId + "/parts/1",
+        headers: { cookie },
+      });
+      expect(timeCsvAfter.statusCode, timeCsvAfter.body).toBe(200);
+      expect(timeCsvAfter.body).toBe(timeCsvBefore.body);
+      for (let i = 0; i < timeSaved.length; i++) {
+        const r = await app.inject({
+          url: "/api/v1/time/" + timeSaved[i]!.id + "/history",
+          headers: { cookie },
+        });
+        expect(r.statusCode, r.body).toBe(200);
+        expect(r.json()).toEqual(timeBefore[i]);
+      }
+      expect(
+        (
+          await app.inject({
+            url:
+              "/api/v1/time/report?from=2026-10-01&to=2026-10-31&recordId=" +
+              linked.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(timeReportBefore);
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/records/" + record.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toMatchObject({
+        title: "Dossier à restaurer",
+        data: { siren: "001234567" },
+      });
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/records/" + linked.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toMatchObject({
+        dossierId: record.id,
+        data: { dueDate: "2026-10-31" },
+      });
+      const download = await app.inject({
+        url: "/api/v1/documents/" + document.id + "/download",
+        headers: { cookie },
+      });
+      expect(download.statusCode).toBe(200);
+      expect(download.rawPayload).toEqual(bytes);
+      const productionAfter = await app.inject({
+        url: "/api/v1/production/rows/" + productionBefore.id,
+        headers: { cookie },
+      });
+      expect(productionAfter.statusCode, productionAfter.body).toBe(200);
+      expect(productionAfter.json()).toEqual(productionBefore);
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/production/models/" + productionModel.id,
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(productionModel);
+
+      generationCookie = await loginGeneration();
+      const restoredResults = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}/results`,
+        headers: { cookie: generationCookie },
+      });
+      expect(restoredResults.statusCode, restoredResults.body).toBe(200);
+      expect(restoredResults.json()).toEqual(generationBefore);
+      const changedTarget = await app.inject({
+        method: "PUT",
+        url: `/api/v1/records/${generatedDossier.id}`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: generatedDossier.version,
+          record: {
+            kind: "dossier",
+            title: generatedDossier.title,
+            confidential: true,
+            data: generatedDossier.data,
+          },
+        },
+      });
+      expect(changedTarget.statusCode, changedTarget.body).toBe(200);
+      const withdrawn = await app.inject({
+        method: "PUT",
+        url: `/api/v1/administration/users/${generationUser.id}`,
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          expectedVersion: generationUser.version,
+          name: generationUser.name,
+          active: true,
+          roleIds: [],
+          permissions: generationPermissions.filter(
+            (p) => p.action !== "confidential",
+          ),
+        },
+      });
+      expect(withdrawn.statusCode, withdrawn.body).toBe(200);
+      const protectedResults = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}/results`,
+        headers: { cookie: generationCookie },
+      });
+      expect(protectedResults.statusCode, protectedResults.body).toBe(200);
+      expect(
+        protectedResults
+          .json()
+          .items.map((r: any) => ({ state: r.state, code: r.code })),
+      ).toEqual([
+        { state: "refused", code: "INACCESSIBLE" },
+        { state: "refused", code: "INACCESSIBLE" },
+      ]);
+      for (const outcome of generationBefore.items) {
+        expect(protectedResults.body).not.toContain(outcome.rowId);
+        expect(protectedResults.body).not.toContain(outcome.targetId);
+      }
+      const restoredStatus = await app.inject({
+        url: `/api/v1/production/jobs/${generationId}`,
+        headers: { cookie: generationCookie },
+      });
+      expect(restoredStatus.statusCode, restoredStatus.body).toBe(200);
+      expect(restoredStatus.json().state).toBe("completed");
+      for (const outcome of generationBefore.items) {
+        expect(restoredStatus.body).not.toContain(outcome.rowId);
+        expect(restoredStatus.body).not.toContain(outcome.targetId);
+      }
+
+      const scopedExit = await app.inject({
+        method: "POST",
+        url: "/api/v1/administration/exports",
+        headers: { origin, cookie: generationCookie },
+        payload: { operationId: randomUUID() },
+      });
+      expect(scopedExit.statusCode, scopedExit.body).toBe(202);
+      let scopedExitStatus;
+      for (let n = 0; n < 200; n++) {
+        scopedExitStatus = await app.inject({
+          url: `/api/v1/administration/exports/${scopedExit.json().id}`,
+          headers: { cookie: generationCookie },
+        });
+        if (
+          ["completed", "failed"].includes(scopedExitStatus.json().job?.state)
+        )
+          break;
+        await new Promise((r) => setTimeout(r, 30));
+      }
+      expect(scopedExitStatus!.json().job.state, scopedExitStatus!.body).toBe(
+        "completed",
+      );
+      const scopedDownload = await app.inject({
+        url: `/api/v1/administration/exports/${scopedExit.json().id}/download`,
+        headers: { cookie: generationCookie },
+      });
+      expect(scopedDownload.statusCode, scopedDownload.body).toBe(200);
+      for (const part of scopedDownload.json().parts) {
+        const data = await app.inject({
+          url: `/api/v1/administration/exports/${scopedExit.json().id}/parts/${part.number}`,
+          headers: { cookie: generationCookie },
+        });
+        expect(data.statusCode, data.body).toBe(200);
+        for (const outcome of generationBefore.items)
+          expect(data.body).not.toContain(outcome.rowId);
+        expect(data.body).not.toContain(generatedDossier.id);
+      }
+
+      const restoredFiscal = await app.inject({
+        url: `/api/v1/fiscal/${fiscal.record.id}`,
+        headers: { cookie },
+      });
+      expect(restoredFiscal.statusCode, restoredFiscal.body).toBe(200);
+      expect(restoredFiscal.json().timeline).toEqual(fiscalBefore.timeline);
+      expect(restoredFiscal.json().record).toEqual(fiscalBefore.record);
+      const preparationAfter = await app.inject({
+        method: "GET",
+        url: "/api/v1/notifications/runs?modelId=" + reminderId,
+        headers: { cookie },
+      });
+      expect(preparationAfter.statusCode, preparationAfter.body).toBe(200);
+      expect(preparationAfter.json().preparation).toEqual(preparationBefore);
+      for (const work of workBefore) {
+        const restoredWork = await app.inject({
+          method: "GET",
+          url: "/api/v1/workflows/targets/" + work.id,
+          headers: { cookie },
+        });
+        expect(restoredWork.statusCode, restoredWork.body).toBe(200);
+        expect(restoredWork.json()).toEqual(work);
+      }
+      expect(
+        (
+          await app.inject({
+            method: "GET",
+            url: "/api/v1/workflows/models",
+            headers: { cookie },
+          })
+        ).json().items,
+      ).toContainEqual(workflowModel);
+
+      expect(restoredFiscal.json().situation.remaining).toBe("100.00");
+
+      expect(
+        (await app.inject("/api/v1/documents/" + document.id + "/download"))
+          .statusCode,
+      ).toBe(401);
+      await app.close();
+      app = undefined;
+      await expect(restore(target)).rejects.toThrow("non vide");
+      expect(
+        await readFile(join(source.dataDirectory, "documents", document.id)),
+      ).toEqual(bytes);
+    } finally {
+      if (app) await app.close();
+      for (const name of names)
+        await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+      await admin.query(`DROP ROLE IF EXISTS ${runtimeRole}`);
+      await admin.end();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+  60000,
+);

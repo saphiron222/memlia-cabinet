@@ -1,0 +1,30 @@
+{
+  "name": "memlia-cabinet",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit && node scripts/verify-ui.mjs && node scripts/verify-scope.mjs",
+    "test": "node scripts/run-tests.mjs vitest run",
+    "build": "npm run build --workspaces --if-present",
+    "dev:server": "tsx apps/server/src/index.ts",
+    "dev:web": "npm run dev --workspace @memlia/web",
+    "test:e2e": "node scripts/run-tests.mjs playwright test",
+    "dev:isolated": "tsx tests/e2e/serve.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "22.19.0",
+    "prettier": "3.7.4",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  }
+}
