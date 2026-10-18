@@ -1,7 +1,10 @@
 import { loadProductionModel, modelAccess } from "../production/service.js";
 import { digest } from "../identity/security.js";
 import { onboardingStatus } from "./onboarding.js";
-import { fiscalDocumentPredicate } from "../records/query.js";
+import {
+  documentOwnerRows,
+  type DocumentOwnerRow,
+} from "../documents/access.js";
 import { randomUUID } from "node:crypto";
 import {
   RelationshipEntitySchema,
@@ -64,57 +67,125 @@ export async function authorize(
   e: RelationshipEntity,
   action: Action = "read",
 ) {
-  const d = e.data;
-  if (
-    d.kind === "pipeline" ||
-    d.kind === "mission" ||
-    d.kind === "onboarding_model" ||
-    d.kind === "lab_policy"
-  ) {
-    if (d.kind === "lab_policy")
-      requireGlobal(
-        a,
-        action === "read"
-          ? "lab_read"
-          : action === "export"
-            ? "lab_export"
-            : "lab_manage",
+  await authorizeBatch(tx, a, [{ entity: e, action }]);
+}
+
+// A bounded current/history page is a read-only call under the existing
+// serialized transaction. The local maps die before any caller can write.
+async function authorizeBatch(
+  tx: Connection,
+  a: SessionUser,
+  checks: { entity: RelationshipEntity; action: Action }[],
+) {
+  const records = new Map<string, Awaited<ReturnType<typeof record>>>();
+  const permissions = new Map<string, boolean>();
+  const permission = async (action: Action, dossierId: string) => {
+    const key = action + "/" + dossierId;
+    if (!permissions.has(key))
+      permissions.set(
+        key,
+        await scopedPermission(tx, a, action, "dossier", dossierId),
       );
-    if (action !== "read")
-      requireGlobal(a, action === "export" ? "export" : "manage_users");
-    return;
-  }
-  if (d.kind !== "prospect") {
-    await record(tx, a, d.dossierId, action);
-    if (d.kind === "lab") {
-      const verb =
-        action === "export"
-          ? "lab_export"
-          : action === "read"
+    return permissions.get(key)!;
+  };
+  const parent = async (id: string, action: Action = "read") => {
+    const key = id.toLowerCase() + "/" + action;
+    if (!records.has(key)) records.set(key, await record(tx, a, id, action));
+    return records.get(key)!;
+  };
+  const evidence = checks.flatMap(({ entity: { data } }) =>
+    data.kind === "onboarding"
+      ? data.values.flatMap((v) => v.evidence)
+      : data.kind === "identity" || data.kind === "lab"
+        ? data.evidence
+        : [],
+  );
+  const proofs = new Map(
+    evidence.map((proof) => [
+      JSON.stringify([
+        proof.documentId.toLowerCase(),
+        proof.version,
+        proof.sha256,
+      ]),
+      proof,
+    ]),
+  );
+  const documents = await documentOwnerRows(
+    tx,
+    a,
+    [...proofs.values()].map((proof) => proof.documentId),
+  );
+  const checkedProofs = new Set<string>();
+  for (const { entity: e, action } of checks) {
+    const d = e.data;
+    if (
+      d.kind === "pipeline" ||
+      d.kind === "mission" ||
+      d.kind === "onboarding_model" ||
+      d.kind === "lab_policy"
+    ) {
+      if (d.kind === "lab_policy")
+        requireGlobal(
+          a,
+          action === "read"
             ? "lab_read"
-            : "lab_manage";
-      if (
-        !(await scopedPermission(tx, a, verb, "dossier", d.dossierId)) ||
-        !(await scopedPermission(tx, a, "lab_read", "dossier", d.dossierId))
-      )
-        fail(404, "NOT_FOUND", "Ressource inaccessible.");
+            : action === "export"
+              ? "lab_export"
+              : "lab_manage",
+        );
+      if (action !== "read")
+        requireGlobal(a, action === "export" ? "export" : "manage_users");
+      continue;
     }
-    if (d.personId) {
-      const person = await record(tx, a, d.personId);
-      if (person.kind !== "contact" || person.data.contactType !== "personne")
-        fail(400, "PERSON_REQUIRED", "Personne requise.");
+    if (d.kind !== "prospect") {
+      await parent(d.dossierId, action);
+      if (d.kind === "lab") {
+        const verb =
+          action === "export"
+            ? "lab_export"
+            : action === "read"
+              ? "lab_read"
+              : "lab_manage";
+        if (
+          !(await permission(verb, d.dossierId)) ||
+          !(await permission("lab_read", d.dossierId))
+        )
+          fail(404, "NOT_FOUND", "Ressource inaccessible.");
+      }
+      if (d.personId) {
+        const person = await parent(d.personId);
+        if (person.kind !== "contact" || person.data.contactType !== "personne")
+          fail(400, "PERSON_REQUIRED", "Personne requise.");
+      }
+      const evidence =
+        d.kind === "onboarding"
+          ? d.values.flatMap((v) => v.evidence)
+          : d.evidence;
+      for (const proof of evidence) {
+        const key = JSON.stringify([
+          proof.documentId.toLowerCase(),
+          proof.version,
+          proof.sha256,
+        ]);
+        if (!checkedProofs.has(key)) {
+          await checkEvidence(
+            tx,
+            a,
+            proof,
+            documents.get(proof.documentId.toLowerCase()),
+            parent,
+            permission,
+          );
+          checkedProofs.add(key);
+        }
+      }
+      continue;
     }
-    const evidence =
-      d.kind === "onboarding"
-        ? d.values.flatMap((v) => v.evidence)
-        : d.evidence;
-    for (const proof of evidence) await evidenceAccess(tx, a, proof);
-    return;
+    const c = await parent(d.contactId, action);
+    if (c.kind !== "contact") fail(400, "CONTACT_REQUIRED", "Contact requis.");
+    if (d.mainContactId) await parent(d.mainContactId);
+    if (d.dossierId) await parent(d.dossierId);
   }
-  const c = await record(tx, a, d.contactId, action);
-  if (c.kind !== "contact") fail(400, "CONTACT_REQUIRED", "Contact requis.");
-  if (d.mainContactId) await record(tx, a, d.mainContactId);
-  if (d.dossierId) await record(tx, a, d.dossierId);
 }
 export async function load(
   tx: Connection,
@@ -123,19 +194,23 @@ export async function load(
   action: Action = "read",
 ) {
   const e = await raw(tx, id);
-  await authorize(tx, a, e, action);
   let after = 0;
+  let current = true;
   while (true) {
     const rows = await tx.query(
       "SELECT content FROM cabinet_relationship_history WHERE id=$1 AND version>$2 ORDER BY version LIMIT 100",
       [id, after],
     );
-    if (!rows.length) break;
-    for (const row of rows) {
-      const h = RelationshipEntitySchema.parse(row.content);
-      await authorize(tx, a, h);
-      after = h.version;
-    }
+    const history = rows.map((row) =>
+      RelationshipEntitySchema.parse(row.content),
+    );
+    await authorizeBatch(tx, a, [
+      ...(current ? [{ entity: e, action }] : []),
+      ...history.map((entity) => ({ entity, action: "read" as const })),
+    ]);
+    current = false;
+    if (!history.length) break;
+    after = history.at(-1)!.version;
   }
   return e;
 }
@@ -758,38 +833,27 @@ export async function evidenceAccess(
   a: SessionUser,
   p: { documentId: string; version: number; sha256: string },
 ) {
-  const args: unknown[] = [p.documentId];
-  const predicate = fiscalDocumentPredicate(
-    a,
-    (v) => {
-      args.push(v);
-      return "$" + args.length;
-    },
-    "$1::uuid",
+  const rows = await documentOwnerRows(tx, a, [p.documentId]);
+  return checkEvidence(tx, a, p, rows.get(p.documentId.toLowerCase()), (id) =>
+    record(tx, a, id),
   );
-  if (!(await tx.query(`SELECT ${predicate} allowed`, args))[0]?.allowed)
-    fail(404, "NOT_FOUND", "Pièce inaccessible.");
-  const rows = await tx.query(
-    "SELECT content,dossier_id FROM cabinet_documents WHERE id=$1",
-    [p.documentId],
-  );
-  if (!rows[0]) fail(404, "NOT_FOUND", "Pièce inaccessible.");
-  const d = rows[0].content as {
-    version: number;
-    sha256: string;
-    confidential: boolean;
-  };
-  await record(tx, a, String(rows[0].dossier_id));
-  if (
-    d.confidential &&
-    !(await scopedPermission(
-      tx,
-      a,
-      "confidential",
-      "dossier",
-      String(rows[0].dossier_id),
-    ))
-  )
+}
+
+async function checkEvidence(
+  tx: Connection,
+  a: SessionUser,
+  p: { documentId: string; version: number; sha256: string },
+  row: DocumentOwnerRow | undefined,
+  parent: (id: string) => ReturnType<typeof record>,
+  permission: (action: Action, dossierId: string) => Promise<boolean> = (
+    action,
+    id,
+  ) => scopedPermission(tx, a, action, "dossier", id),
+) {
+  if (!row?.allowed) fail(404, "NOT_FOUND", "Pièce inaccessible.");
+  const d = row.content;
+  await parent(row.dossier_id);
+  if (d.confidential && !(await permission("confidential", row.dossier_id)))
     fail(404, "NOT_FOUND", "Pièce inaccessible.");
   if (d.version !== p.version || d.sha256 !== p.sha256)
     fail(
@@ -797,7 +861,7 @@ export async function evidenceAccess(
       "EVIDENCE_CHANGED",
       "Identité ou version documentaire différente.",
     );
-  return rows[0];
+  return row;
 }
 
 export function identityFingerprint(

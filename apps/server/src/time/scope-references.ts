@@ -7,7 +7,7 @@ export interface ScopeSelection {
 }
 
 // This is a dependency projection, never an authorization result. The caller
-// still applies the canonical predicates to every referenced current resource.
+// still applies the shared canonical provider to every referenced resource.
 // Keep the selection before pagination and include all versions: an old target
 // can deny the current entity even when it is absent from the visible page.
 export async function scopeReferences(tx: Connection, source: ScopeSelection) {
@@ -27,19 +27,7 @@ export async function scopeReferences(tx: Connection, source: ScopeSelection) {
       : `SELECT '${source.kind}'::text kind,(content->>'id')::uuid id FROM selected`;
   const rows = await tx.query<{ records: string[]; production: string[] }>(
     `WITH selected AS MATERIALIZED (${source.sql}),
-      direct_refs AS MATERIALIZED (${initial}),
-      production_refs AS MATERIALIZED (SELECT id FROM direct_refs WHERE kind='production'),
-      production_subjects AS (
-        SELECT content FROM cabinet_production_rows WHERE id IN(SELECT id FROM production_refs)
-        UNION ALL SELECT content FROM cabinet_production_row_versions WHERE id IN(SELECT id FROM production_refs)
-      ), refs AS (
-        SELECT kind,id FROM direct_refs
-        UNION ALL SELECT 'record',ref.id::uuid FROM production_subjects e
-          CROSS JOIN LATERAL (VALUES
-            (e.content->>'recordId'),
-            (CASE WHEN (e.content->'target'->>'kind' IN('libre','utilisateur')) IS NOT TRUE THEN e.content->'target'->>'id' END)
-          ) ref(id) WHERE ref.id IS NOT NULL
-      ) SELECT
+      refs AS (${initial}) SELECT
         COALESCE(array_agg(DISTINCT id) FILTER(WHERE kind='record'),'{}'::uuid[]) records,
         COALESCE(array_agg(DISTINCT id) FILTER(WHERE kind='production'),'{}'::uuid[]) production
       FROM refs`,

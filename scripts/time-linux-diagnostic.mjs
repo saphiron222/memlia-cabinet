@@ -117,7 +117,12 @@ const sourcePaths = [
   "apps/server/src/jobs/runner.ts",
   "apps/server/src/documents/store.ts",
   "apps/server/src/production/query.ts",
+  "apps/server/src/production/document-scope.ts",
   "apps/server/src/records/query.ts",
+  "apps/server/src/records/access-scope.ts",
+  "apps/server/src/documents/access.ts",
+  "apps/server/test/shared-access-scope.test.ts",
+  "apps/server/test/relationship-access-batch.test.ts",
   "apps/server/src/storage/database.ts",
   "scripts/time-linux-diagnostic.mjs",
   ...readdirSync("tests/diagnostics")

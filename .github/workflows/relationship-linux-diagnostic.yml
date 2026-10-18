@@ -13,6 +13,14 @@ on:
       - "apps/server/src/records/query.ts"
       - "apps/server/src/relationship/document-scope.ts"
       - "apps/server/src/time/**"
+      - "apps/server/src/records/access-scope.ts"
+      - "apps/server/src/documents/access.ts"
+      - "apps/server/src/documents/store.ts"
+      - "apps/server/src/production/query.ts"
+      - "apps/server/src/production/document-scope.ts"
+      - "apps/server/src/relationship/service.ts"
+      - "apps/server/test/shared-access-scope.test.ts"
+      - "apps/server/test/relationship-access-batch.test.ts"
       - "apps/server/test/time-review.test.ts"
 permissions:
   contents: read

@@ -230,7 +230,9 @@ export function installObserver(selected: Target[] = []) {
     ) as unknown[];
     const id = ++serial;
     const started = performance.now();
-    const isTime = sql.startsWith("WITH time_readable_records AS MATERIALIZED");
+    const isTime =
+      sql.startsWith("WITH ") &&
+      sql.includes("time_readable_records AS MATERIALIZED");
     const isReference = sql.startsWith("WITH selected AS MATERIALIZED");
     const ordinal = isTime ? ++timeOrdinal : undefined;
     const references = isReference ? ++referenceOrdinal : undefined;

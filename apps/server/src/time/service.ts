@@ -16,7 +16,7 @@ import {
   requireGlobal,
   requireAccess,
 } from "../records/permissions.js";
-import { authorizedPredicate } from "../records/query.js";
+import { recordAccessScope } from "../records/access-scope.js";
 import { productionScopePredicate } from "../production/query.js";
 import { loadProductionRow } from "../production/service.js";
 import { loadRecord } from "../records/service.js";
@@ -36,13 +36,11 @@ export async function scopeCte(
   // Recomputed within the caller's serialized transaction, without a rights
   // cache. Empty or small dependency sets must not plan every cabinet object.
   const refs = await scopeReferences(tx, selection);
-  const records = refs.records.length
-    ? `r.id=ANY(${p(refs.records)}::uuid[]) AND ${authorizedPredicate(actor, action, p)}`
-    : "FALSE";
+  const access = await recordAccessScope(tx, actor, action, p, refs);
   const production = refs.production.length
-    ? `p.id=ANY(${p(refs.production)}::uuid[]) AND ${productionScopePredicate(actor, action, p, "p.content", "r.id IN (SELECT id FROM time_readable_records)")}`
+    ? `p.id=ANY(${p(refs.production)}::uuid[]) AND ${productionScopePredicate(actor, action, p, "p.content", access)}`
     : "FALSE";
-  return `WITH time_readable_records AS MATERIALIZED (SELECT r.id FROM cabinet_records r WHERE ${records}), time_readable_production AS MATERIALIZED (SELECT p.id FROM cabinet_production_rows p WHERE ${production})`;
+  return `WITH ${access.ctes}, time_readable_records AS MATERIALIZED (SELECT (identity #>> '{}')::uuid id FROM access_allowed WHERE category='record'), time_readable_production AS MATERIALIZED (SELECT p.id FROM cabinet_production_rows p WHERE ${production})`;
 }
 export function scope(
   actor: SessionUser,

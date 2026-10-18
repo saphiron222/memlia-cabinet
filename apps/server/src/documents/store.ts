@@ -1,4 +1,5 @@
 import { fiscalDocumentPredicate } from "../records/query.js";
+import { documentOwnerRows } from "./access.js";
 import { requireModule } from "../administration/settings.js";
 import { assignmentScope } from "../administration/access.js";
 import { randomUUID, createHash } from "node:crypto";
@@ -231,16 +232,10 @@ export class DocumentStore {
     document: DocumentReference,
   ) {
     const parent = await loadRecord(tx, document.dossierId);
-    const params: unknown[] = [document.id];
-    const predicate = fiscalDocumentPredicate(
-      actor,
-      (v) => {
-        params.push(v);
-        return "$" + params.length;
-      },
-      "$1::uuid",
-    );
-    if (!(await tx.query(`SELECT ${predicate} AS allowed`, params))[0]?.allowed)
+    if (
+      !(await documentOwnerRows(tx, actor, [document.id])).get(document.id)
+        ?.allowed
+    )
       return false;
     return (
       (await canAccess(tx, actor, "read", parent)) &&
