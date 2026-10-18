@@ -1397,3 +1397,85 @@ test("round2 N1 reassignment includes other authorized dossiers and invalidates 
     (await f.request("GET", `/time/${allocation.id}/history`)).json().items,
   ).toHaveLength(2);
 });
+
+test("round3 configuration pages count only current and historical authorized record memberships", async () => {
+  f = await fixture();
+  const admin = await f.setup();
+  const publicDossier = (await f.request("POST", "/records", dossier())).json();
+  const input = dossier("Confidentiel");
+  const hiddenDossier = (
+    await f.request("POST", "/records", {
+      ...input,
+      record: { ...input.record, confidential: true },
+    })
+  ).json();
+  const visible = (
+    await f.request("POST", "/records", task(publicDossier.id))
+  ).json();
+  const formerlyHidden = (
+    await f.request("POST", "/records", task(publicDossier.id))
+  ).json();
+  const hidden = (
+    await f.request("POST", "/records", task(hiddenDossier.id))
+  ).json();
+  const history = await save({
+    kind: "plan",
+    level: "occurrence",
+    targetId: hidden.id,
+    minutes: 20,
+    component: "variable",
+  });
+  const moved = await save(
+    { ...history.data, targetId: formerlyHidden.id },
+    history,
+  );
+  const currentHidden = await save({
+    kind: "plan",
+    level: "occurrence",
+    targetId: hidden.id,
+    minutes: 30,
+    component: "variable",
+  });
+  const currentVisible = await save({
+    kind: "plan",
+    level: "occurrence",
+    targetId: visible.id,
+    minutes: 40,
+    component: "variable",
+  });
+  const cabinet = await save({
+    kind: "plan",
+    level: "cabinet",
+    targetId: null,
+    minutes: 50,
+    component: "variable",
+  });
+  expect(
+    (await f.request("GET", "/time/entities?kind=plan")).json().total,
+  ).toBe(4);
+  await revoke(admin.id, ["confidential"]);
+  const page = await f.request("GET", "/time/entities?kind=plan");
+  expect(page.statusCode, page.body).toBe(200);
+  expect(page.json()).toMatchObject({ total: 2, offset: 0, hasMore: false });
+  expect(
+    page
+      .json()
+      .items.map((e: any) => e.id)
+      .sort(),
+  ).toEqual([currentVisible.id, cabinet.id].sort());
+  expect(page.body).not.toContain(moved.id);
+  expect(page.body).not.toContain(currentHidden.id);
+  const beyond = await f.request("GET", "/time/entities?kind=plan&offset=2");
+  expect(beyond.statusCode, beyond.body).toBe(200);
+  expect(beyond.json()).toEqual({
+    items: [],
+    total: 2,
+    offset: 2,
+    hasMore: false,
+  });
+  for (const entry of [moved, currentHidden]) {
+    expect(
+      (await f.request("GET", `/time/${entry.id}/history`)).statusCode,
+    ).toBe(404);
+  }
+});

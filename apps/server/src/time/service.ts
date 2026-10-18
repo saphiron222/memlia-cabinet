@@ -38,10 +38,11 @@ export function scope(
   s = "t.content",
   action: "read" | "export" = "read",
 ) {
-  const d = `${s}->'data'`,
-    auth = "r.id IN (SELECT id FROM time_readable_records)";
+  const d = `${s}->'data'`;
+  // This set already proves existence and canonical access. Direct membership
+  // lets SQL hash it once instead of rescanning it for each current/history row.
   const rec = (id: string) =>
-    `EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(${id})::uuid AND ${auth})`;
+    `COALESCE((${id})::uuid IN (SELECT id FROM time_readable_records),FALSE)`;
   const prod = (id: string) =>
     `EXISTS(SELECT 1 FROM cabinet_production_rows p WHERE p.id=(${id})::uuid AND p.id IN (SELECT id FROM time_readable_production))`;
   const link = (v: string) =>
