@@ -1,0 +1,54 @@
+name: Diagnostic Time PostgreSQL Linux
+on:
+  # A new workflow_dispatch workflow is not registered on the default branch.
+  # Publishing this reviewed diagnostic on this branch is its explicit trigger.
+  # The ordinary push/PR workflow remains byte-for-byte unchanged.
+  push:
+    branches: ["build/socle-partage"]
+    paths:
+      - ".github/workflows/time-linux-diagnostic.yml"
+      - "scripts/time-linux-diagnostic.mjs"
+      - "tests/diagnostics/time-linux*"
+permissions:
+  contents: read
+env:
+  GIT_LFS_SKIP_SMUDGE: "1"
+  NO_COLOR: "1"
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-bookworm@sha256:3645570cccdfa447589da9f57dd740faa29b30938e861289a5574b6ca6b03826
+        env:
+          POSTGRES_DB: memlia_test
+          POSTGRES_USER: memlia_test
+          POSTGRES_PASSWORD: ci-fictitious-disposable-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U memlia_test -d memlia_test"
+          --health-interval 3s --health-timeout 3s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: "22.22.3", cache: npm }
+      - run: npm ci
+      - name: Exact first Time failure and independent SQL plan measurement
+        env:
+          DATABASE_URL: postgresql://memlia_test:ci-fictitious-disposable-only@127.0.0.1:5432/memlia_test
+          EXPECTED_HEAD: ${{ github.sha }}
+          POSTGRES_SERVICE_ID: ${{ job.services.postgres.id }}
+          TIME_DIAGNOSTIC_DIRECTORY: var/task5/linux-diagnostic
+        run: node scripts/time-linux-diagnostic.mjs --fictitious
+      - name: Retain bounded fictitious diagnostic evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: time-linux-diagnostic-${{ github.sha }}
+          path: var/task5/linux-diagnostic/
+          retention-days: 3
+          if-no-files-found: error
