@@ -75,22 +75,15 @@ export async function previewReassignment(
           },
   };
   await authorize(tx, actor, proposed);
-  const dossierId =
-    current.data.kind === "assignment"
-      ? current.data.dossierId
-      : current.data.target.kind === "record"
-        ? (await loadRecord(tx, current.data.target.id)).dossierId
-        : (await loadProductionRow(tx, actor, current.data.target.id)).scope
-            ?.id;
   const priorUsers =
     current.data.kind === "assignment"
       ? [current.data.userId]
       : current.data.weights.map((w) => w.userId);
+  // Compare whole-period totals for the affected people, across all readable dossiers.
   const q = {
     ...TimeQuerySchema.parse({
       from: i.from,
       to: i.to,
-      ...(dossierId ? { dossierId } : {}),
     }),
     userIds: [...new Set([...priorUsers, ...i.weights.map((w) => w.userId)])],
   };

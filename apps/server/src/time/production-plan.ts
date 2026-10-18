@@ -21,7 +21,12 @@ export function productionStages(
     minutes: number | null;
   }[] = [];
   for (const c of model.columns) {
-    const anchor = c.plannedDate ?? initial.dueDate;
+    // A custom row is already a generated occurrence: its canonical initial date
+    // is authoritative even when the reusable column carries an absolute date.
+    const anchor =
+      model.kind === "custom"
+        ? initial.dueDate
+        : (c.plannedDate ?? initial.dueDate);
     if (model.kind === "custom" && anchor) {
       stages.push({
         key: c.id + ":" + productionPeriod(c, initial.dueDate ?? anchor),

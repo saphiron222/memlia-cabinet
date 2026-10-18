@@ -1112,3 +1112,288 @@ test("review I6 custom occurrences retain one period with inherited or frozen pl
     }
   }
 });
+
+test("round2 I6 custom explicit column dates stay in their canonical occurrence before and after completion", async () => {
+  f = await fixture();
+  const admin = await f.setup();
+  const parent = (await f.request("POST", "/records", dossier())).json();
+  const columnId = operationId();
+  const m = await model({
+    kind: "custom",
+    name: "Contrôle mensuel daté",
+    target: "dossier",
+    assigneeId: admin.id,
+    rule: {
+      frequency: "monthly",
+      start: "2026-01-01",
+      end: "2026-12-31",
+      nominalDay: 31,
+      lastDay: false,
+      weekDay: 1,
+    },
+    columns: [
+      {
+        id: columnId,
+        name: "Contrôle",
+        type: "completion",
+        frequency: "monthly",
+        plannedDate: "2026-10-15",
+        plannedMinutes: 30,
+      },
+    ],
+  });
+  const nature = await save({
+    kind: "nature",
+    name: "Contrôle récurrent",
+    active: true,
+  });
+  const occurrences: {
+    id: string;
+    version: number;
+    period: string;
+    date: string;
+  }[] = [];
+  for (const [period, date] of [
+    ["2026-10", "2026-10-31"],
+    ["2026-11", "2026-11-30"],
+  ]) {
+    const response = await f.request(
+      "POST",
+      `/production/models/${m.id}/rows`,
+      {
+        operationId: operationId(),
+        expectedVersion: 1,
+        target: { kind: "dossier", id: parent.id, label: parent.title },
+        period,
+      },
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json().dueDate).toBe(date);
+    occurrences.push({ id: response.json().id, version: 1, period, date });
+    await save({
+      kind: "entry",
+      userId: admin.id,
+      date,
+      natureId: nature.id,
+      link: { kind: "production", id: response.json().id },
+      seconds: 1234,
+      source: "manual",
+      timerId: null,
+      rate: null,
+    });
+  }
+  async function check() {
+    for (const o of occurrences) {
+      for (const filter of ["dossierId=" + parent.id, "userId=" + admin.id]) {
+        const response = await f.request(
+          "GET",
+          `/time/workload?from=${o.period}-01&to=${o.date}&${filter}`,
+        );
+        expect(response.statusCode, response.body).toBe(200);
+        const result = response.json();
+        const planned = result.rows.filter((r: any) =>
+          r.key.startsWith("production:"),
+        );
+        expect(planned).toHaveLength(1);
+        expect(planned[0]).toMatchObject({
+          key: `production:${o.id}:${columnId}:${o.period}:${admin.id}`,
+          target: { kind: "production", id: o.id },
+          from: o.date,
+          to: o.date,
+          plannedMinutes: 30,
+          userId: admin.id,
+        });
+        expect(
+          result.rows.reduce((n: number, r: any) => n + r.realizedSeconds, 0),
+        ).toBe(1234);
+        expect(result.people.find((p: any) => p.id === admin.id)).toMatchObject(
+          { plannedMinutes: 30, realizedSeconds: 1234 },
+        );
+      }
+    }
+    const columnDay = await f.request(
+      "GET",
+      `/time/workload?from=2026-10-15&to=2026-10-15&dossierId=${parent.id}`,
+    );
+    expect(columnDay.statusCode, columnDay.body).toBe(200);
+    expect(columnDay.json().rows).toEqual([]);
+    expect(columnDay.json().people).toEqual([]);
+  }
+  await check();
+  for (const o of occurrences) {
+    const response = await f.request(
+      "POST",
+      `/production/rows/${o.id}/commands`,
+      {
+        operationId: operationId(),
+        expectedVersion: o.version,
+        command: { kind: "cell", columnId, period: o.period, value: "done" },
+      },
+    );
+    expect(response.statusCode, response.body).toBe(200);
+    expect(response.json()).toMatchObject({ state: "done", dueDate: o.date });
+    await check();
+  }
+});
+
+test("round2 N1 reassignment includes other authorized dossiers and invalidates changed cross-dossier sources", async () => {
+  f = await fixture();
+  const admin = await f.setup();
+  const recipient = await person(),
+    unrelated = await person();
+  const day = { from: "2026-10-19", to: "2026-10-19" };
+  const capacity = await save({
+    kind: "capacity",
+    userId: null,
+    ...day,
+    dailyMinutes: [420, 420, 420, 420, 420, 0, 0],
+  });
+  async function work(
+    name: string,
+    userId: string,
+    minutes: number,
+    confidential = false,
+  ) {
+    const base = dossier(name);
+    const parentInput = { ...base, record: { ...base.record, confidential } };
+    const parent = (await f.request("POST", "/records", parentInput)).json();
+    const input = task(parent.id);
+    Object.assign(input.record.data, {
+      dueDate: day.from,
+      assigneeIds: [userId],
+    });
+    const record = (await f.request("POST", "/records", input)).json();
+    const plan = await save({
+      kind: "plan",
+      level: "occurrence",
+      targetId: record.id,
+      minutes,
+      component: "variable",
+    });
+    return { parent, record, plan };
+  }
+  const a = await work("Dossier A", admin.id, 60),
+    b = await work("Dossier B", recipient.id, 1000);
+  const hidden = await work("Dossier confidentiel", recipient.id, 7777, true),
+    other = await work("Dossier autre porteur", unrelated.id, 8888);
+  const allocation = await save({
+    kind: "allocation",
+    target: { kind: "record", id: a.record.id },
+    ...day,
+    weights: [{ userId: admin.id, weight: 1 }],
+    policyVersion: 1,
+  });
+  const nature = await save({
+    kind: "nature",
+    name: "Temps libre hors dossier",
+    active: true,
+  });
+  const actual = await save({
+    kind: "entry",
+    userId: recipient.id,
+    date: day.from,
+    natureId: nature.id,
+    link: { kind: "free", label: "Réalisé du destinataire" },
+    seconds: 120,
+    source: "manual",
+    timerId: null,
+    rate: null,
+  });
+  // More than 200 unrelated people must not widen the selected-person preview.
+  await f.maintainDatabase((db) =>
+    db.transaction(async (tx) => {
+      await tx.query(
+        "INSERT INTO cabinet_users(id,email,name,password_hash,permissions,active) SELECT ('60000000-0000-4000-8000-'||lpad(g::text,12,'0'))::uuid,'preview-outside-'||g||'@example.test','Outside '||g,password_hash,'[]'::jsonb,true FROM cabinet_users CROSS JOIN generate_series(1,201) g WHERE id=$1",
+        [admin.id],
+      );
+    }),
+  );
+  await revoke(admin.id, ["confidential"]);
+  const query = `/time/workload?from=${day.from}&to=${day.to}&userId=${recipient.id}`;
+  const globalBefore = await f.request("GET", query);
+  expect(globalBefore.statusCode, globalBefore.body).toBe(200);
+  expect(globalBefore.json().people[0]).toMatchObject({
+    plannedMinutes: 1000,
+    capacityMinutes: 420,
+    overloadMinutes: 580,
+    realizedSeconds: 120,
+  });
+  const input = {
+    allocationId: allocation.id,
+    expectedVersion: 1,
+    ...day,
+    weights: [{ userId: recipient.id, weight: 1 }],
+  };
+  const preview = await f.request("POST", "/time/reassignment/preview", input);
+  expect(preview.statusCode, preview.body).toBe(200);
+  const result = preview.json();
+  expect(result.before.people.find((p: any) => p.id === recipient.id)).toEqual(
+    globalBefore.json().people[0],
+  );
+  expect(
+    result.after.people.find((p: any) => p.id === recipient.id),
+  ).toMatchObject({
+    plannedMinutes: 1060,
+    capacityMinutes: 420,
+    overloadMinutes: 640,
+    realizedSeconds: 120,
+  });
+  expect(result.before.people.map((p: any) => p.id).sort()).toEqual(
+    [admin.id, recipient.id].sort(),
+  );
+  expect(result.sourceVersions).toMatchObject({
+    [b.plan.id]: 1,
+    [b.record.id]: 1,
+    [capacity.id]: 1,
+    [actual.id]: 1,
+  });
+  for (const object of [
+    hidden.parent,
+    hidden.record,
+    hidden.plan,
+    other.record,
+    other.plan,
+  ])
+    expect(preview.body).not.toContain(object.id);
+  const command = {
+    ...input,
+    operationId: operationId(),
+    sourceVersions: result.sourceVersions,
+  };
+  const changed = await save({ ...b.plan.data, minutes: 1100 }, b.plan);
+  const stale = await f.request("POST", "/time/reassignment/commit", command);
+  expect(stale.statusCode, stale.body).toBe(409);
+  expect(
+    (await f.request("GET", `/time/${allocation.id}/history`)).json().items,
+  ).toHaveLength(1);
+  const refreshed = await f.request(
+    "POST",
+    "/time/reassignment/preview",
+    input,
+  );
+  expect(refreshed.statusCode, refreshed.body).toBe(200);
+  expect(refreshed.json().sourceVersions[changed.id]).toBe(2);
+  expect(
+    refreshed.json().after.people.find((p: any) => p.id === recipient.id),
+  ).toMatchObject({ plannedMinutes: 1160, overloadMinutes: 740 });
+  const freshCommand = {
+    ...input,
+    operationId: operationId(),
+    sourceVersions: refreshed.json().sourceVersions,
+  };
+  const committed = await f.request(
+    "POST",
+    "/time/reassignment/commit",
+    freshCommand,
+  );
+  expect(committed.statusCode, committed.body).toBe(200);
+  expect(
+    (await f.request("POST", "/time/reassignment/commit", freshCommand)).json(),
+  ).toEqual(committed.json());
+  expect((await f.request("GET", query)).json().people[0]).toEqual(
+    refreshed.json().after.people.find((p: any) => p.id === recipient.id),
+  );
+  expect(
+    (await f.request("GET", `/time/${allocation.id}/history`)).json().items,
+  ).toHaveLength(2);
+});
