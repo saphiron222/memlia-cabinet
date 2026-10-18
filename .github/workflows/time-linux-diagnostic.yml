@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: "22.22.3", cache: npm }
       - run: npm ci
-      - name: Exact first Time gate and independent first/reader SQL plans
+      - name: Exact populated Time exit gate and measured C1 SQL plans
         env:
           DATABASE_URL: postgresql://memlia_test:ci-fictitious-disposable-only@127.0.0.1:5432/memlia_test
           EXPECTED_HEAD: ${{ github.sha }}

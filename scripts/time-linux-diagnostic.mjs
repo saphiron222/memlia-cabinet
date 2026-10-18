@@ -42,6 +42,7 @@ const scrub = (value) =>
 const save = (name, value) =>
   writeFileSync(join(directory, name), JSON.stringify(value, null, 2) + "\n", {
     mode: 0o600,
+    flag: "wx",
   });
 const head = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
@@ -107,6 +108,12 @@ const sourcePaths = [
   "apps/server/src/time/catalog.ts",
   "apps/server/src/time/workload.ts",
   "apps/server/src/time/scope-references.ts",
+  "apps/server/src/time/csv.ts",
+  "apps/server/src/time/routes.ts",
+  "apps/server/src/administration/export.ts",
+  "apps/server/src/production/export.ts",
+  "apps/server/src/jobs/runner.ts",
+  "apps/server/src/documents/store.ts",
   "apps/server/src/production/query.ts",
   "apps/server/src/records/query.ts",
   "apps/server/src/storage/database.ts",
@@ -305,10 +312,13 @@ try {
       baselineProcessMs: 110000,
       probeProcessMs: 480000,
       probeStatementMs: 90000,
+      capturedQueriesPerStage: 8192,
+      capturedSqlBytesPerQuery: 1048576,
+      capturedSqlAndParametersBytesPerStage: 67108864,
     },
   });
   const testName =
-    "^review I2 reader cannot take another author's entry, including replay after management revocation$";
+    "^review C1 populated interoperable HTTP exit includes exact current history active timer configurations links and prepared CSV$";
   const baseline = await run(
     "baseline",
     [
@@ -325,42 +335,97 @@ try {
     ],
     110000,
   );
-  // Round4 measured the old ordinal1 and observed ordinal9 as the slowest.
-  // Measure those two contexts explicitly; neither substitutes for full CI.
-  // Pending statements retain their original failures and still have SQL bytes.
+  // Measure the current C1 trace, without assuming that its cause is Time SQL
+  // or JIT. An unfinished read ranks first; otherwise rank by observed duration.
+  // Keep two distinct SQL shapes, and require the same hash/occurrence in the
+  // independent fixture. The on/off pair shares its own live params/snapshot.
   const events = readEvents("baseline");
-  const selected = [1, 9].flatMap((ordinal) => {
-    const start = events.find(
-      (e) => e.type === "sql.start" && e.timeOrdinal === ordinal,
-    );
-    if (!start) return [];
-    const end = events.find(
-      (e) => e.type === "sql.end" && e.timeOrdinal === ordinal,
-    );
-    return [
-      {
-        timeOrdinal: ordinal,
-        sqlSha256: start.sqlSha256,
-        baselineElapsedMs: end?.elapsedMs ?? null,
-      },
-    ];
+  const sql = events
+    .filter((e) => e.type === "sql.start")
+    .map((start) => {
+      const end = events.find(
+        (e) => ["sql.end", "sql.error"].includes(e.type) && e.id === start.id,
+      );
+      return {
+        ...start,
+        elapsedMs: end?.elapsedMs ?? null,
+        outcome: end?.type ?? "pending",
+        error: end?.error,
+      };
+    });
+  const ranked = sql
+    .filter((s) => s.planEligible)
+    .sort((a, b) => (b.elapsedMs ?? Infinity) - (a.elapsedMs ?? Infinity));
+  const seen = new Set();
+  const selected = ranked
+    .filter((s) => {
+      if (seen.has(s.sqlSha256)) return false;
+      seen.add(s.sqlSha256);
+      return true;
+    })
+    .slice(0, 2)
+    .map((s) => ({
+      baselineId: s.id,
+      sqlSha256: s.sqlSha256,
+      sqlOccurrence: s.sqlOccurrence,
+      phase: s.phase,
+      phaseId: s.phaseId,
+      timeOrdinal: s.timeOrdinal,
+      referenceOrdinal: s.referenceOrdinal,
+      baselineElapsedMs: s.elapsedMs,
+      baselineOutcome: s.outcome,
+    }));
+  const groups = new Map();
+  for (const s of sql) {
+    const group = groups.get(s.sqlSha256) ?? {
+      sqlSha256: s.sqlSha256,
+      count: 0,
+      elapsedMs: 0,
+      pending: 0,
+      errors: 0,
+      firstId: s.id,
+    };
+    group.count++;
+    group.elapsedMs += s.elapsedMs ?? 0;
+    group.pending += Number(s.outcome === "pending");
+    group.errors += Number(s.outcome === "sql.error");
+    groups.set(s.sqlSha256, group);
+  }
+  save("baseline-analysis.json", {
+    testName,
+    sqlCount: sql.length,
+    phases: events.filter((e) => ["phase.end", "phase.error"].includes(e.type)),
+    unfinishedPhases: events.filter(
+      (e) =>
+        e.type === "phase.start" &&
+        !events.some(
+          (v) =>
+            ["phase.end", "phase.error"].includes(v.type) &&
+            v.phaseId === e.phaseId,
+        ),
+    ),
+    slowestSql: [...sql]
+      .sort((a, b) => (b.elapsedMs ?? Infinity) - (a.elapsedMs ?? Infinity))
+      .slice(0, 30),
+    groupedSql: [...groups.values()].sort((a, b) => b.elapsedMs - a.elapsedMs),
+    selected,
   });
   let probe = null;
   if (selected.length) {
     save("target.json", {
       targets: selected,
       selection:
-        "original first authorize (ordinal1) and reader load (ordinal9), when reached; maximum2pairs; same ordinal and SQL hash required in independent probe",
+        "two distinct eligible read SQL shapes from exact C1, pending first then greatest observed duration; same SQL hash/occurrence required in independent C1 replay, new fictitious IDs; each on/off pair uses identical params and live snapshot; no inference from I2",
     });
     probe = await run(
       "probe",
-      ["--import", "tsx", "tests/diagnostics/time-linux-probe.ts"],
+      ["--import", "tsx", "tests/diagnostics/time-linux-exit-probe.ts"],
       480000,
     );
   }
   const plans = selected.flatMap((target) =>
     ["on", "off"].map((jit) =>
-      join(directory, `probe-plan-${target.timeOrdinal}-${jit}.json`),
+      join(directory, `probe-plan-${target.baselineId}-${jit}.json`),
     ),
   );
   const planReceipts = plans.map((path) => {
@@ -388,13 +453,9 @@ try {
     plansComplete: complete,
     serverDefaultAfter: after,
     qualification:
-      "Exact first test result is retained, including failure. SQL plan probe is diagnostic only; remaining 16 review / 5 initial Time and affected Production coverage, full native CI and downstream gates remain pending.",
+      "Exact populated C1 original test result and 30s timeout are retained, including failure. The independent C1 SQL probe is diagnostic only. All 23 Time cases, 18 affected Production cases, whole native CI and downstream gates remain pending on the final candidate.",
+    testName,
   });
-  const manifest = readdirSync(directory).map((path) => {
-    const bytes = readFileSync(join(directory, path));
-    return { path, bytes: bytes.length, sha256: hash(bytes) };
-  });
-  save("manifest.json", manifest);
   console.log(
     JSON.stringify({
       directory,
@@ -416,4 +477,9 @@ try {
   process.exitCode = 1;
 } finally {
   await control.end();
+  const manifest = readdirSync(directory).map((path) => {
+    const bytes = readFileSync(join(directory, path));
+    return { path, bytes: bytes.length, sha256: hash(bytes) };
+  });
+  save("manifest.json", manifest);
 }
