@@ -316,33 +316,38 @@
     },
     {
       "local": "apps/web/src/features/time/Time.tsx",
-      "sha256": "bb14caae9b3f434cb3ebad8ebf686412aae78183cc5a47adea1eba0fb741a40c",
+      "sha256": "de828575e48e52180e696b48c996a6fbfd8ffd7b85f9da44b3ae7ae10942d4df",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {
       "local": "apps/web/src/features/time/TimeReport.tsx",
-      "sha256": "7452942c36e2a33f2fc6bb7fd55ccaf483df889cabbfcdd8909724e6a308fa1b",
+      "sha256": "10a1fdf7b63f667ad3bb6b9172ae75398cd62e3f4889c71ff8525cdb26424217",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {
       "local": "apps/web/src/features/time/Configuration.tsx",
-      "sha256": "702ec3af443d75847a761414b674a43c771e7f152fb0fff90731cb2211b6b430",
+      "sha256": "164cc0ccb4eff31ec230735fad8a2e867bff5c7083e0b39ae8ae1276486105c1",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {
       "local": "apps/web/src/features/time/Workload.tsx",
-      "sha256": "6b3877ae16dd23d6392cf861f053c6cda379ad363c71b6cf2bda5a32bf3b7f95",
+      "sha256": "622777a662ed48d79ea7244dd15adfb9add2aa23c6aac76b4a92880b7a3e2c4b",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {
       "local": "apps/web/src/features/time/shared.tsx",
-      "sha256": "9a5d264a9f303bc7944517e3497cda9215df81ef7b0c7fecb363f21ab8528bc0",
+      "sha256": "579b20699ce7d4cb95f9f1a2de25ace5f17e05295a5c0ea1ab94d583b7aa9517",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
     },
     {
       "local": "apps/web/src/features/time/time.css",
-      "sha256": "c1b2b3084058039b2f6f952e791e1c91597f0c03c7e2ca41d78c85cdab92940e",
+      "sha256": "70b1bc9a9a0a63f5de95fa912978b9beb7f3156f6b64923ae9c3f4fc59916330",
       "role": "Memlia canonical time/workload composition consuming retained Plane/Propel, Twenty Table, cal.diy Input/Alert/Calendar ports; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/time/Catalog.tsx",
+      "sha256": "5a2bab44559877cdce3eff91408ba383e381b7adc4ade44462fb051249a32e75",
+      "role": "Memlia paged searchable time catalogs and historical identity resolution composed from retained Cal fields, Plane controls and Propel buttons; no new upstream copy"
     }
   ],
   "packages": [

@@ -1,3 +1,4 @@
+import { CatalogSelect, CatalogName, WeightEditor } from "./Catalog";
 import { useEffect, useState } from "react";
 import {
   TimeEntitySchema,
@@ -43,15 +44,43 @@ export function describe(d: TimeData, options: Options) {
     case "plan":
       return `${d.level === "cabinet" ? "Cabinet" : d.level === "dossier" ? "Dossier" : "Occurrence"} · ${d.minutes === null ? "Héritage rétabli" : d.minutes + " min"} · ${d.component === "fixed" ? "incluse au forfait" : "variable"}`;
     case "capacity":
-      return `${d.userId ? (options.users.find((u) => u.id === d.userId)?.name ?? "Individuelle") : "Cabinet"} · ${d.dailyMinutes.join(" / ")} min`;
+      return (
+        <>
+          {d.userId ? <CatalogName kind="users" id={d.userId} /> : "Cabinet"} ·{" "}
+          {d.dailyMinutes.join(" / ")} min
+        </>
+      );
     case "rate":
-      return `${d.hourlyAmount} € / h · ${d.userId ? (options.users.find((u) => u.id === d.userId)?.name ?? "Individuel") : "Cabinet"}`;
+      return (
+        <>
+          {d.hourlyAmount} € / h ·{" "}
+          {d.userId ? <CatalogName kind="users" id={d.userId} /> : "Cabinet"}
+        </>
+      );
     case "forfait":
-      return `${options.roles.find((r) => r.id === d.roleId)?.name ?? "Rôle"} · ${d.monthlyMinutes} min / mois · ${d.amount} €`;
+      return (
+        <>
+          <CatalogName kind="roles" id={d.roleId} /> · {d.monthlyMinutes} min /
+          mois · {d.amount} €
+        </>
+      );
     case "assignment":
-      return `${options.users.find((u) => u.id === d.userId)?.name ?? "Collaborateur"} · ${options.roles.find((r) => r.id === d.roleId)?.name ?? "Rôle"} · poids ${d.weight}`;
+      return (
+        <>
+          <CatalogName kind="users" id={d.userId} /> ·{" "}
+          <CatalogName kind="roles" id={d.roleId} /> · poids {d.weight}
+        </>
+      );
     case "allocation":
-      return `${d.weights.map((w) => (options.users.find((u) => u.id === w.userId)?.name ?? "Collaborateur") + " × " + w.weight).join(", ")}`;
+      return (
+        <>
+          {d.weights.map((w) => (
+            <span key={w.userId}>
+              <CatalogName kind="users" id={w.userId} /> × {w.weight}{" "}
+            </span>
+          ))}
+        </>
+      );
     case "period":
       return d.closed ? "Verrouillée · " + d.reason : "Ouverte · " + d.reason;
     default:
@@ -283,20 +312,32 @@ function ConfigEditor({
       ))}
     </Select>
   );
-  const personal = select("userId", "Collaborateur", [
-    ["", "Horaire / taux du cabinet"],
-    ...options.users.map((u) => [u.id, u.name] as [string, string]),
-  ]);
+  const personal = (
+    <CatalogSelect
+      kind="users"
+      name="config-userId"
+      label="Collaborateur"
+      value={v.userId ?? ""}
+      onChange={(id) => set("userId", id)}
+      active
+      empty="Horaire / taux du cabinet"
+    />
+  );
   const dateFields = (
     <div className="time-form-grid">
       {field("from", "Applicable à partir du", "date")}
       {field("to", "Jusqu’au (facultatif)", "date")}
     </div>
   );
-  const role = select("roleId", "Rôle porteur", [
-    ["", "Choisir…"],
-    ...options.roles.map((r) => [r.id, r.name] as [string, string]),
-  ]);
+  const role = (
+    <CatalogSelect
+      kind="roles"
+      name="config-roleId"
+      label="Rôle porteur"
+      value={v.roleId ?? ""}
+      onChange={(id) => set("roleId", id)}
+    />
+  );
   async function submit() {
     if (busy) return;
     setError("");
@@ -528,25 +569,11 @@ function ConfigEditor({
           <LinkPicker value={link} onChange={setLink} />
           <fieldset>
             <legend>Poids explicites des porteurs</legend>
-            {options.users.map((u) => (
-              <Field
-                key={u.id}
-                name={"weight-" + u.id}
-                label={u.name}
-                type="number"
-                value={String(
-                  weights.find((w) => w.userId === u.id)?.weight ?? 0,
-                )}
-                onChange={(value) =>
-                  setWeights((ws) => [
-                    ...ws.filter((w) => w.userId !== u.id),
-                    ...(Number(value) > 0
-                      ? [{ userId: u.id, weight: Number(value) }]
-                      : []),
-                  ])
-                }
-              />
-            ))}
+            <WeightEditor
+              prefix="weight"
+              weights={weights}
+              onChange={setWeights}
+            />
           </fieldset>
         </>
       )}

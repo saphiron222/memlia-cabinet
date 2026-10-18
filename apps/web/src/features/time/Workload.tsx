@@ -1,3 +1,4 @@
+import { CatalogSelect, CatalogName, WeightEditor } from "./Catalog";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import {
@@ -149,51 +150,35 @@ export function WorkloadGrid({
       setBusy(false);
     }
   }
-  const name = (id: string | null) =>
-    options.users.find((u) => u.id === id)?.name ?? "Non affectée";
+  const name = (id: string | null) => <CatalogName kind="users" id={id} />;
   return (
     <section>
       <ErrorSummary message={error} />
       <div className="time-toolbar">
-        <Select
+        <CatalogSelect
+          kind="users"
           name="workload-user"
           label="Collaborateur"
           value={userId}
           onChange={setUserId}
-        >
-          <option value="">Tous les collaborateurs autorisés</option>
-          {options.users.map((u) => (
-            <option value={u.id} key={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </Select>
-        <Select
+          empty="Tous les collaborateurs autorisés"
+        />
+        <CatalogSelect
+          kind="groups"
           name="workload-group"
           label="Pôle / site"
           value={groupId}
           onChange={setGroupId}
-        >
-          <option value="">Tous les pôles et sites</option>
-          {options.groups.map((g) => (
-            <option value={g.id} key={g.id}>
-              {g.name} · {g.kind === "team" ? "Pôle" : "Site"}
-            </option>
-          ))}
-        </Select>
-        <Select
+          empty="Tous les pôles et sites"
+        />
+        <CatalogSelect
+          kind="roles"
           name="workload-role"
           label="Rôle porteur"
           value={roleId}
           onChange={setRoleId}
-        >
-          <option value="">Tous les rôles</option>
-          {options.roles.map((r) => (
-            <option value={r.id} key={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </Select>
+          empty="Tous les rôles"
+        />
       </div>
       {data ? (
         <>
@@ -216,7 +201,10 @@ export function WorkloadGrid({
               <tbody>
                 {data.people.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell>{p.name}</TableCell>
+                    <TableCell>
+                      {p.name}
+                      {!p.active && " · Inactif"}
+                    </TableCell>
                     <TableCell>
                       {p.capacityMinutes === null
                         ? "Inconnue"
@@ -229,12 +217,20 @@ export function WorkloadGrid({
                           ? "Dérogation individuelle"
                           : "Non configurée"}
                     </TableCell>
-                    <TableCell>{duration(p.plannedMinutes * 60)}</TableCell>
+                    <TableCell>
+                      {duration(p.plannedMinutes * 60)}
+                      {p.unknownPlans > 0 &&
+                        ` · Partiel (${p.unknownPlans} prévision(s) inconnue(s))`}
+                    </TableCell>
                     <TableCell>{duration(p.realizedSeconds)}</TableCell>
                     <TableCell>
                       <span
                         className={
-                          p.overloadMinutes ? "time-overload" : "time-balanced"
+                          p.overloadMinutes === null
+                            ? "muted"
+                            : p.overloadMinutes
+                              ? "time-overload"
+                              : "time-balanced"
                         }
                       >
                         {p.overloadMinutes === null
@@ -281,8 +277,7 @@ export function WorkloadGrid({
                       <TableCell>{r.label}</TableCell>
                       <TableCell>{name(r.userId)}</TableCell>
                       <TableCell>
-                        {options.roles.find((role) => role.id === r.roleId)
-                          ?.name ?? "—"}
+                        <CatalogName kind="roles" id={r.roleId} />
                       </TableCell>
                       <TableCell>
                         <span className="time-tag">
@@ -362,26 +357,14 @@ export function WorkloadGrid({
                   <p className="muted">
                     Poids explicites. Le réalisé conserve son auteur historique.
                   </p>
-                  {options.users.map((u) => (
-                    <Field
-                      key={u.id}
-                      name={"reassign-" + u.id}
-                      label={"Poids · " + u.name}
-                      type="number"
-                      value={String(
-                        weights.find((w) => w.userId === u.id)?.weight ?? 0,
-                      )}
-                      onChange={(v) => {
-                        setPreview(null);
-                        setWeights((ws) => [
-                          ...ws.filter((w) => w.userId !== u.id),
-                          ...(Number(v) > 0
-                            ? [{ userId: u.id, weight: Number(v) }]
-                            : []),
-                        ]);
-                      }}
-                    />
-                  ))}
+                  <WeightEditor
+                    prefix="reassign"
+                    weights={weights}
+                    onChange={(w) => {
+                      setPreview(null);
+                      setWeights(w);
+                    }}
+                  />
                   <Button
                     onClick={() => void reassign()}
                     disabled={busy || !weights.length}
@@ -401,7 +384,10 @@ export function WorkloadGrid({
                         <tbody>
                           {preview.after.people.map((p) => (
                             <TableRow key={p.id}>
-                              <TableCell>{p.name}</TableCell>
+                              <TableCell>
+                                {p.name}
+                                {!p.active && " · Inactif"}
+                              </TableCell>
                               <TableCell>
                                 {preview.before.people.find(
                                   (b) => b.id === p.id,

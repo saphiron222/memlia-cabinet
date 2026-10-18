@@ -5,7 +5,8 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   page,
   browser,
 }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
+  page.setDefaultTimeout(15000);
   await page.goto("/");
   await page.getByLabel("Nom complet").fill("Camille Temps fictif");
   await page.getByLabel("Adresse email").fill("temps@example.test");
@@ -149,7 +150,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByRole("table", { name: "Saisies de temps" }).getByText("1 h 30"),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/task-time-1440-light.png",
+    path: "evidence/private/task5/round1-final/task-time-1440-light.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -183,7 +184,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.getByRole("button", { name: "Exporter les temps" }).click();
   await expect(page.getByText("CSV prêt", { exact: false })).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/time-week-1440-light.png",
+    path: "evidence/private/task5/round1-final/time-week-1440-light.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -217,14 +218,14 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByRole("button", { name: "Colonnes précédentes", exact: true }),
   ).toBeDisabled();
   await page.screenshot({
-    path: "evidence/private/task5/time-week-900-light.png",
+    path: "evidence/private/task5/round1-final/time-week-900-light.png",
     fullPage: true,
     animations: "disabled",
   });
   await page.getByRole("button", { name: "Activer le thème sombre" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.screenshot({
-    path: "evidence/private/task5/time-week-900-dark.png",
+    path: "evidence/private/task5/round1-final/time-week-900-dark.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -238,13 +239,13 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     expect(box!.x + box!.width).toBeLessThanOrEqual(900);
   }
   await page.screenshot({
-    path: "evidence/private/task5/workload-900-dark.png",
+    path: "evidence/private/task5/round1-final/workload-900-dark.png",
     fullPage: true,
     animations: "disabled",
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({
-    path: "evidence/private/task5/workload-1440-dark.png",
+    path: "evidence/private/task5/round1-final/workload-1440-dark.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -255,8 +256,13 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     .first()
     .getByRole("button", { name: "Voir la charge" })
     .click();
-  await page.getByLabel("Poids · Camille Temps fictif").fill("0");
-  await page.getByLabel("Poids · Alex Martin fictif").fill("1");
+  await page
+    .getByRole("button", { name: "Retirer ce porteur", exact: true })
+    .click();
+  await page
+    .getByLabel("Ajouter un porteur", { exact: true })
+    .selectOption(colleague.id);
+  await page.getByLabel("Poids du porteur", { exact: true }).fill("1");
   await page
     .getByRole("button", { name: "Prévisualiser la réaffectation" })
     .click();
@@ -264,7 +270,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByRole("table", { name: "Aperçu de réaffectation" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/reassignment-1440-dark.png",
+    path: "evidence/private/task5/round1-final/reassignment-1440-dark.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -279,7 +285,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
   await page.getByRole("button", { name: "Modifier", exact: true }).click();
   await expect(page.getByLabel("Lundi (min)")).toHaveValue("420");
   await page.screenshot({
-    path: "evidence/private/task5/capacity-editor-1440-dark.png",
+    path: "evidence/private/task5/round1-final/capacity-editor-1440-dark.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -294,7 +300,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByRole("table", { name: "Contributions de charge" }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/workload-1440-light.png",
+    path: "evidence/private/task5/round1-final/workload-1440-light.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -310,7 +316,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByText("Chronomètre actif depuis", { exact: false }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/time-timer-active.png",
+    path: "evidence/private/task5/round1-final/time-timer-active.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -342,7 +348,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByText("Chargement des temps…", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/time-loading.png",
+    path: "evidence/private/task5/round1-final/time-loading.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -350,7 +356,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     page.getByText("Aucun temps saisi sur cette période et ce périmètre."),
   ).toBeVisible();
   await page.screenshot({
-    path: "evidence/private/task5/time-empty.png",
+    path: "evidence/private/task5/round1-final/time-empty.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -372,7 +378,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     "Lecture temporairement indisponible.",
   );
   await page.screenshot({
-    path: "evidence/private/task5/time-error.png",
+    path: "evidence/private/task5/round1-final/time-error.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -415,7 +421,7 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
       .getByText("Camille Temps fictif"),
   ).toHaveCount(0);
   await readonly.screenshot({
-    path: "evidence/private/task5/workload-readonly-900-light.png",
+    path: "evidence/private/task5/round1-final/workload-readonly-900-light.png",
     fullPage: true,
     animations: "disabled",
   });
@@ -428,9 +434,226 @@ test("temps : clavier, relation canonique, semaine, forfait, réaffectation et c
     readonly.getByText("Lecture seule : modification de charge non autorisée."),
   ).toBeVisible();
   await readonly.screenshot({
-    path: "evidence/private/task5/workload-readonly-detail.png",
+    path: "evidence/private/task5/round1-final/workload-readonly-detail.png",
     fullPage: true,
     animations: "disabled",
   });
   await context.close();
+  await page.setViewportSize({ width: 900, height: 1000 });
+  // Real catalogs: the chosen identities sort after more than 200 existing options.
+  for (let i = 0; i < 201; i++) {
+    await save({
+      kind: "nature",
+      name: `AAA Nature ancienne ${String(i).padStart(3, "0")}`,
+      active: false,
+    });
+    await post("/users", {
+      operationId: crypto.randomUUID(),
+      email: `catalog-${i}@example.test`,
+      name: `AAA Compte ${String(i).padStart(3, "0")}`,
+      password: "MotDePasseFictif123!",
+      permissions: [],
+    });
+  }
+  const lateNature = await save({
+    kind: "nature",
+    name: "ZZZ Expertise spéciale",
+    active: true,
+  });
+  const lateUser = await post("/users", {
+    operationId: crypto.randomUUID(),
+    email: "catalog-last@example.test",
+    name: "ZZZ Zoé Catalogue",
+    password: "MotDePasseFictif123!",
+    permissions: [],
+  });
+  await page.goto("/#temps-cabinet");
+  await page.getByLabel("Du", { exact: true }).fill("2026-10-19");
+  await page.getByLabel("Au", { exact: true }).fill("2026-10-25");
+  await page
+    .getByRole("button", { name: "Saisir du temps", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Rechercher une nature", { exact: true }).fill("ZZZ");
+  await dialog
+    .getByLabel("Nature du temps", { exact: true })
+    .selectOption(lateNature.id);
+  await dialog
+    .getByLabel("Rechercher une personne", { exact: true })
+    .fill("ZZZ");
+  await dialog
+    .getByLabel("Auteur du temps", { exact: true })
+    .selectOption(lateUser.id);
+  await dialog.getByLabel("Date du temps").fill("2026-10-22");
+  await dialog
+    .getByLabel("Libellé libre")
+    .fill("Choix au-delà de deux cents options");
+  await dialog.getByLabel("Durée en minutes").fill("15");
+  await page.screenshot({
+    path: "evidence/private/task5/round1-final/catalog-beyond200-900.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await dialog
+    .getByRole("button", { name: "Enregistrer le temps", exact: true })
+    .click();
+  await post("/time/entities", {
+    id: lateNature.id,
+    expectedVersion: lateNature.version,
+    operationId: crypto.randomUUID(),
+    data: { ...lateNature.data, active: false },
+  });
+  await page.reload();
+  await page.getByLabel("Du", { exact: true }).fill("2026-10-19");
+  await page.getByLabel("Au", { exact: true }).fill("2026-10-25");
+  const historyRow = page
+    .getByRole("row")
+    .filter({ hasText: "Choix au-delà de deux cents options" });
+  await expect(historyRow).toContainText("ZZZ Zoé Catalogue");
+  await expect(historyRow).toContainText("ZZZ Expertise spéciale · Inactif");
+  await expect(
+    page
+      .getByRole("table", { name: "Saisies de temps" })
+      .getByText("Chargement…", { exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: "evidence/private/task5/round1-final/catalog-history-900.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  const plans = (
+    await (await page.request.get("/api/v1/time/entities?kind=plan")).json()
+  ).items;
+  for (const plan of plans)
+    await post("/time/entities", {
+      id: plan.id,
+      expectedVersion: plan.version,
+      operationId: crypto.randomUUID(),
+      data: { ...plan.data, minutes: null },
+    });
+  await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: {
+      kind: "tache",
+      title: "Prévision à renseigner",
+      dossierId: dossier.id,
+      data: { dueDate: "2026-10-22", assigneeIds: [actor.id] },
+    },
+  });
+  await page.getByRole("tab", { name: "Plan de charge", exact: true }).click();
+  await page
+    .getByLabel("Rechercher une personne", { exact: true })
+    .fill("Camille");
+  await page
+    .getByLabel("Collaborateur", { exact: true })
+    .selectOption(actor.id);
+  const incomplete = page
+    .getByRole("table", { name: "Capacité et charge des collaborateurs" })
+    .getByRole("row")
+    .filter({ hasText: "Camille" });
+  await expect(incomplete).toContainText("Partiel");
+  await expect(incomplete).toContainText("Inconnue");
+  await expect(incomplete).not.toContainText("Capacité respectée");
+  for (const theme of ["light", "dark"] as const) {
+    if ((await page.locator("html").getAttribute("data-theme")) !== theme)
+      await page
+        .getByRole("button", {
+          name:
+            theme === "dark"
+              ? "Activer le thème sombre"
+              : "Activer le thème clair",
+        })
+        .click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await page.screenshot({
+      path: `evidence/private/task5/round1-final/workload-unknown-900-${theme}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+    const frame = page
+      .getByRole("table", { name: "Capacité et charge des collaborateurs" })
+      .locator("..")
+      .locator("..");
+    const next = frame.getByRole("button", {
+      name: "Colonnes suivantes",
+      exact: true,
+    });
+    const viewport = frame.locator(".time-table-scroll");
+    for (let i = 0; i < 4 && (await next.isEnabled()); i++) {
+      const end = await viewport.evaluate((el) =>
+        Math.min(el.scrollLeft + 360, el.scrollWidth - el.clientWidth),
+      );
+      await next.click();
+      await expect
+        .poll(() => viewport.evaluate((el) => el.scrollLeft))
+        .toBeCloseTo(end, 0);
+      if (
+        end ===
+        (await viewport.evaluate((el) => el.scrollWidth - el.clientWidth))
+      ) {
+        await expect(next).toBeDisabled();
+        break;
+      }
+    }
+    await expect(
+      incomplete
+        .getByRole("cell", { name: "Inconnue", exact: true })
+        .locator("span"),
+    ).toBeInViewport({ ratio: 1 });
+    await page.screenshot({
+      path: `evidence/private/task5/round1-final/workload-unknown-right-900-${theme}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+    const previous = frame.getByRole("button", {
+      name: "Colonnes précédentes",
+      exact: true,
+    });
+    for (let i = 0; i < 4 && (await previous.isEnabled()); i++) {
+      const end = await viewport.evaluate((el) =>
+        Math.max(el.scrollLeft - 360, 0),
+      );
+      await previous.click();
+      await expect
+        .poll(() => viewport.evaluate((el) => el.scrollLeft))
+        .toBeCloseTo(end, 0);
+      if (end === 0) {
+        await expect(previous).toBeDisabled();
+        break;
+      }
+    }
+  }
+  await page.getByRole("tab", { name: "Temps saisis", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Saisir du temps", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Rechercher une nature", { exact: true })
+    .fill("Révision comptable");
+  await page
+    .getByLabel("Nature du temps", { exact: true })
+    .selectOption(nature.id);
+  await page.getByLabel("Date du temps").fill("2026-10-22");
+  await page.getByLabel("Libellé libre").fill("Chronomètre abandonné");
+  await page
+    .getByRole("button", { name: "Démarrer le chronomètre", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Abandonner sans temps", exact: true })
+    .click();
+  await page
+    .getByLabel("Motif de l’abandon")
+    .fill("Départ involontaire, aucun temps à imputer");
+  await page.screenshot({
+    path: "evidence/private/task5/round1-final/timer-abandon-900.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page
+    .getByRole("button", { name: "Confirmer l’abandon", exact: true })
+    .click();
+  await expect(
+    page.getByText("Chronomètre actif depuis", { exact: false }),
+  ).toHaveCount(0);
 });

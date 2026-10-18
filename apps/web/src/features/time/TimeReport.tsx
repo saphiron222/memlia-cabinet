@@ -1,3 +1,4 @@
+import { CatalogSelect, CatalogName } from "./Catalog";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import {
@@ -123,19 +124,17 @@ export function Report({
     <section className="time-report">
       <ErrorSummary message={error} />
       <div className="time-report-bar">
-        <Select
-          name="time-report-nature"
+        <CatalogSelect
+          kind="natures"
+          name="time-filter-nature"
           label="Nature"
           value={nature}
-          onChange={setNature}
-        >
-          <option value="">Toutes les natures</option>
-          {options.natures.map((n) => (
-            <option value={n.id} key={n.id}>
-              {n.data.kind === "nature" ? n.data.name : ""}
-            </option>
-          ))}
-        </Select>
+          onChange={(v) => {
+            setNature(v);
+            setOffset(0);
+          }}
+          empty="Toutes les natures"
+        />
         <Button onClick={() => void exportCsv()} disabled={exporting}>
           Exporter les temps
         </Button>
@@ -215,19 +214,15 @@ export function Report({
               <tbody>
                 {report.entries.map((e) => {
                   if (e.data.kind !== "entry") return null;
-                  const d = e.data,
-                    nature = options.natures.find((n) => n.id === d.natureId);
+                  const d = e.data;
                   return (
                     <TableRow key={e.id}>
                       <TableCell>{d.date}</TableCell>
                       <TableCell>
-                        {options.users.find((u) => u.id === d.userId)?.name ??
-                          "Auteur historique"}
+                        <CatalogName kind="users" id={d.userId} />
                       </TableCell>
                       <TableCell>
-                        {nature?.data.kind === "nature"
-                          ? nature.data.name
-                          : "Nature historique"}
+                        <CatalogName kind="natures" id={d.natureId} />
                       </TableCell>
                       <TableCell>
                         {d.link.kind === "free" ? (

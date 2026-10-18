@@ -50,6 +50,8 @@ Les éléments métier qui n'ont pas d'équivalent dans une référence (matrice
 | Configuration temps | Table Twenty, Peek Plane, Cal Input/Alert, NativeSelect Propel | Familles typées, champs de dates/minutes/décimales exactes,7jours, versions et politiques explicites ; aucun formulaire JSON |
 | Semaine et saisie | Calendar et PanelCard cal.diy, formulaire Cal et boutons Twenty | Date civile UTC sélectionnée puis semaine lundi→dimanche ; objet explicite ou libellé libre et chronomètre persistant |
 
+`features/time/Catalog.tsx` compose les champs Cal et boutons retenus pour les catalogues recherchables paginés, résout les libellés historiques et sélectionnés, et édite les porteurs explicites. Le diagnostic de charge partielle et l’abandon motivé du chronomètre consomment les contrats métier réels.
+
 `features/time/time.css` compose ces ports avec les jetons Twenty réellement chargés. Les cellules, filtres et panneaux gardent les fournisseurs métier ; aucun composant amont n'est réécrit pour cet ajout. Le contrôleur Workflows conserve désormais la section active au changement d'URL de la fiche. Ses empreintes et celles des compositions nouvelles figurent dans la provenance ; l'offre de source exacte du build inclut les fichiers Task5.
 
 ## Limites de preuve et réception

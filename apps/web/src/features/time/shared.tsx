@@ -1,3 +1,4 @@
+import { CatalogSelect } from "./Catalog";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import { z } from "zod";
 import {
@@ -262,44 +263,23 @@ export function EntryForm({
           value={day}
           onChange={setDay}
         />
-        <Select
+        <CatalogSelect
+          kind="natures"
           name="time-nature"
           label="Nature du temps"
           value={nature}
           onChange={setNature}
-        >
-          <option value="">Choisir…</option>
-          {options.natures
-            .filter(
-              (n) =>
-                n.data.kind === "nature" && (n.data.active || n.id === nature),
-            )
-            .map((n) => (
-              <option
-                key={n.id}
-                value={n.id}
-                disabled={n.data.kind === "nature" && !n.data.active}
-              >
-                {n.data.kind === "nature" ? n.data.name : ""}
-                {n.data.kind === "nature" && !n.data.active
-                  ? " · inactive"
-                  : ""}
-              </option>
-            ))}
-        </Select>
+          active
+        />
         {options.canManage && (
-          <Select
+          <CatalogSelect
+            kind="users"
             name="time-author"
             label="Auteur du temps"
             value={userId}
             onChange={setUserId}
-          >
-            {options.users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </Select>
+            active
+          />
         )}
       </div>
       {fixedLink ? (
@@ -332,13 +312,6 @@ export function EntryForm({
           </Button>
         )}
       </div>
-      {!options.natures.some(
-        (n) => n.data.kind === "nature" && n.data.active,
-      ) && (
-        <p className="muted">
-          Aucune nature active. Configurez une nature pour commencer.
-        </p>
-      )}
     </form>
   );
 }

@@ -1,3 +1,4 @@
+import { CatalogSelect } from "./Catalog";
 import { useEffect, useState } from "react";
 import {
   TimeListSchema,
@@ -55,7 +56,9 @@ export function Time({
     [timers, setTimers] = useState<TimeEntity[]>([]),
     [epoch, setEpoch] = useState(0),
     [error, setError] = useState(""),
-    [stopping, setStopping] = useState(false);
+    [stopping, setStopping] = useState(false),
+    [abandonId, setAbandonId] = useState<string | null>(null),
+    [abandonReason, setAbandonReason] = useState("");
   useEffect(() => {
     void request(
       "/time/entities?kind=timer&active=true&userId=" + user.id,
@@ -77,11 +80,11 @@ export function Time({
       });
   }, [epoch]);
   const changed = () => setEpoch((v) => v + 1);
-  async function stop(t: TimeEntity) {
+  async function stop(t: TimeEntity, abandon = false) {
     setStopping(true);
     try {
       await request(
-        "/time/timers/" + t.id + "/stop",
+        "/time/timers/" + t.id + (abandon ? "/abandon" : "/stop"),
         TimeEntitySchema,
         signal,
         {
@@ -89,10 +92,14 @@ export function Time({
           body: JSON.stringify({
             operationId: crypto.randomUUID(),
             expectedVersion: t.version,
+            ...(abandon ? { reason: abandonReason } : {}),
           }),
         },
       );
       changed();
+      setAbandonId(null);
+      setAbandonReason("");
+      setError("");
     } catch (e) {
       setError(message(e));
     } finally {
@@ -180,6 +187,35 @@ export function Time({
           <Button disabled={stopping} onClick={() => void stop(t)}>
             Arrêter et enregistrer
           </Button>
+          <Button disabled={stopping} onClick={() => setAbandonId(t.id)}>
+            Abandonner sans temps
+          </Button>
+          {abandonId === t.id && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void stop(t, true);
+              }}
+            >
+              <Field
+                name="time-abandon-reason"
+                label="Motif de l’abandon"
+                value={abandonReason}
+                onChange={(value) => setAbandonReason(value.slice(0, 300))}
+                required
+                hint="Aucune durée ne sera imputée."
+              />
+              <Button
+                type="submit"
+                disabled={stopping || !abandonReason.trim()}
+              >
+                Confirmer l’abandon
+              </Button>
+              <Button type="button" onClick={() => setAbandonId(null)}>
+                Annuler
+              </Button>
+            </form>
+          )}
         </div>
       ))}
       {options ? (
@@ -188,19 +224,14 @@ export function Time({
             <>
               {options.canReadOthers && (
                 <div className="time-toolbar">
-                  <Select
-                    name="time-person"
-                    label="Rapport par personne"
+                  <CatalogSelect
+                    kind="users"
+                    name="time-report-user"
+                    label="Collaborateur du rapport"
                     value={userId}
                     onChange={setUserId}
-                  >
-                    <option value="">Temps du cabinet</option>
-                    {options.users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </Select>
+                    empty="Tous les collaborateurs autorisés"
+                  />
                 </div>
               )}
               <div className="time-dossier-filter">
