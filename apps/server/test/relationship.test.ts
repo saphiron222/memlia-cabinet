@@ -1367,3 +1367,273 @@ test("onboarding completion follows current inline final statuses without erasin
     (await f.request("GET", `/relationship/entities/${row.id}`)).json(),
   ).toEqual(row);
 });
+
+test("reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them", async () => {
+  const admin = await start();
+  const created = await f.request("POST", "/users", {
+    operationId: operationId(),
+    email: "proof-reader@example.test",
+    name: "Lecteur preuve",
+    password: "MotDePasseFictif123!",
+    permissions: admin.permissions,
+  });
+  expect(created.statusCode, created.body).toBe(201);
+  let reader = created.json();
+  const login = await f.request(
+    "POST",
+    "/login",
+    {
+      email: reader.email,
+      password: "MotDePasseFictif123!",
+    },
+    "",
+  );
+  expect(login.statusCode, login.body).toBe(200);
+  const token = String(login.headers["set-cookie"]).split(";")[0]!;
+  const request = (
+    method: "GET" | "POST",
+    path: string,
+    payload?: Record<string, unknown>,
+  ) => f.request(method, path, payload, token);
+  const d = (
+    await f.request("POST", "/records", {
+      operationId: operationId(),
+      record: {
+        kind: "dossier",
+        title: "Preuve partagée Work et LAB",
+        data: {},
+      },
+    })
+  ).json();
+  const evidence = await proof(d.id);
+  const task = await f.request("POST", "/records", {
+    operationId: operationId(),
+    record: {
+      kind: "tache",
+      title: "Propriétaire de preuve",
+      dossierId: d.id,
+      data: { documentIds: [evidence.documentId] },
+    },
+  });
+  expect(task.statusCode, task.body).toBe(201);
+  const policy = await save({
+    kind: "lab_policy",
+    name: "Politique preuve partagée",
+    periodDays: 90,
+    reason: "Cabinet",
+  });
+  const writeReview = async (
+    data: Record<string, unknown>,
+    old?: { id: string; version: number },
+  ) => {
+    const command = {
+      id: old?.id ?? operationId(),
+      expectedVersion: old?.version ?? 0,
+      operationId: operationId(),
+      data,
+    };
+    const r = await request("POST", "/relationship/entities", command);
+    expect(r.statusCode, r.body).toBe(200);
+    return { review: r.json(), command };
+  };
+  const data = {
+    kind: "lab",
+    dossierId: d.id,
+    level: "standard",
+    reason: "Examen humain partagé",
+    role: "Responsable",
+    observedOn: "2026-10-18",
+    decisionOn: "2026-10-18",
+    nextReviewOn: "2026-10-18",
+    policyId: policy.id,
+    policyVersion: 1,
+    evidence: [evidence],
+    recipientIds: [reader.id],
+  };
+  const current = await writeReview(data);
+  const historical = await writeReview({
+    ...data,
+    reason: "Ancien justificatif",
+  });
+  const unrelatedProof = await proof(d.id);
+  const historicalOnly = await writeReview(
+    {
+      ...historical.review.data,
+      evidence: [unrelatedProof],
+      reason: "Preuve Work dans l’historique seulement",
+    },
+    historical.review,
+  );
+  const reviews = [current, historicalOnly];
+  expect(
+    (
+      await request("POST", "/relationship/lab/reminders", {
+        operationId: operationId(),
+      })
+    ).statusCode,
+  ).toBe(202);
+  let notices: any[] = [];
+  for (let n = 0; n < 100; n++) {
+    notices = (await request("GET", "/notifications")).json().items;
+    if (notices.length === 2) break;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  expect(notices).toHaveLength(2);
+  const mark = {
+    operationId: operationId(),
+    expectedVersion: 1,
+    state: "read",
+  };
+  expect(
+    (await request("POST", `/notifications/${notices[0].id}`, mark)).statusCode,
+  ).toBe(200);
+  const exportCommand = { operationId: operationId() };
+  const started = await request(
+    "POST",
+    "/administration/exports",
+    exportCommand,
+  );
+  expect(started.statusCode, started.body).toBe(202);
+  let exportState: any;
+  for (let n = 0; n < 200; n++) {
+    exportState = (
+      await request("GET", `/administration/exports/${started.json().id}`)
+    ).json();
+    if (["completed", "failed"].includes(exportState.job.state)) break;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  expect(exportState.job.state, JSON.stringify(exportState)).toBe("completed");
+  const download = `/administration/exports/${started.json().id}/download`;
+  const manifestResponse = await request("GET", download);
+  expect(manifestResponse.statusCode, manifestResponse.body).toBe(200);
+  const parts = manifestResponse
+    .json()
+    .parts.map((p: any) => p.downloadUrl.replace("/api/v1", ""));
+  const entries: any[] = [];
+  for (const path of parts)
+    entries.push(...(await request("GET", path)).json().relationship);
+  for (const { review } of reviews)
+    expect(
+      entries.some((e) => e.entity === "current" && e.data.id === review.id),
+    ).toBe(true);
+  expect(
+    entries.some(
+      (e) =>
+        e.entity === "history" &&
+        e.data.id === historical.review.id &&
+        e.data.data.evidence.some(
+          (p: any) => p.documentId === evidence.documentId,
+        ),
+    ),
+  ).toBe(true);
+  const assertSurfaces = async (allowed: boolean) => {
+    const status = allowed ? 200 : 404;
+    expect(
+      (await request("GET", `/documents/${evidence.documentId}`)).statusCode,
+    ).toBe(status);
+    expect(
+      (await request("GET", `/records/${task.json().id}`)).statusCode,
+    ).toBe(status);
+    // The dossier and dedicated LAB grants remain readable throughout the withdrawal.
+    expect((await request("GET", `/records/${d.id}`)).statusCode).toBe(200);
+    expect(
+      (await request("GET", `/documents/${unrelatedProof.documentId}`))
+        .statusCode,
+    ).toBe(200);
+    expect(
+      (await request("GET", `/relationship/entities/${policy.id}`)).statusCode,
+    ).toBe(200);
+    for (const { review, command } of reviews) {
+      for (const path of [
+        `/relationship/entities/${review.id}`,
+        `/relationship/${review.id}/history`,
+        `/relationship/${review.id}/events`,
+        `/relationship/entities/${review.id}/capabilities`,
+      ])
+        expect((await request("GET", path)).statusCode, path).toBe(status);
+      expect(
+        (await request("POST", "/relationship/entities", command)).statusCode,
+      ).toBe(status);
+    }
+    expect(
+      (await request("GET", "/relationship/entities?kind=lab")).json(),
+    ).toMatchObject({ total: allowed ? 2 : 0 });
+    const n = (await request("GET", "/notifications")).json();
+    expect(n.items).toHaveLength(allowed ? 2 : 0);
+    expect(n.unread).toBe(allowed ? 1 : 0);
+    expect(
+      (await request("POST", `/notifications/${notices[0].id}`, mark))
+        .statusCode,
+    ).toBe(status);
+    expect((await request("GET", download)).statusCode).toBe(
+      allowed ? 200 : 403,
+    );
+    for (const path of parts)
+      expect((await request("GET", path)).statusCode).toBe(allowed ? 200 : 403);
+    expect(
+      (await request("POST", "/administration/exports", exportCommand))
+        .statusCode,
+    ).toBe(allowed ? 202 : 403);
+  };
+  await assertSurfaces(true);
+  const withoutWorkRead = admin.permissions.flatMap((p: any) =>
+    p.action === "read" && p.kind === "*"
+      ? ["dossier", "contact", "obligation"].map((kind) => ({ ...p, kind }))
+      : p.action === "read" && p.kind === "tache"
+        ? []
+        : [p],
+  );
+  for (const [permissions, allowed] of [
+    [withoutWorkRead, false],
+    [admin.permissions, true],
+  ] as const) {
+    const updated = await f.request("PUT", `/users/${reader.id}`, {
+      operationId: operationId(),
+      expectedVersion: reader.version,
+      active: true,
+      permissions,
+    });
+    expect(updated.statusCode, updated.body).toBe(200);
+    reader = updated.json();
+    await assertSurfaces(allowed);
+    if (!allowed) {
+      const filtered = await request("POST", "/administration/exports", {
+        operationId: operationId(),
+      });
+      expect(filtered.statusCode, filtered.body).toBe(202);
+      let state: any;
+      for (let n = 0; n < 200; n++) {
+        state = (
+          await request("GET", `/administration/exports/${filtered.json().id}`)
+        ).json();
+        if (["completed", "failed"].includes(state.job.state)) break;
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      expect(state.job.state, JSON.stringify(state)).toBe("completed");
+      const result = await request(
+        "GET",
+        `/administration/exports/${filtered.json().id}/download`,
+      );
+      expect(result.statusCode, result.body).toBe(200);
+      for (const part of result.json().parts) {
+        const response = await request(
+          "GET",
+          part.downloadUrl.replace("/api/v1", ""),
+        );
+        expect(response.statusCode, response.body).toBe(200);
+        const rows = response.json().relationship;
+        expect(
+          rows.some((e: any) =>
+            [current.review.id, historicalOnly.review.id].includes(e.data.id),
+          ),
+        ).toBe(false);
+        expect(JSON.stringify(rows)).not.toContain(evidence.documentId);
+      }
+    }
+    const reminders = await request("POST", "/relationship/lab/reminders", {
+      operationId: operationId(),
+    });
+    expect(reminders.statusCode, reminders.body).toBe(202);
+    expect(reminders.json().scheduled).toBe(0);
+  }
+});

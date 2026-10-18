@@ -389,6 +389,185 @@ test("relationship: filled CRM conversion, onboarding provenance, LAB, models, d
     ],
   });
   const receipts: unknown[] = [];
+  // I2: configure own statuses through the actual editor, then use them in an accueil.
+  await page.goto("/#relationship?view=settings&section=onboarding_model");
+  await page
+    .getByRole("button", { name: "Nouveau modèle d’accueil", exact: true })
+    .click();
+  await page.getByLabel("Nom du modèle").fill("Accueil avec statuts locaux");
+  await page
+    .getByRole("button", { name: "Ajouter une étape", exact: true })
+    .click();
+  const localEditor = page.locator(".relationship-step-editor").last();
+  await localEditor
+    .getByLabel("Étape 3", { exact: true })
+    .fill("Validation interne");
+  await localEditor
+    .getByLabel("Type de valeur", { exact: true })
+    .selectOption("status");
+  await localEditor
+    .getByRole("checkbox", { name: "Requise", exact: true })
+    .check();
+  await localEditor.getByRole("button", { name: "Ajouter un statut" }).click();
+  await localEditor.getByLabel("Statut 1", { exact: true }).fill("À examiner");
+  await localEditor.getByRole("button", { name: "Ajouter un statut" }).click();
+  await localEditor.getByLabel("Statut 2", { exact: true }).fill("Validé");
+  const finalControl = localEditor.getByRole("checkbox", {
+    name: "Statut final : Validé",
+    exact: true,
+  });
+  await expect(finalControl).toBeVisible();
+  await finalControl.focus();
+  await page.keyboard.press("Space");
+  await expect(finalControl).toBeChecked();
+  await expect(
+    localEditor.getByRole("checkbox", {
+      name: "Statut final : À examiner",
+      exact: true,
+    }),
+  ).not.toBeChecked();
+  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Enregistré" }),
+  ).toBeVisible();
+  const localModel = (
+    await (
+      await page.request.get(
+        "/api/v1/relationship/entities?kind=onboarding_model",
+      )
+    ).json()
+  ).items.find((m: any) => m.data.name === "Accueil avec statuts locaux");
+  const localStep = localModel.data.steps.find(
+    (s: any) => s.name === "Validation interne",
+  );
+  expect(localStep.stageTypeId).toBeNull();
+  expect(localStep.statuses.map((s: any) => s.final)).toEqual([false, true]);
+  await page.reload();
+  await expect(finalControl).toBeChecked();
+  await page.setViewportSize({ width: 900, height: 1000 });
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate((t) => {
+      document.documentElement.setAttribute("data-theme", t);
+      document.documentElement.className = t;
+    }, theme);
+    await finalControl.focus();
+    await expect(finalControl).toBeFocused();
+    await expect(finalControl).toBeInViewport({ ratio: 1 });
+    await page.screenshot({
+      path: `${capture}/local-status-editor-900-${theme}.png`,
+      fullPage: true,
+    });
+    receipts.push({
+      view: "local-status-editor",
+      width: 900,
+      theme,
+      modelId: localModel.id,
+      stepId: localStep.id,
+      statusIds: localStep.statuses.map((s: any) => s.id),
+      keyboard: "Space toggles named final checkbox; checked after reload",
+      url: page.url(),
+      assets: await page.evaluate(() =>
+        performance
+          .getEntriesByType("resource")
+          .map((r) => r.name)
+          .filter((n) => /\.(css|tsx|woff)/.test(n)),
+      ),
+    });
+  }
+  const localDossier = await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: { kind: "dossier", title: "Dossier statuts locaux", data: {} },
+  });
+  const localPerson = await post("/records", {
+    operationId: crypto.randomUUID(),
+    record: {
+      kind: "contact",
+      title: "Personne statuts locaux",
+      dossierId: localDossier.id,
+      data: { contactType: "personne" },
+    },
+  });
+  const localAccueil = await save({
+    kind: "onboarding",
+    dossierId: localDossier.id,
+    personId: localPerson.id,
+    modelId: localModel.id,
+  });
+  await page.goto("/#relationship?view=onboarding&id=" + localAccueil.id);
+  await page
+    .getByLabel("Valeur", { exact: true })
+    .selectOption(localStep.statuses[0].id);
+  const progress = page.locator(`select[id="${localStep.id}-status"]`);
+  await expect(progress).toBeVisible();
+  await progress.selectOption("done");
+  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Choisissez un statut final",
+  );
+  await page
+    .getByLabel("Valeur", { exact: true })
+    .selectOption(localStep.statuses[1].id);
+  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Enregistré" }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Valeur", { exact: true })).toHaveValue(
+    localStep.statuses[1].id,
+  );
+  await expect(progress).toHaveValue("done");
+  const localStatus = async () =>
+    await (
+      await page.request.get(
+        `/api/v1/relationship/onboarding/${localAccueil.id}/status`,
+      )
+    ).json();
+  expect(
+    (await localStatus()).steps.find((s: any) => s.id === localStep.id).status,
+  ).toBe("done");
+  expect(
+    (await localStatus()).blockers.some((b: any) => b.stepId === localStep.id),
+  ).toBe(false);
+  const localHistory = (
+    await (
+      await page.request.get(`/api/v1/relationship/${localAccueil.id}/history`)
+    ).json()
+  ).items;
+  expect(
+    localHistory[0].data.values.find((v: any) => v.stepId === localStep.id),
+  ).toMatchObject({ value: localStep.statuses[1].id, status: "done" });
+  await page.goto(
+    "/#relationship?view=settings&section=onboarding_model&id=" + localModel.id,
+  );
+  await finalControl.uncheck();
+  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Enregistré" }),
+  ).toBeVisible();
+  expect(
+    (await localStatus()).blockers.some((b: any) => b.stepId === localStep.id),
+  ).toBe(true);
+  await finalControl.check();
+  await page.getByRole("button", { name: "Enregistrer", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Enregistré" }),
+  ).toBeVisible();
+  const modelHistory = (
+    await (
+      await page.request.get(`/api/v1/relationship/${localModel.id}/history`)
+    ).json()
+  ).items;
+  expect(
+    modelHistory.map(
+      (m: any) =>
+        m.data.steps.find((s: any) => s.id === localStep.id).statuses[1],
+    ),
+  ).toEqual(
+    [true, false, true].map((final) => ({ ...localStep.statuses[1], final })),
+  );
+  expect(
+    (await localStatus()).blockers.some((b: any) => b.stepId === localStep.id),
+  ).toBe(false);
   for (const width of [1440, 900])
     for (const theme of ["light", "dark"]) {
       await page.setViewportSize({ width, height: 1000 });

@@ -1,7 +1,7 @@
 import { loadProductionModel, modelAccess } from "../production/service.js";
 import { digest } from "../identity/security.js";
 import { onboardingStatus } from "./onboarding.js";
-import { relationshipDocumentPredicate } from "./document-scope.js";
+import { fiscalDocumentPredicate } from "../records/query.js";
 import { randomUUID } from "node:crypto";
 import {
   RelationshipEntitySchema,
@@ -759,7 +759,7 @@ export async function evidenceAccess(
   p: { documentId: string; version: number; sha256: string },
 ) {
   const args: unknown[] = [p.documentId];
-  const predicate = relationshipDocumentPredicate(
+  const predicate = fiscalDocumentPredicate(
     a,
     (v) => {
       args.push(v);

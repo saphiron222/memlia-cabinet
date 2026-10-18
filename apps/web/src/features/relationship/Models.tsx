@@ -533,30 +533,59 @@ export function ModelForm({
                         />
                         <div className="relationship-fields">
                           {s.statuses.map((status, j) => (
-                            <Field
-                              key={status.id}
-                              name={status.id}
-                              label={"Statut " + (j + 1)}
-                              disabled={!!s.stageTypeId}
-                              value={status.name}
-                              onChange={(v) =>
-                                D({
-                                  ...d,
-                                  steps: d.steps.map((x) =>
-                                    x.id === s.id
-                                      ? {
-                                          ...x,
-                                          statuses: s.statuses.map((st) =>
-                                            st.id === status.id
-                                              ? { ...st, name: v }
-                                              : st,
-                                          ),
-                                        }
-                                      : x,
-                                  ),
-                                })
-                              }
-                            />
+                            <div key={status.id} className="relationship-stack">
+                              <Field
+                                name={status.id}
+                                label={"Statut " + (j + 1)}
+                                disabled={!!s.stageTypeId}
+                                value={status.name}
+                                onChange={(v) =>
+                                  D({
+                                    ...d,
+                                    steps: d.steps.map((x) =>
+                                      x.id === s.id
+                                        ? {
+                                            ...x,
+                                            statuses: s.statuses.map((st) =>
+                                              st.id === status.id
+                                                ? { ...st, name: v }
+                                                : st,
+                                            ),
+                                          }
+                                        : x,
+                                    ),
+                                  })
+                                }
+                              />
+                              <Checkbox
+                                label={
+                                  "Statut final : " +
+                                  (status.name || "Statut " + (j + 1))
+                                }
+                                disabled={!!s.stageTypeId}
+                                checked={status.final}
+                                onChange={(e) =>
+                                  D({
+                                    ...d,
+                                    steps: d.steps.map((x) =>
+                                      x.id === s.id
+                                        ? {
+                                            ...x,
+                                            statuses: x.statuses.map((st) =>
+                                              st.id === status.id
+                                                ? {
+                                                    ...st,
+                                                    final: e.target.checked,
+                                                  }
+                                                : st,
+                                            ),
+                                          }
+                                        : x,
+                                    ),
+                                  })
+                                }
+                              />
+                            </div>
                           ))}
                         </div>
                         <Button

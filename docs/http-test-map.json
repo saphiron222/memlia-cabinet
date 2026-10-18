@@ -573,7 +573,7 @@
   },
   "POST /api/v1/relationship/lab/reminders": {
     "file": "apps/server/test/relationship.test.ts",
-    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
   },
   "GET /api/v1/relationship/onboarding/:id/status": {
     "file": "apps/server/test/relationship.test.ts",
@@ -589,7 +589,7 @@
   },
   "GET /api/v1/relationship/entities/:id/capabilities": {
     "file": "apps/server/test/relationship.test.ts",
-    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
   },
   "POST /api/v1/relationship/entities": {
     "file": "apps/server/test/relationship.test.ts",
@@ -601,7 +601,7 @@
   },
   "GET /api/v1/relationship/entities/:id": {
     "file": "apps/server/test/relationship.test.ts",
-    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
   },
   "POST /api/v1/relationship/prospects/:id/move": {
     "file": "apps/server/test/relationship.test.ts",
@@ -609,7 +609,7 @@
   },
   "GET /api/v1/relationship/:id/history": {
     "file": "apps/server/test/relationship.test.ts",
-    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+    "test": "reverse Work proof owner withdraws current and historical LAB detail, history, reminders, exports and replay consistently with GED, then restores them"
   },
   "GET /api/v1/relationship/:id/events": {
     "file": "apps/server/test/relationship.test.ts",
