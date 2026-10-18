@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Client, Pool } from "pg";
 import { EvidenceStore } from "../../scripts/relationship-diagnostic-evidence.mjs";
 import { runStage } from "../../scripts/relationship-diagnostic-stage.mjs";
+import { createDiagnosticControl } from "../../scripts/relationship-diagnostic-control.mjs";
 const uri = new URL(process.env.DATABASE_URL);
 assert(["localhost", "127.0.0.1", "[::1]"].includes(uri.hostname));
 
@@ -44,6 +45,10 @@ for (const scenario of ["active", "delayed", "deadline", "monitor-deadline"]) {
         query_timeout: 5000,
         // Shortened only in this synthetic delayed-signal witness: old cleanup
         // attempts DROP while the real native reader still holds its lock.
+        statement_timeout: delayed ? 100 : 5000,
+      });
+      const stageControl = createDiagnosticControl({
+        connectionString: uri.toString(),
         statement_timeout: delayed ? 100 : 5000,
       });
       owned.on("error", () => {});
@@ -88,16 +93,16 @@ for (const scenario of ["active", "delayed", "deadline", "monitor-deadline"]) {
           (row) => row.application_name === applicationName,
         );
         const observedControl = {
-          async query(input, params) {
+          async queryWithin(input, deadline) {
             const sql = typeof input === "string" ? input : input.text;
             if (monitored && sql.startsWith("SELECT pid,state")) {
-              monitorTimeout = input.query_timeout ?? 5000;
+              monitorTimeout = Math.floor(deadline - performance.now());
               // A real control query is still in flight when the child exits.
               // The stage must not add its full 5s allowance after the deadline.
-              return control.query({
-                text: "SELECT pg_sleep(5)",
-                query_timeout: monitorTimeout,
-              });
+              return stageControl.queryWithin(
+                { text: "SELECT pg_sleep(5)" },
+                deadline,
+              );
             }
             if (delayed && sql.includes("pg_terminate_backend")) {
               // A successful send is not an exit acknowledgement. Delay only
@@ -106,14 +111,12 @@ for (const scenario of ["active", "delayed", "deadline", "monitor-deadline"]) {
                 "SELECT pid,backend_start::text FROM pg_stat_activity WHERE application_name=$1",
                 [applicationName],
               );
-              signalPromise = delay(250).then(() =>
-                control.query(input, params),
-              );
+              signalPromise = delay(250).then(() => control.query(input));
               return {
                 rows: targets.rows.map((row) => ({ ...row, terminated: true })),
               };
             }
-            return control.query(input, params);
+            return stageControl.queryWithin(input, deadline);
           },
         };
         let failure;
@@ -222,6 +225,7 @@ for (const scenario of ["active", "delayed", "deadline", "monitor-deadline"]) {
         await unrelated.query(`DROP SCHEMA IF EXISTS ${sentinel} CASCADE`);
         await unrelated.end();
         await control.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+        await stageControl.end();
         await control.end();
       }
     },

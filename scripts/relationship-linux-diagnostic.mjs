@@ -6,7 +6,7 @@ import { readFileSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { platform, arch, cpus, totalmem } from "node:os";
-import { Pool } from "pg";
+import { createDiagnosticControl } from "./relationship-diagnostic-control.mjs";
 import { EvidenceStore } from "./relationship-diagnostic-evidence.mjs";
 import {
   runStage,
@@ -81,12 +81,8 @@ const childEnv = {
   FORCE_COLOR: "0",
 };
 delete childEnv.NO_COLOR;
-const control = new Pool({
+const control = createDiagnosticControl({
   connectionString: process.env.DATABASE_URL,
-  max: 1,
-  connectionTimeoutMillis: 5000,
-  query_timeout: 5000,
-  statement_timeout: 5000,
 });
 const sourcePaths = [
   ".github/workflows/ci.yml",
@@ -97,9 +93,11 @@ const sourcePaths = [
   "scripts/relationship-diagnostic-evidence.mjs",
   "scripts/relationship-diagnostic-evidence.d.mts",
   "scripts/relationship-diagnostic-stage.mjs",
+  "scripts/relationship-diagnostic-control.mjs",
   "tests/diagnostics/relationship-linux-reporter.mjs",
   "tests/diagnostics/relationship-linux-bounds.test.mjs",
   "tests/diagnostics/relationship-linux-cleanup.test.mjs",
+  "tests/diagnostics/relationship-linux-control.test.mjs",
   "tests/diagnostics/relationship-linux.config.ts",
   "tests/diagnostics/relationship-linux.setup.ts",
   "tests/diagnostics/relationship-linux-observer.ts",
@@ -189,7 +187,7 @@ const cases = [
 ];
 try {
   const environment = (
-    await control.query(
+    await control.queryWithin(
       "SELECT version() version,current_setting('server_version_num') server_version_num,current_setting('jit') jit,pg_jit_available() compiler_available,current_setting('jit_above_cost') jit_above_cost,current_setting('jit_inline_above_cost') jit_inline_above_cost,current_setting('jit_optimize_above_cost') jit_optimize_above_cost",
     )
   ).rows[0];
@@ -248,7 +246,7 @@ try {
       evidence: evidence.limits,
     },
     settings:
-      "No JIT or statement/test/lock timeout changes; EXPLAIN ANALYZE keeps server policy. Only control connection has 5s monitoring timeout.",
+      "No JIT or statement/test/lock timeout changes in the original tests; EXPLAIN ANALYZE keeps server policy. Each owned control has one deadline of at most 5s including connection, query and transport close, within the original stage deadline.",
   });
   const receipts = [];
   for (const [id, file, name] of cases) {
@@ -311,7 +309,7 @@ try {
     });
   }
   const after = (
-    await control.query(
+    await control.queryWithin(
       "SELECT current_setting('jit') jit,pg_jit_available() compiler_available",
     )
   ).rows[0];

@@ -10,6 +10,10 @@ import {
 } from "./relationship-diagnostic-evidence.mjs";
 export const scrub = (value) =>
   value.replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, "[database URL redacted]");
+function requireOwnedControl(control) {
+  if (typeof control?.queryWithin !== "function")
+    throw new Error("A cancellable owned diagnostic control is required");
+}
 export function readEvents(directory, stage, allowIncompleteTail = false) {
   try {
     const text = readFileSync(join(directory, `${stage}-events.jsonl`), "utf8");
@@ -30,6 +34,7 @@ export async function cleanOwned(
   stage,
   deadline,
 ) {
+  requireOwnedControl(control);
   if (!/^memlia-relationship-diag-[a-f0-9-]{36}$/.test(applicationName))
     throw new Error("Invalid owned application identity");
   const remaining = () => {
@@ -37,12 +42,10 @@ export async function cleanOwned(
     if (ms <= 0) throw new Error("Owned cleanup exceeded the stage deadline");
     return ms;
   };
-  const query = (text, values = []) =>
-    control.query({
-      text,
-      values,
-      query_timeout: Math.min(5000, remaining()),
-    });
+  const query = (text, values = []) => {
+    remaining();
+    return control.queryWithin({ text, values }, deadline);
+  };
   const schemas = [
     ...new Set(
       readEvents(directory, stage, true).flatMap((e) =>
@@ -118,6 +121,7 @@ export async function runStage({
   boundMs,
   killGraceMs = 10000,
 }) {
+  requireOwnedControl(control);
   const store = new EvidenceStore(directory, stage),
     startedAt = new Date().toISOString(),
     started = performance.now();
@@ -209,11 +213,13 @@ export async function runStage({
       try {
         const remainingMs = Math.floor(started + boundMs - performance.now());
         if (remainingMs <= 0) return;
-        const result = await control.query({
-          text: "SELECT pid,state,wait_event_type,wait_event,pg_blocking_pids(pid) AS blockers,extract(epoch FROM clock_timestamp()-query_start)*1000 AS query_ms,query FROM pg_stat_activity WHERE application_name=$1",
-          values: [applicationName],
-          query_timeout: Math.min(5000, remainingMs),
-        });
+        const result = await control.queryWithin(
+          {
+            text: "SELECT pid,state,wait_event_type,wait_event,pg_blocking_pids(pid) AS blockers,extract(epoch FROM clock_timestamp()-query_start)*1000 AS query_ms,query FROM pg_stat_activity WHERE application_name=$1",
+            values: [applicationName],
+          },
+          started + boundMs,
+        );
         const rows = result.rows.map(({ query, ...row }) => ({
           ...row,
           sqlSha256: createHash("sha256").update(query).digest("hex"),

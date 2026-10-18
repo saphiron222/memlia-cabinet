@@ -16,6 +16,7 @@ import {
   EvidenceLimit,
 } from "../../scripts/relationship-diagnostic-evidence.mjs";
 import { runStage } from "../../scripts/relationship-diagnostic-stage.mjs";
+import { createDiagnosticControl } from "../../scripts/relationship-diagnostic-control.mjs";
 const root = resolve(
   process.env.RELATIONSHIP_BOUNDS_TEST_DIRECTORY ??
     `var/task6/bounds-${Date.now()}`,
@@ -33,6 +34,9 @@ const control = new Pool({
   connectionString: uri.toString(),
   max: 1,
   query_timeout: 5000,
+});
+const stageControl = createDiagnosticControl({
+  connectionString: uri.toString(),
 });
 const otherName = "diag-unrelated-" + randomUUID(),
   otherUri = new URL(uri);
@@ -65,14 +69,14 @@ async function exercise(
   const childSource = `import {EvidenceStore} from ${JSON.stringify(moduleUrl)};const store=new EvidenceStore(process.env.RELATIONSHIP_DIAGNOSTIC_DIRECTORY,process.env.RELATIONSHIP_DIAGNOSTIC_STAGE,'observer');${source ?? ""}`;
   const observedControl = monitorRows
     ? {
-        query: (sql, params) =>
+        queryWithin: (sql, deadline) =>
           (typeof sql === "string" ? sql : sql.text).startsWith(
             "SELECT pid,state",
           )
             ? Promise.resolve({ rows: monitorRows })
-            : control.query(sql, params),
+            : stageControl.queryWithin(sql, deadline),
       }
-    : control;
+    : stageControl;
   let failure;
   try {
     await runStage({
@@ -301,6 +305,7 @@ test("bounded diagnostic writers stop only their stage and preserve owned cleanu
   } finally {
     await unrelated.query(`DROP SCHEMA IF EXISTS ${sentinel} CASCADE`);
     await unrelated.end();
+    await stageControl.end();
     await control.end();
   }
 });
