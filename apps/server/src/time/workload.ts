@@ -109,7 +109,6 @@ export async function calculateWorkload(
     params.push(v);
     return "$" + params.length;
   };
-  const cte = scopeCte(actor, p);
   const objectUsers = (
     alias: string,
     param: (v: unknown) => string,
@@ -126,8 +125,14 @@ export async function calculateWorkload(
       `COALESCE(r.content->'data'->'assigneeIds','[]'::jsonb) ?| ${p(selectedUsers)}::text[]`,
     ),
   ];
+  const recordCandidates = `r.kind IN('tache','obligation') AND NOT EXISTS(SELECT 1 FROM cabinet_production_rows represented WHERE represented.record_id=r.id) AND ${recordFilters.join(" AND ")} AND r.content->'data'->>'dueDate'>=${p(q.from)} AND r.content->'data'->>'dueDate'<=${p(q.to)}`;
+  const cte = await scopeCte(tx, actor, p, {
+    kind: "record",
+    sql: `SELECT r.content FROM cabinet_records r WHERE ${recordCandidates}`,
+    params: [...params],
+  });
   const scopeRecords = await tx.query(
-    `${cte} SELECT r.content FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND r.kind IN('tache','obligation') AND NOT EXISTS(SELECT 1 FROM cabinet_production_rows represented WHERE represented.record_id=r.id) AND ${recordFilters.join(" AND ")} AND r.content->'data'->>'dueDate'>=${p(q.from)} AND r.content->'data'->>'dueDate'<=${p(q.to)} ORDER BY r.id LIMIT 10001`,
+    `${cte} SELECT r.content FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND ${recordCandidates} ORDER BY r.id LIMIT 10001`,
     params,
   );
   if (scopeRecords.length > 10000)
@@ -151,8 +156,14 @@ export async function calculateWorkload(
       `EXISTS(SELECT 1 FROM cabinet_production_model_versions mv CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND COALESCE(c->>'assigneeId',mv.content->'model'->>'assigneeId',(SELECT v.content->>'assigneeId' FROM cabinet_production_row_versions v WHERE v.id=p.id AND v.version=1))=ANY(${pp(selectedUsers)}::text[]))`,
     ),
   ];
+  const productionCandidates = `${productionFilters.join(" AND ")} AND EXISTS(SELECT 1 FROM cabinet_production_model_versions mv WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND (EXISTS(SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE (mv.content->'model'->>'kind'<>'custom' AND c->>'plannedDate'>=${pp(q.from)} AND c->>'plannedDate'<=${pp(q.to)}) OR (mv.content->'model'->>'kind'<>'custom' AND c->>'frequency'<>'once' AND substring(p.content->>'period',1,4) BETWEEN substring(${pp(q.from)}::text,1,4) AND substring(${pp(q.to)}::text,1,4))) OR EXISTS(SELECT 1 FROM cabinet_production_row_versions first WHERE first.id=p.id AND first.version=1 AND first.content->>'dueDate'>=${pp(q.from)} AND first.content->>'dueDate'<=${pp(q.to)})))`;
+  const productionCte = await scopeCte(tx, actor, pp, {
+    kind: "production",
+    sql: `SELECT p.content FROM cabinet_production_rows p WHERE ${productionCandidates}`,
+    params: [...prodParams],
+  });
   const prod = await tx.query(
-    `${scopeCte(actor, pp)} SELECT p.content FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND ${productionFilters.join(" AND ")} AND EXISTS(SELECT 1 FROM cabinet_production_model_versions mv WHERE mv.id=p.model_id AND mv.version=(p.content->>'modelVersion')::int AND (EXISTS(SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_array_length(mv.content->'model'->'columns')=0 THEN '[{}]'::jsonb ELSE mv.content->'model'->'columns' END) c WHERE (mv.content->'model'->>'kind'<>'custom' AND c->>'plannedDate'>=${pp(q.from)} AND c->>'plannedDate'<=${pp(q.to)}) OR (mv.content->'model'->>'kind'<>'custom' AND c->>'frequency'<>'once' AND substring(p.content->>'period',1,4) BETWEEN substring(${pp(q.from)}::text,1,4) AND substring(${pp(q.to)}::text,1,4))) OR EXISTS(SELECT 1 FROM cabinet_production_row_versions first WHERE first.id=p.id AND first.version=1 AND first.content->>'dueDate'>=${pp(q.from)} AND first.content->>'dueDate'<=${pp(q.to)}))) ORDER BY p.id LIMIT 10001`,
+    `${productionCte} SELECT p.content FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND ${productionCandidates} ORDER BY p.id LIMIT 10001`,
     prodParams,
   );
   if (prod.length > 10000)

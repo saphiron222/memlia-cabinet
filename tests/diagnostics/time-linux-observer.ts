@@ -67,19 +67,23 @@ const direct = (client: Client, sql: string, params?: unknown[]) =>
   original.call(client, sql, params) as Promise<QueryResult>;
 let serial = 0;
 let timeOrdinal = 0;
-let measured = false;
-let target: { timeOrdinal: number; sqlSha256: string } | undefined;
-export const probeWasMeasured = () => measured;
+let referenceOrdinal = 0;
+type Target = { timeOrdinal: number; sqlSha256: string };
+let targets: Target[] = [];
+const measured = new Set<number>();
+export const probeWasMeasured = () =>
+  targets.length > 0 && targets.every((t) => measured.has(t.timeOrdinal));
 
 async function plans(
   client: Client,
   sql: string,
   params: unknown[],
-  ordinal: number,
+  target: Target,
 ) {
-  if (hash(sql) !== target?.sqlSha256)
+  if (hash(sql) !== target.sqlSha256)
     throw new Error("Probe SQL differs from the selected baseline SQL");
-  measured = true;
+  const ordinal = target.timeOrdinal;
+  measured.add(ordinal);
   const identity = {
     timeOrdinal: ordinal,
     sqlSha256: hash(sql),
@@ -94,7 +98,7 @@ async function plans(
     (SELECT count(*) FROM cabinet_production_rows) AS production_current,
     (SELECT count(*) FROM cabinet_production_row_versions) AS production_history`;
   const before = (await direct(client, counts)).rows;
-  artifact("selected-query", { ...identity, sql, params, before });
+  artifact(`selected-query-${ordinal}`, { ...identity, sql, params, before });
   // Same live transaction, unchanged fictitious rows and parameters. Savepoints
   // restore each experimental SET LOCAL even when EXPLAIN is cancelled.
   for (const jit of ["on", "off"] as const) {
@@ -110,7 +114,7 @@ async function plans(
         `EXPLAIN (ANALYZE, BUFFERS, VERBOSE, SETTINGS, FORMAT JSON) ${sql}`,
         params,
       );
-      const receipt = artifact(`plan-${jit}`, {
+      const receipt = artifact(`plan-${ordinal}-${jit}`, {
         ...identity,
         jit,
         state,
@@ -136,7 +140,7 @@ async function plans(
     }
   }
   const after = (await direct(client, counts)).rows;
-  artifact("plan-reset", {
+  artifact(`plan-reset-${ordinal}`, {
     before,
     after,
     same: JSON.stringify(before) === JSON.stringify(after),
@@ -147,13 +151,11 @@ async function plans(
     );
 }
 
-export function installObserver(selected?: {
-  timeOrdinal: number;
-  sqlSha256: string;
-}) {
+export function installObserver(selected: Target[] = []) {
   if (!directory || !stage || !process.env.DATABASE_URL)
     throw new Error("Manual native diagnostic environment required");
-  target = selected;
+  if (selected.length > 2) throw new Error("At most two diagnostic plan pairs");
+  targets = selected;
   // Observe the driver rather than replacing the canonical Database provider.
   // Preserve both promise and callback forms used by pg.Pool and pg.Client.
   Client.prototype.query = function (this: Client, ...args: unknown[]) {
@@ -170,18 +172,22 @@ export function installObserver(selected?: {
     const id = ++serial;
     const started = performance.now();
     const isTime = sql.startsWith("WITH time_readable_records AS MATERIALIZED");
+    const isReference = sql.startsWith("WITH selected AS MATERIALIZED");
     const ordinal = isTime ? ++timeOrdinal : undefined;
+    const references = isReference ? ++referenceOrdinal : undefined;
+    const selectedTarget = targets.find((t) => t.timeOrdinal === ordinal);
     const details = {
       id,
       sqlSha256: hash(sql),
       command: sql.trim().split(/\s+/, 2).join(" "),
       backend: (this as Client & { processID?: number }).processID,
       timeOrdinal: ordinal,
+      referenceOrdinal: references,
     };
-    if (isTime) {
-      if (ordinal! > 64 || Buffer.byteLength(sql) > 1024 * 1024)
+    if (isTime || isReference) {
+      if ((ordinal ?? references)! > 64 || Buffer.byteLength(sql) > 1024 * 1024)
         throw new Error("Diagnostic SQL capture bound exceeded");
-      artifact(`query-${ordinal}`, {
+      artifact(isTime ? `query-${ordinal}` : `references-${references}`, {
         ...details,
         sql,
         params,
@@ -206,7 +212,7 @@ export function installObserver(selected?: {
         ? (args.at(-1) as (...values: unknown[]) => void)
         : undefined;
     if (callback) {
-      if (ordinal !== undefined && ordinal === target?.timeOrdinal)
+      if (selectedTarget)
         throw new Error("Selected Time query unexpectedly uses callback mode");
       args[args.length - 1] = (...values: unknown[]) => {
         end(values[0]);
@@ -221,8 +227,7 @@ export function installObserver(selected?: {
     }
     return (async () => {
       try {
-        if (ordinal !== undefined && ordinal === target?.timeOrdinal)
-          await plans(this, sql, params, ordinal);
+        if (selectedTarget) await plans(this, sql, params, selectedTarget);
         const result = await original.apply(this, args);
         end();
         return result;

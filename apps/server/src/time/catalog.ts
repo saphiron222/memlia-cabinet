@@ -53,8 +53,13 @@ export async function catalog(
     where.push(`t.id=${p(actor.id)}::uuid`);
   let cte = "";
   if (kind === "natures") {
-    cte = scopeCte(actor, p);
-    where.push("t.kind='nature'", fullScope(actor, p));
+    where.push("t.kind='nature'");
+    cte = await scopeCte(tx, actor, p, {
+      kind: "time",
+      sql: `SELECT t.content FROM cabinet_time t WHERE ${where.join(" AND ")}`,
+      params: [...params],
+    });
+    where.push(fullScope(actor, p));
   }
   const rows = await tx.query(
     `${cte} SELECT t.id,${name} name,${active} active FROM ${table} t WHERE ${where.join(" AND ")} ORDER BY ${name},t.id LIMIT 101 OFFSET ${p(q.offset)}`,

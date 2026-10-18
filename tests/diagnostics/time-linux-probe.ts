@@ -21,7 +21,7 @@ const selected = JSON.parse(
     "utf8",
   ),
 );
-installObserver(selected);
+installObserver(selected.targets);
 const { createApplication } = await import("../../apps/server/src/app.js");
 const { openDatabase } =
   await import("../../apps/server/src/storage/database.js");

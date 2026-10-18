@@ -22,15 +22,27 @@ import { loadProductionRow } from "../production/service.js";
 import { loadRecord } from "../records/service.js";
 import { idempotent } from "../storage/operations.js";
 import { fail } from "../errors.js";
+import { scopeReferences, type ScopeSelection } from "./scope-references.js";
 export const manages = (a: SessionUser) => hasPermission(a, "time_manage", "*");
 export const readsOthers = (a: SessionUser) =>
   hasPermission(a, "time_read", "*");
-export function scopeCte(
+export async function scopeCte(
+  tx: Connection,
   actor: SessionUser,
   p: (v: unknown) => string,
+  selection: ScopeSelection,
   action: "read" | "export" = "read",
 ) {
-  return `WITH time_readable_records AS MATERIALIZED (SELECT r.id FROM cabinet_records r WHERE ${authorizedPredicate(actor, action, p)}), time_readable_production AS MATERIALIZED (SELECT p.id FROM cabinet_production_rows p WHERE ${productionScopePredicate(actor, action, p, "p.content", "r.id IN (SELECT id FROM time_readable_records)")})`;
+  // Recomputed within the caller's serialized transaction, without a rights
+  // cache. Empty or small dependency sets must not plan every cabinet object.
+  const refs = await scopeReferences(tx, selection);
+  const records = refs.records.length
+    ? `r.id=ANY(${p(refs.records)}::uuid[]) AND ${authorizedPredicate(actor, action, p)}`
+    : "FALSE";
+  const production = refs.production.length
+    ? `p.id=ANY(${p(refs.production)}::uuid[]) AND ${productionScopePredicate(actor, action, p, "p.content", "r.id IN (SELECT id FROM time_readable_records)")}`
+    : "FALSE";
+  return `WITH time_readable_records AS MATERIALIZED (SELECT r.id FROM cabinet_records r WHERE ${records}), time_readable_production AS MATERIALIZED (SELECT p.id FROM cabinet_production_rows p WHERE ${production})`;
 }
 export function scope(
   actor: SessionUser,
@@ -78,8 +90,6 @@ async function entityRows(
       params.push(v);
       return "$" + params.length;
     };
-  const cte = scopeCte(actor, p, action),
-    filter = fullScope(actor, p, "t.content", action);
   const selected = selection
     ? [
         selection.where ? selection.where(p) : "TRUE",
@@ -94,8 +104,21 @@ async function entityRows(
           : "TRUE",
       ].join(" AND ")
     : "TRUE";
+  const candidates = `${selected}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""}`;
+  const cte = await scopeCte(
+    tx,
+    actor,
+    p,
+    {
+      kind: "time",
+      sql: `SELECT t.content FROM cabinet_time t WHERE ${candidates}`,
+      params: [...params],
+    },
+    action,
+  );
+  const filter = fullScope(actor, p, "t.content", action);
   const rows = await tx.query(
-    `${cte} SELECT t.content${selection?.count ? ", count(*) OVER() AS total" : ""} FROM cabinet_time t WHERE ${filter} AND ${selected}${kind ? ` AND t.kind=${p(kind)}` : " AND t.kind NOT IN('entry','timer')"}${dates ? ` AND t.content->'data'->>'date'>=${p(dates.from)} AND t.content->'data'->>'date'<=${p(dates.to)}` : ""} ORDER BY t.id LIMIT ${p(selection?.limit ?? 20001)} OFFSET ${p(selection?.offset ?? 0)}`,
+    `${cte} SELECT t.content${selection?.count ? ", count(*) OVER() AS total" : ""} FROM cabinet_time t WHERE ${filter} AND ${candidates} ORDER BY t.id LIMIT ${p(selection?.limit ?? 20001)} OFFSET ${p(selection?.offset ?? 0)}`,
     params,
   );
   if (rows.length > 20000)
@@ -145,8 +168,13 @@ export async function load(tx: Connection, actor: SessionUser, id: string) {
       params.push(v);
       return "$" + params.length;
     };
+  const cte = await scopeCte(tx, actor, p, {
+    kind: "time",
+    sql: "SELECT content FROM cabinet_time WHERE id=$1",
+    params: [id],
+  });
   const rows = await tx.query(
-    `${scopeCte(actor, p)} SELECT t.content FROM cabinet_time t WHERE t.id=$1 AND ${fullScope(actor, p)}`,
+    `${cte} SELECT t.content FROM cabinet_time t WHERE t.id=$1 AND ${fullScope(actor, p)}`,
     params,
   );
   if (!rows[0]) fail(404, "NOT_FOUND", "Temps inaccessible.");
@@ -163,8 +191,19 @@ export async function authorize(
       params.push(v);
       return "$" + params.length;
     };
+  const cte = await scopeCte(
+    tx,
+    actor,
+    p,
+    {
+      kind: "time",
+      sql: "SELECT $1::jsonb content",
+      params: [...params],
+    },
+    action,
+  );
   const r = await tx.query(
-    `${scopeCte(actor, p, action)} SELECT ${scope(actor, p, "$1::jsonb", action)} allowed`,
+    `${cte} SELECT ${scope(actor, p, "$1::jsonb", action)} allowed`,
     params,
   );
   if (r[0]?.allowed !== true) fail(404, "NOT_FOUND", "Temps inaccessible.");
@@ -521,10 +560,8 @@ export async function report(
       params.push(v);
       return "$" + params.length;
     };
-  const cte = scopeCte(actor, p, action);
   const filters = [
     "t.kind='entry'",
-    fullScope(actor, p, "t.content", action),
     "t.content->'data'->>'date'>=$1",
     "t.content->'data'->>'date'<=$2",
   ];
@@ -548,7 +585,19 @@ export async function report(
     filters.push(
       `EXISTS(SELECT 1 FROM cabinet_memberships m WHERE m.group_id=${p(q.groupId)}::uuid AND m.user_id=(t.content->'data'->>'userId')::uuid)`,
     );
-  const where = filters.join(" AND ");
+  const candidates = filters.join(" AND ");
+  const cte = await scopeCte(
+    tx,
+    actor,
+    p,
+    {
+      kind: "time",
+      sql: `SELECT t.content FROM cabinet_time t WHERE ${candidates}`,
+      params: [...params],
+    },
+    action,
+  );
+  const where = `${candidates} AND ${fullScope(actor, p, "t.content", action)}`;
   const totals = (
     await tx.query(
       `${cte} SELECT count(*) total,COALESCE(sum((t.content->'data'->>'seconds')::bigint),0) seconds,COALESCE(sum(CASE WHEN t.content->'data'->'rate'->>'hourlyAmount' IS NULL THEN (t.content->'data'->>'seconds')::bigint ELSE 0 END),0) unrated,round(sum((t.content->'data'->>'seconds')::numeric*(t.content->'data'->'rate'->>'hourlyAmount')::numeric/3600),2)::text amount FROM cabinet_time t WHERE ${where}`,
@@ -604,16 +653,28 @@ export async function targets(
       params.push(v);
       return "$" + params.length;
     };
-  const cte = scopeCte(actor, p);
   const pattern = p("%" + q.replace(/[\\%_]/g, "\\$&") + "%");
+  const source = kind === "production" ? "production" : "record";
+  const candidates =
+    kind === "production"
+      ? `p.content->'target'->>'label' ILIKE ${pattern}`
+      : `r.kind=${p(kind)} AND r.content->>'title' ILIKE ${pattern}`;
+  const cte = await scopeCte(tx, actor, p, {
+    kind: source,
+    sql:
+      kind === "production"
+        ? `SELECT p.content FROM cabinet_production_rows p WHERE ${candidates}`
+        : `SELECT r.content FROM cabinet_records r WHERE ${candidates}`,
+    params: [...params],
+  });
   const rows =
     kind === "production"
       ? await tx.query(
-          `${cte} SELECT p.id,p.content->'target'->>'label' label FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND p.content->'target'->>'label' ILIKE ${pattern} ORDER BY p.id LIMIT 101 OFFSET ${p(offset)}`,
+          `${cte} SELECT p.id,p.content->'target'->>'label' label FROM cabinet_production_rows p WHERE p.id IN(SELECT id FROM time_readable_production) AND ${candidates} ORDER BY p.id LIMIT 101 OFFSET ${p(offset)}`,
           params,
         )
       : await tx.query(
-          `${cte} SELECT r.id,r.content->>'title' label FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND r.kind=${p(kind)} AND r.content->>'title' ILIKE ${pattern} ORDER BY r.id LIMIT 101 OFFSET ${p(offset)}`,
+          `${cte} SELECT r.id,r.content->>'title' label FROM cabinet_records r WHERE r.id IN(SELECT id FROM time_readable_records) AND ${candidates} ORDER BY r.id LIMIT 101 OFFSET ${p(offset)}`,
           params,
         );
   return {

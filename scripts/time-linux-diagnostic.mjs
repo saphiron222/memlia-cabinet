@@ -99,10 +99,14 @@ const sourcePaths = [
   "package-lock.json",
   "apps/server/test/time-review.test.ts",
   "apps/server/test/time.test.ts",
+  "apps/server/test/time-scope.test.ts",
   "apps/server/test/production-round1.test.ts",
   "apps/server/test/helpers.ts",
   "apps/server/src/time/service.ts",
   "apps/server/src/time/export.ts",
+  "apps/server/src/time/catalog.ts",
+  "apps/server/src/time/workload.ts",
+  "apps/server/src/time/scope-references.ts",
   "apps/server/src/production/query.ts",
   "apps/server/src/records/query.ts",
   "apps/server/src/storage/database.ts",
@@ -321,27 +325,32 @@ try {
     ],
     110000,
   );
-  // Prefer the first slow completed Time statement; retain incomplete statements
-  // and the exact original failure if the process bound interrupted one.
+  // Round4 measured the old ordinal1 and observed ordinal9 as the slowest.
+  // Measure those two contexts explicitly; neither substitutes for full CI.
+  // Pending statements retain their original failures and still have SQL bytes.
   const events = readEvents("baseline");
-  const timeStatements = events.filter(
-    (e) =>
-      ["sql.end", "sql.error"].includes(e.type) && e.timeOrdinal !== undefined,
-  );
-  const selected =
-    timeStatements.find((e) => e.type === "sql.end" && e.elapsedMs >= 1000) ??
-    timeStatements
-      .filter((e) => e.type === "sql.end")
-      .sort((a, b) => b.elapsedMs - a.elapsedMs)[0] ??
-    events.find((e) => e.type === "sql.start" && e.timeOrdinal !== undefined);
+  const selected = [1, 9].flatMap((ordinal) => {
+    const start = events.find(
+      (e) => e.type === "sql.start" && e.timeOrdinal === ordinal,
+    );
+    if (!start) return [];
+    const end = events.find(
+      (e) => e.type === "sql.end" && e.timeOrdinal === ordinal,
+    );
+    return [
+      {
+        timeOrdinal: ordinal,
+        sqlSha256: start.sqlSha256,
+        baselineElapsedMs: end?.elapsedMs ?? null,
+      },
+    ];
+  });
   let probe = null;
-  if (selected) {
+  if (selected.length) {
     save("target.json", {
-      timeOrdinal: selected.timeOrdinal,
-      sqlSha256: selected.sqlSha256,
-      baselineElapsedMs: selected.elapsedMs ?? null,
+      targets: selected,
       selection:
-        "first completed Time SQL >=1s, else slowest completed, else first pending; same ordinal and SQL hash required in independent probe",
+        "original first authorize (ordinal1) and reader load (ordinal9), when reached; maximum2pairs; same ordinal and SQL hash required in independent probe",
     });
     probe = await run(
       "probe",
@@ -349,8 +358,10 @@ try {
       480000,
     );
   }
-  const plans = ["on", "off"].map((jit) =>
-    join(directory, `probe-plan-${jit}.json`),
+  const plans = selected.flatMap((target) =>
+    ["on", "off"].map((jit) =>
+      join(directory, `probe-plan-${target.timeOrdinal}-${jit}.json`),
+    ),
   );
   const planReceipts = plans.map((path) => {
     try {
@@ -360,7 +371,10 @@ try {
     }
   });
   const complete =
-    probe?.code === 0 && !probe.timedOut && planReceipts.every(Boolean);
+    selected.length === 2 &&
+    probe?.code === 0 &&
+    !probe.timedOut &&
+    planReceipts.every(Boolean);
   const after = (
     await control.query(
       "SELECT current_setting('jit') AS jit,pg_jit_available() AS compiler_available",
