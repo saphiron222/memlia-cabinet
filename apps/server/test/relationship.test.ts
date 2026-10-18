@@ -1800,3 +1800,81 @@ test("LAB v13 migration preserves the v12 verdict for historical owners, contact
     (await f.request("GET", `/relationship/entities/${review.id}`)).statusCode,
   ).toBe(200);
 });
+
+test("GED proof discovery keeps uppercase historical links and the full document chain protected after LAB withdrawal", async () => {
+  const actor = await start();
+  const createDossier = async (title: string) => {
+    const response = await f.request("POST", "/records", {
+      operationId: operationId(),
+      record: { kind: "dossier", title, data: {} },
+    });
+    expect(response.statusCode, response.body).toBe(201);
+    return response.json();
+  };
+  const a = await createDossier("Ancien propriétaire"),
+    b = await createDossier("Propriétaire courant");
+  const old = await proof(a.id),
+    replacement = await proof(a.id, old.documentId),
+    currentProof = await proof(b.id),
+    unrelated = await proof(b.id);
+  const policy = await save({
+    kind: "lab_policy",
+    name: "Découverte historique",
+    periodDays: 90,
+    reason: "Examen fictif",
+  });
+  let review = await save({
+    kind: "lab",
+    dossierId: a.id,
+    personId: null,
+    level: "standard",
+    reason: "Preuve ancienne",
+    role: "Responsable",
+    observedOn: "2026-10-18",
+    decisionOn: "2026-10-18",
+    nextReviewOn: "2027-01-01",
+    policyId: policy.id,
+    policyVersion: policy.version,
+    evidence: [{ ...old, documentId: old.documentId.toUpperCase() }],
+  });
+  // The current review no longer names either version of this proof chain.
+  review = await save(
+    { ...review.data, dossierId: b.id, evidence: [currentProof] },
+    review,
+  );
+  const base = actor.permissions.filter((p: any) => p.action !== "lab_read");
+  for (const [permissions, status] of [
+    [base, 404],
+    [[...base, { action: "lab_read", kind: "dossier", dossierId: b.id }], 404],
+    [actor.permissions, 200],
+    [base, 404],
+    [actor.permissions, 200],
+  ] as const) {
+    const current = (await f.request("GET", "/session")).json().user;
+    const changed = await f.request("PUT", `/users/${actor.id}`, {
+      operationId: operationId(),
+      expectedVersion: current.version,
+      active: true,
+      permissions,
+    });
+    expect(changed.statusCode, changed.body).toBe(200);
+    for (const id of [old.documentId, replacement.documentId])
+      expect((await f.request("GET", `/documents/${id}`)).statusCode).toBe(
+        status,
+      );
+    expect(
+      (await f.request("GET", `/documents/${unrelated.documentId}`)).statusCode,
+    ).toBe(200);
+    const listing = await f.request("GET", `/documents?dossierId=${a.id}`);
+    expect(listing.statusCode, listing.body).toBe(200);
+    expect(listing.json().total).toBe(status === 200 ? 2 : 0);
+    expect(
+      listing
+        .json()
+        .items.map((item: any) => item.id)
+        .sort(),
+    ).toEqual(
+      status === 200 ? [old.documentId, replacement.documentId].sort() : [],
+    );
+  }
+});

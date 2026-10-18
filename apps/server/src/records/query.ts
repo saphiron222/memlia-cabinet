@@ -217,7 +217,9 @@ export function fiscalDocumentPredicate(
   parameter: (v: unknown) => string,
   documentId: string,
 ) {
-  return `${relationshipDocumentPredicate(actor, parameter, documentId)} AND NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE ((fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (fiscal_owner.kind='tache' AND (fiscal_owner.content->'data'->'documentIds') ? (${documentId})::text)) AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
+  // Isolate the actual owners before applying the full record graph policy.
+  // Only structural rows are projected; grants are evaluated for this actor now.
+  return `${relationshipDocumentPredicate(actor, parameter, documentId)} AND NOT EXISTS(WITH fiscal_owners AS MATERIALIZED(SELECT id,kind,content FROM cabinet_records WHERE ((kind='obligation' AND (content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (kind='tache' AND (content->'data'->'documentIds') ? (${documentId})::text))) SELECT 1 FROM fiscal_owners fiscal_owner WHERE (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
 }
 
 // Grid and original archives use the same current notice and coupled year/property semantics.

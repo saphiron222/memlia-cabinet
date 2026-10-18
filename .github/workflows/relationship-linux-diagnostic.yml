@@ -10,6 +10,8 @@ on:
       - "scripts/relationship-linux-diagnostic.mjs"
       - "scripts/relationship-diagnostic-*"
       - "tests/diagnostics/relationship-linux*"
+      - "apps/server/src/records/query.ts"
+      - "apps/server/src/relationship/document-scope.ts"
 permissions:
   contents: read
 env:

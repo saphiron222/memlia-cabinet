@@ -9,8 +9,14 @@ export function relationshipDocumentPredicate(
   p: (v: unknown) => string,
   id: string,
 ) {
-  return `cabinet_relationship_document_allowed_v13(${p(a.id)}::uuid,${p(JSON.stringify(a.permissions))}::jsonb,(${id})::uuid)`;
+  // Skip the owner policy only when this proof chain has no historical owner.
+  // This is a structural existence check in the same statement, not a verdict
+  // cache; attached proofs still use the unique versioned authorization policy.
+  return `CASE WHEN EXISTS(${relatedLabOwnersSql(id)}) THEN cabinet_relationship_document_allowed_v13(${p(a.id)}::uuid,${p(JSON.stringify(a.permissions))}::jsonb,(${id})::uuid) ELSE TRUE END`;
 }
+const relatedLabOwnersSql = (id: string) =>
+  `SELECT DISTINCT linked.id FROM cabinet_documents lab_target JOIN cabinet_documents lab_proof ON lab_proof.logical_id=lab_target.logical_id JOIN cabinet_relationship_history linked ON EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(linked.content->'data'->'evidence','[]'::jsonb)) proof WHERE (proof->>'documentId')::uuid=lab_proof.id) WHERE lab_target.id=(${id})::uuid`;
+
 function policy(affectedOwners = false) {
   const grant = (
     action: Action,
@@ -34,7 +40,7 @@ function policy(affectedOwners = false) {
   // statement, never an authorization cache: every historical owner still runs
   // the same canonical grant, current existence and full snapshot checks below.
   const owners = affectedOwners
-    ? `WITH affected AS MATERIALIZED(SELECT DISTINCT linked.id FROM cabinet_documents lab_target JOIN cabinet_documents lab_proof ON lab_proof.logical_id=lab_target.logical_id JOIN cabinet_relationship_history linked ON EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(linked.content->'data'->'evidence','[]'::jsonb)) proof WHERE (proof->>'documentId')::uuid=lab_proof.id) WHERE lab_target.id=(${id})::uuid) SELECT 1 FROM affected JOIN cabinet_relationship_history owner ON owner.id=affected.id WHERE owner.content->'data'->>'kind'='lab'`
+    ? `WITH affected AS MATERIALIZED(${relatedLabOwnersSql(id)}) SELECT 1 FROM affected JOIN cabinet_relationship_history owner ON owner.id=affected.id WHERE owner.content->'data'->>'kind'='lab'`
     : `SELECT 1 FROM cabinet_relationship_history owner WHERE owner.content->'data'->>'kind'='lab' AND EXISTS(SELECT 1 FROM cabinet_relationship_history linked WHERE linked.id=owner.id AND EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(linked.content->'data'->'evidence','[]'::jsonb)) proof WHERE EXISTS(SELECT 1 FROM cabinet_documents lab_proof JOIN cabinet_documents lab_target ON lab_target.logical_id=lab_proof.logical_id WHERE lab_proof.id=(proof->>'documentId')::uuid AND lab_target.id=(${id})::uuid)))`;
   return `NOT EXISTS(${owners} AND ((${grant("lab_read", "dossier", "(owner.content->'data'->>'dossierId')::uuid")}) IS NOT TRUE OR NOT EXISTS(SELECT 1 FROM cabinet_records lab_current WHERE lab_current.id=(owner.content->'data'->>'dossierId')::uuid) OR (owner.content->'data'->>'personId' IS NOT NULL AND NOT EXISTS(SELECT 1 FROM cabinet_records lab_current WHERE lab_current.id=(owner.content->'data'->>'personId')::uuid)) OR EXISTS(SELECT 1 FROM (${snapshots}) lab_subject WHERE (${readable}) IS NOT TRUE)))`;
 }
