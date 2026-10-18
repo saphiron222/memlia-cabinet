@@ -899,20 +899,24 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         ).toEqual([
           { rolsuper: false, rolcreatedb: false, rolcreaterole: false },
         ]);
-        expect(
-          (
-            await verification.query(
-              "SELECT p.prosecdef,p.provolatile,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=$1 AND p.proname='cabinet_relationship_document_allowed_v12'",
-              [schema],
-            )
-          ).rows,
-        ).toEqual([
-          {
-            prosecdef: false,
-            provolatile: "s",
-            proconfig: [`search_path=${schema}, pg_catalog`],
-          },
-        ]);
+        for (const functionName of [
+          "cabinet_relationship_document_allowed_v12",
+          "cabinet_relationship_document_allowed_v13",
+        ])
+          expect(
+            (
+              await verification.query(
+                "SELECT p.prosecdef,p.provolatile,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=$1 AND p.proname=$2",
+                [schema, functionName],
+              )
+            ).rows,
+          ).toEqual([
+            {
+              prosecdef: false,
+              provolatile: "s",
+              proconfig: [`search_path=${schema}, pg_catalog`],
+            },
+          ]);
         const analyzed = (
           await verification.query(
             "SELECT schemaname,relname,last_analyze IS NOT NULL AS analyzed FROM pg_stat_all_tables WHERE schemaname=$1",

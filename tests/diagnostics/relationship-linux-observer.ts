@@ -57,7 +57,7 @@ export function installObserver() {
     const eligible =
       transactions.has(this) &&
       /^\s*(SELECT|WITH)\b/i.test(sql) &&
-      /cabinet_relationship_document_allowed_v12/.test(sql) &&
+      /cabinet_relationship_document_allowed_v(?:12|13)/.test(sql) &&
       !/\b(INSERT|UPDATE|DELETE|MERGE|nextval|setval|pg_advisory\w*)\b/i.test(
         sql,
       );

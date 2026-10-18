@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { relationshipDocumentFunctionV12 } from "../relationship/document-scope.js";
+import {
+  relationshipDocumentFunctionV12,
+  relationshipDocumentFunctionV13,
+} from "../relationship/document-scope.js";
 import type { Connection } from "./database.js";
 export const migration = `
 CREATE TABLE IF NOT EXISTS schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
@@ -21,7 +24,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 12)
+  if (version > 13)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -125,6 +128,27 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((s) => s.trim())
       .filter(Boolean))
       await connection.query(sql);
+  }
+  if (version < 13) {
+    if (
+      createHash("sha256")
+        .update(relationshipDocumentFunctionV13)
+        .digest("hex") !==
+      "64b8c3f0b8561fe10869d0a817a009eceac7b82032fb8f460ef98dbc5784ae1d"
+    )
+      throw new Error(
+        "La politique LAB v13 a changé ; une migration versionnée est requise.",
+      );
+    const schemas = await connection.query("SELECT current_schema() AS name");
+    const schema = String(schemas[0]?.name ?? "");
+    if (!schema) throw new Error("Schéma d’installation absent.");
+    await connection.query(
+      relationshipDocumentFunctionV13.replace(
+        "SET search_path FROM CURRENT",
+        `SET search_path TO "${schema.replaceAll('"', '""')}", pg_catalog`,
+      ),
+    );
+    await connection.query("INSERT INTO schema_migrations(version) VALUES(13)");
   }
 }
 

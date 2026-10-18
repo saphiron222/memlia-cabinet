@@ -1637,3 +1637,166 @@ test("reverse Work proof owner withdraws current and historical LAB detail, hist
     expect(reminders.json().scheduled).toBe(0);
   }
 });
+
+test("LAB v13 migration preserves the v12 verdict for historical owners, contact confidentiality and every version of a proof", async () => {
+  const actor = await start();
+  await f.maintainDatabase(async (db) => {
+    expect(
+      (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
+        .version,
+    ).toBe(13);
+  });
+  const create = async (record: Record<string, unknown>) => {
+    const result = await f.request("POST", "/records", {
+      operationId: operationId(),
+      record,
+    });
+    expect(result.statusCode, result.body).toBe(201);
+    return result.json();
+  };
+  const a = await create({ kind: "dossier", title: "Historique A", data: {} }),
+    b = await create({ kind: "dossier", title: "Courant B", data: {} });
+  const person = await create({
+    kind: "contact",
+    title: "Personne confidentielle",
+    dossierId: a.id,
+    confidential: true,
+    data: { contactType: "personne", relatedDossierIds: [b.id] },
+  });
+  const old = await proof(a.id),
+    next = await proof(a.id, old.documentId),
+    unrelated = await proof(b.id);
+  const policy = await save({
+    kind: "lab_policy",
+    name: "Migration",
+    periodDays: 90,
+    reason: "Examen fictif",
+  });
+  let review = await save({
+    kind: "lab",
+    dossierId: a.id,
+    personId: person.id,
+    level: "standard",
+    reason: "Historique",
+    role: "Responsable",
+    observedOn: "2026-10-18",
+    decisionOn: "2026-10-18",
+    nextReviewOn: "2027-01-01",
+    policyId: policy.id,
+    policyVersion: policy.version,
+    evidence: [{ ...old, documentId: old.documentId.toUpperCase() }],
+  });
+  review = await save(
+    { ...review.data, dossierId: b.id, personId: null, evidence: [next] },
+    review,
+  );
+  const changed = await f.request("PUT", `/records/${person.id}`, {
+    operationId: operationId(),
+    expectedVersion: person.version,
+    record: {
+      kind: "contact",
+      title: person.title,
+      dossierId: person.dossierId,
+      data: person.data,
+      confidential: false,
+    },
+  });
+  expect(changed.statusCode, changed.body).toBe(200);
+  const grant = (
+    action: string,
+    kind = "*",
+    dossierId: string | null = null,
+  ) => ({ action, kind, dossierId });
+  const matrices = [
+    actor.permissions,
+    [grant("read"), grant("confidential")],
+    [grant("read"), grant("lab_read")],
+    [grant("read"), grant("confidential"), grant("lab_read", "dossier", b.id)],
+    [
+      grant("read"),
+      grant("confidential"),
+      grant("lab_read", "dossier", a.id),
+      grant("lab_read", "dossier", b.id),
+    ],
+    [
+      grant("read", "dossier", a.id),
+      grant("read", "dossier", b.id),
+      grant("read", "contact"),
+      grant("confidential"),
+      grant("lab_read"),
+    ],
+  ];
+  const ids = [old.documentId, next.documentId, unrelated.documentId];
+  let before: unknown[],
+    verdicts: boolean[] = [];
+  await f.maintainDatabase(async (db) => {
+    before = await db.query(
+      "SELECT id,version,content FROM cabinet_relationship_history ORDER BY id,version",
+    );
+    for (const permissions of matrices)
+      for (const id of ids) {
+        const row = (
+          await db.query(
+            "SELECT cabinet_relationship_document_allowed_v12($1::uuid,$2::jsonb,$3::uuid) old,cabinet_relationship_document_allowed_v13($1::uuid,$2::jsonb,$3::uuid) current",
+            [actor.id, JSON.stringify(permissions), id],
+          )
+        )[0]!;
+        expect(row.current).toBe(row.old);
+        verdicts.push(Boolean(row.old));
+      }
+    expect(verdicts).toEqual([
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    await db.query(
+      "DROP FUNCTION cabinet_relationship_document_allowed_v13(uuid,jsonb,uuid)",
+    );
+    await db.query("DELETE FROM schema_migrations WHERE version=13");
+  });
+  await f.maintainDatabase(async (db) => {
+    expect(
+      (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
+        .version,
+    ).toBe(13);
+    expect(
+      await db.query(
+        "SELECT id,version,content FROM cabinet_relationship_history ORDER BY id,version",
+      ),
+    ).toEqual(before);
+    let index = 0;
+    for (const permissions of matrices)
+      for (const id of ids)
+        expect(
+          (
+            await db.query(
+              "SELECT cabinet_relationship_document_allowed_v13($1::uuid,$2::jsonb,$3::uuid) allowed",
+              [actor.id, JSON.stringify(permissions), id],
+            )
+          )[0]!.allowed,
+        ).toBe(verdicts[index++]);
+    const properties = await db.query(
+      "SELECT prosecdef,provolatile,proconfig FROM pg_proc WHERE proname='cabinet_relationship_document_allowed_v13' AND pronamespace=current_schema()::regnamespace",
+    );
+    expect(properties).toHaveLength(1);
+    expect(properties[0]).toMatchObject({ prosecdef: false, provolatile: "s" });
+  });
+  expect(
+    (await f.request("GET", `/relationship/entities/${review.id}`)).statusCode,
+  ).toBe(200);
+});
