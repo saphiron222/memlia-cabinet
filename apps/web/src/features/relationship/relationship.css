@@ -303,7 +303,7 @@
 }
 .relationship-detail-context {
   position: sticky;
-  top: -24px;
+  top: 0;
   z-index: 4;
   background: var(--m-bg);
   padding: 10px 40px 0 0;

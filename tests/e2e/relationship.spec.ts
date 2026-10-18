@@ -504,7 +504,9 @@ test("relationship: filled CRM conversion, onboarding provenance, LAB, models, d
   await expect(page.locator(".relationship-detail-context")).toContainText(
     "Entreprise future Bastide",
   );
-  await expect(page.locator(".relationship-detail-context")).toBeInViewport();
+  await expect(page.locator(".relationship-detail-context > p")).toBeInViewport(
+    { ratio: 1 },
+  );
   await page.screenshot({
     path: capture + "/lab-keyboard.png",
     fullPage: true,
