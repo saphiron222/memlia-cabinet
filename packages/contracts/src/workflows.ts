@@ -246,6 +246,9 @@ export const NotificationPreferencesSchema = z
   .strict();
 export const NotificationSchema = z
   .object({
+    source: z.enum(["work", "lab"]).default("work"),
+    relationshipId: z.uuid().nullable().default(null),
+    relationshipVersion: z.number().int().positive().nullable().default(null),
     id: z.uuid(),
     version: z.number().int().positive(),
     targetId: z.uuid(),
@@ -265,7 +268,7 @@ export const NotificationListSchema = z.object({
       NotificationSchema.extend({
         title: z.string(),
         text: z.string(),
-        targetKind: z.enum(["tache", "obligation"]),
+        targetKind: z.enum(["tache", "obligation", "lab"]),
       }),
     )
     .max(100),

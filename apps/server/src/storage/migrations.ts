@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { relationshipDocumentFunctionV12 } from "../relationship/document-scope.js";
 import type { Connection } from "./database.js";
 export const migration = `
 CREATE TABLE IF NOT EXISTS schema_migrations (version integer PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());
@@ -19,7 +21,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 11)
+  if (version > 12)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -99,6 +101,31 @@ export async function migrate(connection: Connection): Promise<void> {
       .map((s) => s.trim())
       .filter(Boolean))
       await connection.query(sql);
+  if (version < 12) {
+    // This immutable migration must not drift when canonical grant builders evolve.
+    // A changed definition requires a new explicitly versioned policy/migration.
+    if (
+      createHash("sha256")
+        .update(relationshipDocumentFunctionV12)
+        .digest("hex") !==
+      "fc884c89022df0d669faa4bff08fd1d85ab60515eaa971e357c2efb69a609073"
+    )
+      throw new Error(
+        "La politique LAB v12 a changé ; une migration versionnée est requise.",
+      );
+    const schemas = await connection.query("SELECT current_schema() AS name");
+    const schema = String(schemas[0]?.name ?? "");
+    if (!schema) throw new Error("Schéma d’installation absent.");
+    const statements = relationshipMigration.replace(
+      "SET search_path FROM CURRENT",
+      `SET search_path TO "${schema.replaceAll('"', '""')}", pg_catalog`,
+    );
+    for (const sql of statements
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean))
+      await connection.query(sql);
+  }
 }
 
 // Additive migration: the published first migration above remains unchanged.
@@ -251,4 +278,17 @@ CREATE TABLE cabinet_time_csv_rows(export_id uuid NOT NULL REFERENCES cabinet_ti
 ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
 ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production','time'));
 INSERT INTO schema_migrations(version) VALUES(11);
+`;
+
+const relationshipMigration = `
+CREATE TABLE cabinet_relationship(id uuid PRIMARY KEY,kind text NOT NULL,content jsonb NOT NULL);
+CREATE INDEX cabinet_relationship_kind ON cabinet_relationship(kind,id);
+CREATE UNIQUE INDEX cabinet_relationship_contact ON cabinet_relationship((content->'data'->>'contactId')) WHERE kind='prospect';
+CREATE TABLE cabinet_relationship_history(id uuid NOT NULL REFERENCES cabinet_relationship(id),version integer NOT NULL,content jsonb NOT NULL,PRIMARY KEY(id,version));
+CREATE TABLE cabinet_relationship_events(id uuid PRIMARY KEY,entity_id uuid NOT NULL REFERENCES cabinet_relationship(id),content jsonb NOT NULL);
+CREATE TABLE cabinet_relationship_imports(id uuid PRIMARY KEY,actor_id uuid NOT NULL REFERENCES cabinet_users(id),content jsonb NOT NULL);
+ALTER TABLE cabinet_export_rows DROP CONSTRAINT cabinet_export_rows_kind_check;
+ALTER TABLE cabinet_export_rows ADD CONSTRAINT cabinet_export_rows_kind_check CHECK(kind IN ('record','document','field','fiscal','workflow','production','time','relationship'));
+${relationshipDocumentFunctionV12}
+INSERT INTO schema_migrations(version) VALUES(12);
 `;

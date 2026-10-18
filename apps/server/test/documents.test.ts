@@ -600,7 +600,7 @@ it("upgrades a version-one database without losing cabinet records and reports a
     await f.maintainDatabase(async (db) => {
       await db.transaction(async (tx) => {
         await tx.query(
-          "DROP TABLE cabinet_time_csv_rows, cabinet_time_csv, cabinet_time_history, cabinet_time, cabinet_production_export_rows, cabinet_production_exports, cabinet_production_generation_results, cabinet_production_imports, cabinet_production_row_versions, cabinet_production_rows, cabinet_production_model_versions, cabinet_production_models, cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
+          "DROP TABLE cabinet_relationship_imports, cabinet_relationship_events, cabinet_relationship_history, cabinet_relationship, cabinet_time_csv_rows, cabinet_time_csv, cabinet_time_history, cabinet_time, cabinet_production_export_rows, cabinet_production_exports, cabinet_production_generation_results, cabinet_production_imports, cabinet_production_row_versions, cabinet_production_rows, cabinet_production_model_versions, cabinet_production_models, cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
         );
         await tx.query("DROP INDEX cabinet_task_occurrence");
         await tx.query("DROP TABLE cabinet_fiscal_events");
@@ -890,7 +890,7 @@ it("backfills indexed search from schema two and keeps a shared extension outsid
           "ALTER TABLE cabinet_documents DROP COLUMN IF EXISTS search_text",
         );
         await tx.query(
-          "DROP TABLE cabinet_time_csv_rows, cabinet_time_csv, cabinet_time_history, cabinet_time, cabinet_production_export_rows, cabinet_production_exports, cabinet_production_generation_results, cabinet_production_imports, cabinet_production_row_versions, cabinet_production_rows, cabinet_production_model_versions, cabinet_production_models, cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
+          "DROP TABLE cabinet_relationship_imports, cabinet_relationship_events, cabinet_relationship_history, cabinet_relationship, cabinet_time_csv_rows, cabinet_time_csv, cabinet_time_history, cabinet_time, cabinet_production_export_rows, cabinet_production_exports, cabinet_production_generation_results, cabinet_production_imports, cabinet_production_row_versions, cabinet_production_rows, cabinet_production_model_versions, cabinet_production_models, cabinet_reminder_preparation, cabinet_workflow_imports, cabinet_notification_preferences, cabinet_notifications, cabinet_work_events, cabinet_work, cabinet_workflow_model_versions, cabinet_workflow_models",
         );
         await tx.query("DROP INDEX cabinet_task_occurrence");
         await tx.query("DROP TABLE cabinet_fiscal_events");

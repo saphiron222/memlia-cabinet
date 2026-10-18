@@ -1,3 +1,6 @@
+import { registerPipelineImports } from "./relationship/imports.js";
+import { LabReminders } from "./relationship/notifications.js";
+import { registerRelationshipRoutes } from "./relationship/routes.js";
 import { registerTimeRoutes } from './time/routes.js';
 import { registerStageImportRoutes } from "./production/imports.js";
 import { registerProductionRoutes } from "./production/routes.js";
@@ -302,11 +305,13 @@ export async function createApplication(options: ApplicationOptions) {
     civilDate,
     options.cabinetTimeZone ?? "Europe/Paris",
   );
+  const labReminders = new LabReminders(db,jobs,now,civilDate);
   let reminderTick: Promise<void> | undefined;
   const reminderTimer = setInterval(() => {
     if (!reminderTick)
       reminderTick = reminders
         .tick()
+        .then(()=>labReminders.tick())
         .catch(() => {
           app.log.error(
             "Préparation des rappels interrompue ; le point durable sera repris au prochain passage.",
@@ -325,7 +330,9 @@ export async function createApplication(options: ApplicationOptions) {
   registerNotificationRoutes(app, { db, now, user }, reminders);
   registerProductionRoutes(app, { db, now, user }, jobs, civilDate);
   registerStageImportRoutes(app, { db, now, user }, importParser);
+  registerPipelineImports(app, { db, now, user }, importParser);
   registerTimeRoutes(app, { db, now, user }, jobs);
+  registerRelationshipRoutes(app, { db, now, user }, civilDate,labReminders);
   registerWorkflowRoutes(app, { db, now, user }, jobs, civilDate);
   registerRecordRoutes(app, { db, now, user }, civilDate, options.csvSyncRows);
   registerUserRoutes(app, { db, now, user });

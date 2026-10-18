@@ -1,3 +1,5 @@
+import { visibleLab } from "../relationship/notifications.js";
+import type { Notification } from "@memlia/contracts";
 import { randomUUID } from "node:crypto";
 import {
   NotificationSchema,
@@ -95,13 +97,16 @@ export async function listNotifications(
     for (const row of rows) {
       const n = NotificationSchema.parse(row.content);
       if (n.state === "dismissed") continue;
-      const work = await visibleWork(tx, actor, n.targetId);
+      const work = await visibleNotification(tx, actor, n);
       if (!work) continue;
       const comment = n.commentId
         ? work.comments.find((c) => c.id === n.commentId)
         : null;
       if (n.commentId && !comment) continue;
-      let reminderText = "Échéance à suivre.";
+      let reminderText =
+        n.source === "lab"
+          ? "Révision de vigilance à examiner."
+          : "Échéance à suivre.";
       if (n.reminderId) {
         const rows = await tx.query(
           "SELECT content FROM cabinet_workflow_model_versions WHERE id=$1 AND version=$2",
@@ -126,4 +131,14 @@ export async function listNotifications(
     after = String(rows.at(-1)!.id);
   }
   return { items, unread, nextOffset };
+}
+
+export async function visibleNotification(
+  tx: Connection,
+  actor: SessionUser,
+  n: Notification,
+) {
+  return n.source === "lab"
+    ? visibleLab(tx, actor, n)
+    : visibleWork(tx, actor, n.targetId);
 }

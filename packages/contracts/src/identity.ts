@@ -15,6 +15,9 @@ export const ActionSchema = z.enum([
   "time_read",
   "time_manage",
   "time_lock",
+  "lab_read",
+  "lab_manage",
+  "lab_export",
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 export const PermissionSchema = z

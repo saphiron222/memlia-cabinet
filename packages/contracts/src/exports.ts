@@ -1,3 +1,4 @@
+import { RelationshipExportSchema } from "./relationship.js";
 import { TimeExportSchema } from "./time.js";
 import { ProductionExportSchema } from "./production.js";
 import { WorkflowExportSchema } from "./workflows.js";
@@ -14,6 +15,7 @@ export const CabinetExportSchema = z.object({
     "objets autorisés actifs et archivés, avec leurs références documentaires",
   ),
   records: z.array(CabinetRecordSchema),
+  relationship: z.array(RelationshipExportSchema).default([]),
   time: z.array(TimeExportSchema).default([]),
   production: z.array(ProductionExportSchema).default([]),
   workflows: z.array(WorkflowExportSchema).default([]),
@@ -51,6 +53,7 @@ export const ExportCommandSchema = z
   .strict();
 
 export const ExportManifestSchema = CabinetExportSchema.omit({
+  relationship: true,
   time: true,
   production: true,
   workflows: true,

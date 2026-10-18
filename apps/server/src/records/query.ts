@@ -1,3 +1,5 @@
+import { directPermissionSql } from "./grants.js";
+import { relationshipDocumentPredicate } from "../relationship/document-scope.js";
 import { productionDocumentIdsSql } from "../production/document-scope.js";
 import {
   CabinetRecordSchema,
@@ -9,7 +11,6 @@ import {
   type RecordListQuery,
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
-import { hasPermission } from "./permissions.js";
 import { assignmentScope } from "../administration/access.js";
 import { fail } from "../errors.js";
 // Exact counterpart of direct resource checks; applied before projection/count/pagination.
@@ -18,18 +19,13 @@ export function authorizedPredicate(
   action: "read" | "export" | "update",
   parameter: (v: unknown) => string,
   followContact = true,
+  followRelationship = true,
 ): string {
   const grant = (verb: Action, kind: RecordKind, scope: string) => {
-    if (hasPermission(actor, verb, kind)) return "TRUE";
-    const ids = actor.permissions
-      .filter(
-        (p) =>
-          p.action === verb &&
-          (p.kind === "*" || p.kind === kind) &&
-          p.dossierId,
-      )
-      .map((p) => p.dossierId);
-    return `(${scope}=ANY(${parameter(ids)}::uuid[]) OR ${assignmentScope(actor.id, verb, kind, scope, parameter)})`;
+    const direct = directPermissionSql(actor, verb, kind, scope, parameter);
+    return direct === "TRUE"
+      ? "TRUE"
+      : `(${direct} OR ${assignmentScope(actor.id, verb, kind, scope, parameter)})`;
   };
   const scope =
     "CASE WHEN r.kind='dossier' THEN r.id ELSE (r.content->>'dossierId')::uuid END";
@@ -41,13 +37,17 @@ export function authorizedPredicate(
     .join(" OR ");
   const parent = `(${grant("read", "dossier", "parent.id")} AND (NOT COALESCE((parent.content->>'confidential')::boolean,false) OR ${grant("confidential", "dossier", "parent.id")}))`;
   const links = `(CASE WHEN r.content->>'dossierId' IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(r.content->>'dossierId') END || CASE WHEN r.kind='contact' THEN COALESCE(r.content->'data'->'relatedDossierIds','[]'::jsonb) ELSE '[]'::jsonb END)`;
-  const documents = ` AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text((COALESCE(r.content->'data'->'fiscal'->'documentIds','[]'::jsonb)||COALESCE(r.content->'data'->'documentIds','[]'::jsonb))) AS fiscal_piece(id) LEFT JOIN cabinet_documents fiscal_document ON fiscal_document.id=fiscal_piece.id::uuid WHERE fiscal_document.id IS NULL OR ((fiscal_document.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "fiscal_document.dossier_id")}) IS NOT TRUE))`;
+  const labDoc = (id: string) =>
+    followRelationship
+      ? relationshipDocumentPredicate(actor, parameter, id)
+      : "TRUE";
+  const documents = ` AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text((COALESCE(r.content->'data'->'fiscal'->'documentIds','[]'::jsonb)||COALESCE(r.content->'data'->'documentIds','[]'::jsonb))) AS fiscal_piece(id) LEFT JOIN cabinet_documents fiscal_document ON fiscal_document.id=fiscal_piece.id::uuid WHERE fiscal_document.id IS NULL OR (${labDoc("fiscal_document.id")}) IS NOT TRUE OR ((fiscal_document.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "fiscal_document.dossier_id")}) IS NOT TRUE))`;
   const fiscalLinks = (alias: string) =>
     `(COALESCE(${alias}.content->'data'->'fiscal'->'relatedRecordIds','[]'::jsonb) || CASE WHEN ${alias}.content->'data'->'fiscal'->>'contactId' IS NULL THEN '[]'::jsonb ELSE jsonb_build_array(${alias}.content->'data'->'fiscal'->>'contactId') END || CASE WHEN ${alias}.kind='tache' AND ${alias}.content->'data'->>'prospectId' IS NOT NULL THEN jsonb_build_array(${alias}.content->'data'->>'prospectId') ELSE '[]'::jsonb END)`;
   const related = followContact
-    ? ` AND NOT EXISTS(WITH RECURSIVE fiscal_reachable(id) AS (SELECT value::uuid FROM jsonb_array_elements_text(${fiscalLinks("r")}) UNION SELECT link.value::uuid FROM fiscal_reachable reached JOIN cabinet_records linked ON linked.id=reached.id CROSS JOIN LATERAL jsonb_array_elements_text(${fiscalLinks("linked")}) link(value)) SELECT 1 FROM fiscal_reachable reached LEFT JOIN cabinet_records fiscal_related ON fiscal_related.id=reached.id WHERE fiscal_related.id IS NULL OR (${authorizedPredicate(actor, "read", parameter, false).replaceAll(/\br\./g, "fiscal_related.")}) IS NOT TRUE)`
+    ? ` AND NOT EXISTS(WITH RECURSIVE fiscal_reachable(id) AS (SELECT value::uuid FROM jsonb_array_elements_text(${fiscalLinks("r")}) UNION SELECT link.value::uuid FROM fiscal_reachable reached JOIN cabinet_records linked ON linked.id=reached.id CROSS JOIN LATERAL jsonb_array_elements_text(${fiscalLinks("linked")}) link(value)) SELECT 1 FROM fiscal_reachable reached LEFT JOIN cabinet_records fiscal_related ON fiscal_related.id=reached.id WHERE fiscal_related.id IS NULL OR (${authorizedPredicate(actor, "read", parameter, false, followRelationship).replaceAll(/\br\./g, "fiscal_related.")}) IS NOT TRUE)`
     : "";
-  const productionDocuments = `NOT EXISTS(SELECT 1 FROM (${productionDocumentIdsSql("r.id")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid WHERE d.id IS NULL OR d.dossier_id IS DISTINCT FROM (r.content->>'dossierId')::uuid OR ((d.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "d.dossier_id")}) IS NOT TRUE))`;
+  const productionDocuments = `NOT EXISTS(SELECT 1 FROM (${productionDocumentIdsSql("r.id")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid WHERE d.id IS NULL OR (${labDoc("d.id")}) IS NOT TRUE OR d.dossier_id IS DISTINCT FROM (r.content->>'dossierId')::uuid OR ((d.content->>'confidential')::boolean AND (${grant("confidential", "dossier", "d.dossier_id")}) IS NOT TRUE))`;
   return `((${own}) AND ${productionDocuments} AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(${links}) AS link(id) LEFT JOIN cabinet_records parent ON parent.id=link.id::uuid AND parent.kind='dossier' WHERE parent.id IS NULL OR (${parent}) IS NOT TRUE) AND CASE WHEN r.kind='tache' OR (r.kind='obligation' AND jsonb_typeof(r.content->'data'->'fiscal')='object') THEN (TRUE ${related}${documents}) ELSE TRUE END)`;
 }
 export function recordFilter(
@@ -217,7 +217,7 @@ export function fiscalDocumentPredicate(
   parameter: (v: unknown) => string,
   documentId: string,
 ) {
-  return `NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE ((fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (fiscal_owner.kind='tache' AND (fiscal_owner.content->'data'->'documentIds') ? (${documentId})::text)) AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
+  return `${relationshipDocumentPredicate(actor, parameter, documentId)} AND NOT EXISTS(SELECT 1 FROM cabinet_records fiscal_owner WHERE ((fiscal_owner.kind='obligation' AND (fiscal_owner.content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (fiscal_owner.kind='tache' AND (fiscal_owner.content->'data'->'documentIds') ? (${documentId})::text)) AND (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
 }
 
 // Grid and original archives use the same current notice and coupled year/property semantics.

@@ -11,7 +11,7 @@ import type { RouteContext } from "../context.js";
 import {
   listNotifications,
   notificationPreferences,
-  visibleWork,
+  visibleNotification,
 } from "./service.js";
 import { idempotent } from "../storage/operations.js";
 import { fail } from "../errors.js";
@@ -101,7 +101,7 @@ export function registerNotificationRoutes(
       );
       if (!rows[0]) fail(404, "NOT_FOUND", "Notification inaccessible.");
       const old = NotificationSchema.parse(rows[0].content);
-      if (!(await visibleWork(tx, actor, old.targetId)))
+      if (!(await visibleNotification(tx, actor, old)))
         fail(404, "NOT_FOUND", "Notification inaccessible.");
       return idempotent(
         tx,

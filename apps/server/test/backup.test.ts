@@ -645,6 +645,120 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
           headers: { cookie },
         })
       ).json();
+      const relationshipSaved: { id: string; version: number; data: any }[] =
+        [];
+      const relationshipSave = async (
+        data: Record<string, unknown>,
+        previous?: { id: string; version: number },
+      ) => {
+        const response = await app!.inject({
+          method: "POST",
+          url: "/api/v1/relationship/entities",
+          headers: { origin, cookie },
+          payload: {
+            id: previous?.id ?? randomUUID(),
+            expectedVersion: previous?.version ?? 0,
+            operationId: randomUUID(),
+            data,
+          },
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        return response.json();
+      };
+      const relationshipStage = randomUUID();
+      const relationshipPipeline = await relationshipSave({
+        kind: "pipeline",
+        name: "Pipeline restauré",
+        stages: [
+          {
+            id: relationshipStage,
+            name: "Accueil",
+            color: "green",
+            icon: "check",
+            final: true,
+          },
+        ],
+        conversionStageId: relationshipStage,
+      });
+      relationshipSaved.push(relationshipPipeline);
+      const relationshipContactResponse = await app.inject({
+        method: "POST",
+        url: "/api/v1/records",
+        headers: { origin, cookie },
+        payload: {
+          operationId: randomUUID(),
+          record: {
+            kind: "contact",
+            title: "Prospect restauré",
+            data: { contactType: "organisation" },
+          },
+        },
+      });
+      expect(relationshipContactResponse.statusCode).toBe(201);
+      const relationshipProspect = await relationshipSave({
+        kind: "prospect",
+        contactId: relationshipContactResponse.json().id,
+        pipelineId: relationshipPipeline.id,
+        stageId: relationshipStage,
+        identity: "future_company",
+        temperature: "warm",
+        proposedFee: "1200.25",
+      });
+      relationshipSaved.push(
+        await relationshipSave(
+          { ...relationshipProspect.data, notes: "Révision conservée" },
+          relationshipProspect,
+        ),
+      );
+      const relationshipPolicy = await relationshipSave({
+        kind: "lab_policy",
+        name: "Politique restaurée",
+        periodDays: 90,
+        reason: "Décision cabinet fictive",
+      });
+      relationshipSaved.push(relationshipPolicy);
+      relationshipSaved.push(
+        await relationshipSave({
+          kind: "lab",
+          dossierId: record.id,
+          level: "standard",
+          reason: "Examen humain restauré",
+          role: "Responsable",
+          observedOn: "2026-10-18",
+          decisionOn: "2026-10-18",
+          nextReviewOn: "2027-01-16",
+          policyId: relationshipPolicy.id,
+          policyVersion: 1,
+          evidence: [
+            {
+              documentId: document.id,
+              version: document.version,
+              sha256: document.sha256,
+              origin: "manual",
+              reference: "Spécimen",
+              acquiredOn: "2026-10-18",
+              scope: "Examen",
+              result: "examined",
+            },
+          ],
+        }),
+      );
+      const relationshipBefore = [];
+      for (const entity of relationshipSaved)
+        relationshipBefore.push(
+          (
+            await app.inject({
+              url: "/api/v1/relationship/" + entity.id + "/history",
+              headers: { cookie },
+            })
+          ).json(),
+        );
+      const relationshipEvents = (
+        await app.inject({
+          url: "/api/v1/relationship/" + relationshipProspect.id + "/events",
+          headers: { cookie },
+        })
+      ).json();
       const options = {
         dataDirectory: source.dataDirectory,
         configFile: join(root, "config.json"),
@@ -785,6 +899,20 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         ).toEqual([
           { rolsuper: false, rolcreatedb: false, rolcreaterole: false },
         ]);
+        expect(
+          (
+            await verification.query(
+              "SELECT p.prosecdef,p.provolatile,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=$1 AND p.proname='cabinet_relationship_document_allowed_v12'",
+              [schema],
+            )
+          ).rows,
+        ).toEqual([
+          {
+            prosecdef: false,
+            provolatile: "s",
+            proconfig: [`search_path=${schema}, pg_catalog`],
+          },
+        ]);
         const analyzed = (
           await verification.query(
             "SELECT schemaname,relname,last_analyze IS NOT NULL AS analyzed FROM pg_stat_all_tables WHERE schemaname=$1",
@@ -815,6 +943,22 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
       });
       expect(logged.statusCode).toBe(200);
       cookie = String(logged.headers["set-cookie"]).split(";")[0]!;
+      for (let i = 0; i < relationshipSaved.length; i++) {
+        const response = await app.inject({
+          url: "/api/v1/relationship/" + relationshipSaved[i]!.id + "/history",
+          headers: { cookie },
+        });
+        expect(response.statusCode, response.body).toBe(200);
+        expect(response.json()).toEqual(relationshipBefore[i]);
+      }
+      expect(
+        (
+          await app.inject({
+            url: "/api/v1/relationship/" + relationshipProspect.id + "/events",
+            headers: { cookie },
+          })
+        ).json(),
+      ).toEqual(relationshipEvents);
       const timeCsvAfter = await app.inject({
         url: "/api/v1/time/exports/" + timeCsvId + "/parts/1",
         headers: { cookie },

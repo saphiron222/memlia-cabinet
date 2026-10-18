@@ -251,6 +251,7 @@ export async function backup(options) {
         "1,2,3,4,5,6,7,8,9",
         "1,2,3,4,5,6,7,8,9,10",
         "1,2,3,4,5,6,7,8,9,10,11",
+        "1,2,3,4,5,6,7,8,9,10,11,12",
       ].includes(migrations.join(","))
     )
       fail("Version de schéma non prise en charge.");
@@ -337,7 +338,7 @@ export async function validateBackup(root) {
   );
   if (
     manifest.format !== 1 ||
-    ![4, 5, 6, 7, 8, 9, 10, 11].includes(manifest.schema) ||
+    ![4, 5, 6, 7, 8, 9, 10, 11, 12].includes(manifest.schema) ||
     manifest.application !== "0.1.0" ||
     manifest.postgresMajor !== 17 ||
     !Array.isArray(manifest.files) ||

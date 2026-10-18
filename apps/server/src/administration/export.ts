@@ -1,3 +1,8 @@
+import {
+  relationshipExportPage,
+  assertRelationshipExport,
+} from "../relationship/export.js";
+import { RelationshipExportSchema } from "@memlia/contracts";
 import { timeExportPage, assertTimeExports } from "../time/export.js";
 import { TimeExportSchema } from "@memlia/contracts";
 import {
@@ -55,6 +60,7 @@ const checkpointSchema = z.object({
     "workflows",
     "production",
     "time",
+    "relationship",
     "documents",
     "complete",
   ]),
@@ -62,6 +68,7 @@ const checkpointSchema = z.object({
   bytes: z.number().int().nonnegative(),
   records: z.number().int().nonnegative(),
   documents: z.number().int().nonnegative(),
+  relationship: z.number().int().nonnegative().default(0),
   time: z.number().int().nonnegative().default(0),
   production: z.number().int().nonnegative().default(0),
   workflows: z.number().int().nonnegative().default(0),
@@ -70,6 +77,7 @@ const checkpointSchema = z.object({
   partBytes: z.number().int().nonnegative(),
 });
 const headerSchema = CabinetExportSchema.omit({
+  relationship: true,
   time: true,
   production: true,
   workflows: true,
@@ -123,6 +131,7 @@ export class Exports {
         workflows: 0,
         production: 0,
         time: 0,
+        relationship: 0,
         part: 1,
         partBytes: 2048,
       },
@@ -221,6 +230,8 @@ export class Exports {
                     )
                   ).map((r) => CabinetRecordSchema.parse(r.content));
                 }
+                if (prior.phase === "relationship")
+                  return relationshipExportPage(tx, actor, prior.after);
                 if (prior.phase === "time")
                   return timeExportPage(tx, actor, prior.after);
                 if (prior.phase === "production")
@@ -320,7 +331,9 @@ export class Exports {
                         ? prior.production
                         : prior.phase === "time"
                           ? prior.time
-                          : prior.documents) +
+                          : prior.phase === "relationship"
+                            ? prior.relationship
+                            : prior.documents) +
                 index +
                 1,
               id: value.id,
@@ -335,7 +348,9 @@ export class Exports {
                         ? "production"
                         : prior.phase === "time"
                           ? "time"
-                          : "document",
+                          : prior.phase === "relationship"
+                            ? "relationship"
+                            : "document",
               content: value,
             }));
             for (const field of fields) {
@@ -399,6 +414,7 @@ export class Exports {
                 prior.workflows +
                 prior.production +
                 prior.time +
+                prior.relationship +
                 page.length >
               400_000
             )
@@ -428,8 +444,13 @@ export class Exports {
                       : prior.phase === "production"
                         ? "time"
                         : prior.phase === "time"
-                          ? "documents"
-                          : "complete",
+                          ? "relationship"
+                          : prior.phase === "relationship"
+                            ? "documents"
+                            : "complete",
+              relationship:
+                prior.relationship +
+                (prior.phase === "relationship" ? page.length : 0),
               time: prior.time + (prior.phase === "time" ? page.length : 0),
               production:
                 prior.production +
@@ -453,7 +474,8 @@ export class Exports {
               c.fiscal +
               c.workflows +
               c.production +
-              c.time;
+              c.time +
+              c.relationship;
             await ctx.commit(
               next,
               next.phase !== prior.phase
@@ -591,6 +613,21 @@ export class Exports {
         page.map((row) => TimeExportSchema.parse(row.content)),
       );
       afterTime = String(page.at(-1)!.id);
+    }
+    let afterRelationship: string | null = null;
+    while (true) {
+      const rows: Record<string, unknown>[] = await tx.query(
+        "SELECT id,content FROM cabinet_export_rows WHERE export_id=$1 AND kind='relationship' AND ($2::uuid IS NULL OR id>$2) ORDER BY id LIMIT 100",
+        [id, afterRelationship],
+      );
+      if (!rows.length) break;
+      for (const row of rows)
+        await assertRelationshipExport(
+          tx,
+          actor,
+          RelationshipExportSchema.parse(row.content),
+        );
+      afterRelationship = String(rows.at(-1)!.id);
     }
     let afterDocument: string | null = null;
     while (true) {
@@ -1010,6 +1047,9 @@ export class Exports {
       ...headerSchema.parse(stored.content),
       records,
       customFields,
+      relationship: rows
+        .filter((r) => r.kind === "relationship")
+        .map((r) => r.content),
       time: rows.filter((r) => r.kind === "time").map((r) => r.content),
       production: rows
         .filter((r) => r.kind === "production")

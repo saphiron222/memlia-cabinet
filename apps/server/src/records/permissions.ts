@@ -1,3 +1,6 @@
+import { hasPermission } from "./grants.js";
+export { hasPermission } from "./grants.js";
+import { relationshipDocumentPredicate } from "../relationship/document-scope.js";
 import { productionDocumentIdsSql } from "../production/document-scope.js";
 import { assignmentScope } from "../administration/access.js";
 import type {
@@ -8,19 +11,6 @@ import type {
 } from "@memlia/contracts";
 import { fail } from "../errors.js";
 import type { Connection } from "../storage/database.js";
-export function hasPermission(
-  user: SessionUser,
-  action: Action,
-  kind: RecordKind | "*",
-  dossierId: string | null = null,
-) {
-  return user.permissions.some(
-    (p) =>
-      p.action === action &&
-      (p.kind === "*" || p.kind === kind) &&
-      (p.dossierId === null || p.dossierId === dossierId),
-  );
-}
 export function requireGlobal(user: SessionUser, action: Action) {
   if (!hasPermission(user, action, "*"))
     fail(403, "FORBIDDEN", "Droit insuffisant.");
@@ -32,6 +22,20 @@ export async function canAccess(
   record: CabinetRecord,
   visited = new Set<string>(),
 ): Promise<boolean> {
+  async function visibleLabDocument(id: string) {
+    const args: unknown[] = [id];
+    const predicate = relationshipDocumentPredicate(
+      user,
+      (v) => {
+        args.push(v);
+        return "$" + args.length;
+      },
+      "$1::uuid",
+    );
+    return (
+      (await tx.query(`SELECT ${predicate} allowed`, args))[0]?.allowed === true
+    );
+  }
   const key = record.id + "/" + record.version;
   if (visited.has(key)) return true;
   visited.add(key);
@@ -104,6 +108,7 @@ export async function canAccess(
       if (
         !rows[0] ||
         rows[0].dossier_id !== record.dossierId ||
+        !(await visibleLabDocument(id)) ||
         (rows[0].confidential === "true" &&
           !(await scopedPermission(
             tx,
@@ -141,6 +146,7 @@ export async function canAccess(
       if (
         !rows[0] ||
         rows[0].dossier_id !== record.dossierId ||
+        !(await visibleLabDocument(id)) ||
         (rows[0].confidential === "true" &&
           !(await scopedPermission(
             tx,
@@ -155,13 +161,14 @@ export async function canAccess(
   }
   if (record.kind === "obligation" && !record.data.fiscal) {
     const pieces = await tx.query(
-      `SELECT d.dossier_id,d.content FROM (${productionDocumentIdsSql("$1")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid`,
+      `SELECT d.id,d.dossier_id,d.content FROM (${productionDocumentIdsSql("$1")}) piece LEFT JOIN cabinet_documents d ON d.id=piece.id::uuid`,
       [record.id],
     );
     for (const d of pieces)
       if (
         !d.content ||
         d.dossier_id !== record.dossierId ||
+        !(await visibleLabDocument(String(d.id))) ||
         ((d.content as { confidential: boolean }).confidential &&
           !(await scopedPermission(
             tx,

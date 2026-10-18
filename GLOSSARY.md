@@ -103,3 +103,19 @@ _Avoid_ : règle fiscale, facturation réalisée
 **Capacité** :
 Durée de travail disponible selon l’horaire journalier du cabinet ou une dérogation individuelle datée.
 _Avoid_ : temps saisi, disponibilité supposée
+
+**Prospect** :
+Fiche de relation commerciale rattachée à un contact canonique, avec pipeline, température manuelle, risque manuel et missions proposées.
+_Avoid_ : dossier déjà converti, score réglementaire
+
+**Conversion CRM** :
+Création unique d’un dossier lié au contact lorsque le prospect atteint le déclencheur configuré, dans la même transaction que son événement.
+_Avoid_ : génération de devis, signature, activation du portail
+
+**Accueil client (onboarding)** :
+Matrice d’étapes typées dont les valeurs, provenances et blocages préparent l’entrée en relation.
+_Avoid_ : habilitation de portail vérifiée
+
+**Revue LAB** :
+Décision humaine justifiée de vigilance, accompagnée de preuves et d’une date de révision selon la politique explicite du cabinet.
+_Avoid_ : risque CRM, certification automatique, score sanctions

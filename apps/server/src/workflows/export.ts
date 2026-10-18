@@ -1,3 +1,5 @@
+import { visibleLab } from "../relationship/notifications.js";
+import { load as loadRelationship } from "../relationship/service.js";
 import {
   WorkflowExportSchema,
   WorkflowModelSchema,
@@ -30,7 +32,7 @@ export async function workflowExportPage(
  UNION ALL SELECT overlay(overlay(md5('model_version:'||m.id::text||':'||m.version) placing '4' from 13 for 1) placing 'a' from 17 for 1)::uuid,jsonb_build_object('entity','model_version','data',m.content) FROM cabinet_workflow_model_versions m JOIN cabinet_workflow_models current ON current.id=m.id WHERE ${modelScope("m.content")} AND ${modelScope("current.content")}
  UNION ALL SELECT overlay(overlay(md5('work:'||w.id::text) placing '4' from 13 for 1) placing 'a' from 17 for 1)::uuid,jsonb_build_object('entity','work','data',w.content) FROM cabinet_work w WHERE ${target("w.id")}
  UNION ALL SELECT w.id,jsonb_build_object('entity','work_event','data',w.content,'actorId',w.actor_id,'operationId',w.operation_id) FROM cabinet_work_events w WHERE ${target("w.target_id")}
- UNION ALL SELECT n.id,jsonb_build_object('entity','notification','data',n.content) FROM cabinet_notifications n WHERE n.recipient_id=$3 AND ${target("n.target_id")}
+ UNION ALL SELECT n.id,jsonb_build_object('entity','notification','data',n.content) FROM cabinet_notifications n WHERE n.recipient_id=$3 AND COALESCE(n.content->>'source','work')='work' AND ${target("n.target_id")}
  UNION ALL SELECT overlay(overlay(md5('notification_preferences:'||p.user_id::text) placing '4' from 13 for 1) placing 'a' from 17 for 1)::uuid,jsonb_build_object('entity','notification_preferences','userId',p.user_id,'data',p.content) FROM cabinet_notification_preferences p WHERE p.user_id=$3
  UNION ALL SELECT p.id,jsonb_build_object('entity','reminder_preparation','data',p.content) FROM cabinet_reminder_preparation p JOIN cabinet_workflow_model_versions m ON m.id=p.model_id AND m.version=p.model_version JOIN cabinet_workflow_models current ON current.id=m.id WHERE p.actor_id=$3 AND ${modelScope("m.content")} AND ${modelScope("current.content")}
  UNION ALL SELECT i.id,jsonb_build_object('entity','checklist_import','data',i.content) FROM cabinet_workflow_imports i WHERE i.actor_id=$3
@@ -84,6 +86,12 @@ export async function assertWorkflowExport(
   if (e.entity === "notification") {
     if (e.data.recipientId !== actor.id)
       fail(403, "FORBIDDEN", "Sortie inaccessible.");
+    if (e.data.source === "lab") {
+      if (!(await visibleLab(tx, actor, e.data)))
+        fail(404, "NOT_FOUND", "Notification inaccessible.");
+      await loadRelationship(tx, actor, e.data.relationshipId!, "export");
+      return;
+    }
     await workTarget(tx, actor, e.data.targetId, "export");
     await readWork(tx, actor, e.data.targetId);
   }
