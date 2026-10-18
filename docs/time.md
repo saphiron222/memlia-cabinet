@@ -40,7 +40,7 @@ Les rapports et catalogues retournent100 lignes par page. Les catalogues utilisa
 
 ## Critères et réception
 
-| Critère | Fournisseur et preuve locale |
+| Critère | Fournisseur et preuve comportementale |
 |---|---|
 | PAR-048 / F-TEMPS-AC-01 | `shared.tsx` formulaire typé, test navigateur durée90 Tab/Entrée/reload ; HTTP durée/date/auteur/nature |
 | PAR-049 / F-TEMPS-AC-02 | relation discriminée libre/record/production, HTTP même titre libre exclu du réalisé de la tâche |
@@ -54,4 +54,12 @@ Les rapports et catalogues retournent100 lignes par page. Les catalogues utilisa
 | PUB-016-S2 portion Task5 | fiche tâche onglet Temps réel lié à son ID, prévu avec provenance et réalisé, lien permanent conservé au reload ; mentions restent fournies par Task3 |
 | TR-PERSIST / TR-LOCAL / TR-TESTS | HTTP PGlite puis PostgreSQL17 réel, deux restores natifs (public/schéma configuré) peuplés de toutes les familles de temps, historiques, chronomètre actif et CSV identique |
 
-Les ports réellement utilisés et adaptations sont dans `interface-source-map.md` et `design-interface-provenance.json`. Captures fictives inspectées en1440/900, clair/sombre, panneaux remplis, clavier/focus/défilement, chargement/vide/erreur/lecture seule. Les premières captures et erreurs restent privées avec les reçus. La qualification locale ne vaut ni CI exacte du contrôleur ni réception globale Task12, ni essais réels en cabinet (dernière phase seulement). Le rapport privé Task5 recense commandes/résultats et empreintes de la livraison.
+Les ports réellement utilisés et adaptations sont dans `interface-source-map.md` et `design-interface-provenance.json`. Les captures fictives locales sources/Vite/PGlite ont été inspectées en1440/900, clair/sombre, panneaux remplis, clavier/focus/défilement, chargement/vide/erreur/lecture seule. Les premières captures et erreurs restent privées avec les reçus ; elles ne constituent pas une nouvelle capture du serveur compilé ni une réception visuelle globale.
+
+## Réception du lot
+
+Le commit produit `cfc96c1` a passé ses revues et les [CI Linux de branche](https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179) et [de PR](https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166) le 18 octobre 2026. Chacune compte 210 tests PGlite réussis et 3 tests réservés à PostgreSQL ignorés, puis 213 tests PostgreSQL 17 et 41 parcours navigateur réussis. Les parcours UI restent ceux des serveurs isolés source/Vite/PGlite ; serveur compilé, exclusion des données privées et cycle du conteneur Linux avec restauration sont vérifiés séparément. L’offre source/licences du conteneur a été lue anonymement : 8 457 fichiers, 4 documents normatifs vérifiés et 13 ressources.
+
+Le témoin original de sortie complète avec configurations, courants, historiques, chronomètre, liens et CSV préparé passe en 19,8 et 20,5 secondes sur PostgreSQL Linux, sous sa limite inchangée de 30 secondes. Les quatre cas ajoutés dans `time-export-batch.test.ts` vérifient le retrait du droit de lecture sur une nouvelle cible après préparation, les 101 lignes CSV avec mutation de la dernière partie, et les filtres devenus interdits de deux CSV vides. Les réglages JIT et les verrous sont conservés ; ces résultats ne sont pas une mesure p95 ni une qualification à 10 000 dossiers, 100 000 occurrences et 20 utilisateurs simultanés.
+
+Navigation persistante Temps/Charge et libellés/filtres de cibles de configuration restent aux corrections consolidées du lot 12. Bundle, volume, exploitation et confinement complets restent aux lots 11/12 ; les vraies administrations et comptes sont réservés à la dernière phase en cabinet. Le rapport privé Task5 conserve commandes, résultats, erreurs initiales et empreintes ; le périmètre complet reste celui du cahier.

@@ -136,16 +136,18 @@ Réception du lot : produit `d1dc0d2`, revue indépendante et trois corrections/
 
 ### Task 5: Temps, capacité, charge et forfaits
 
+Réception du lot : revues indépendantes et corrections ciblées approuvées ; le dernier point de runtime a été confirmé sur le même commit `cfc96c1` par les [CI Linux de branche](https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179) et [de PR](https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166), réussies le 18 octobre 2026. Chacune : 210 tests PGlite réussis et trois tests réservés à PostgreSQL ignorés, 213 tests PostgreSQL 17 et 41 parcours navigateur source/Vite/PGlite réussis ; serveur compilé, contexte privé, offre source anonyme et cycle réel du conteneur avec restauration vérifiés séparément. Le scénario d’export complet auparavant bloquant passe en 19,8 et 20,5 secondes sous sa limite inchangée de 30 secondes, sans nouvelle exception JIT ni retrait de verrou. Navigation persistante Temps/Charge et lisibilité des cibles de configuration restent aux corrections consolidées du lot 12 ; taille du bundle, volume/p95, confinement et exploitation complète restent aux lots 11/12. Les vrais portails restent à la dernière phase en cabinet.
+
 **Files:** Create `packages/contracts/src/time.ts`, `apps/server/src/time/*`, `apps/web/src/features/time/*`; tests `apps/server/test/time.test.ts`, `tests/e2e/time.spec.ts`.
 
 **Interfaces:** `/api/v1/time` entries, timer start/stop, rates, capacities, dated assignments and forfaits; `calculateWorkload` exposes cabinet→dossier→occurrence inheritance and provenance, fixed/variable components, realized/planned totals and period. Duration uses integer minutes/seconds; money uses exact decimals. Closed periods retain versioned rates.
 
 **Coverage:** F-TEMPS, F-CHARGE.
 
-- [ ] RED then GREEN: inheritance 120 minutes, dossier override 90, occurrence override 45, return-to-inheritance restores 90 with explanation; changing a parent doesn't rewrite explicit children.
-- [ ] Implement manual and timer time entry, week report, task/dossier links, lock/reopen periods, filtering and export; prevent two active timers for one user and double stop/replay. Wire realized time and planned-versus-realized reporting into the existing Task3 task detail/report through its canonical task identity (PUB-016-S2); Task3 links alone do not complete that reporting criterion.
-- [ ] RED then GREEN: forfait change mid-month, activity starts late, two collaborators on one role and extra task do not double-count; allocation weights and prorating basis are explicit versioned choices, never guessed fiscal rules.
-- [ ] Implement workload grid by user/team/site/period, capacity and overload, reassignment preview/commit, actual-versus-planned, dated forfait/rate editors; test unauthorized employee data and browser workflow, check/test/build, commit and report.
+- [x] RED then GREEN: inheritance 120 minutes, dossier override 90, occurrence override 45, return-to-inheritance restores 90 with explanation; changing a parent doesn't rewrite explicit children.
+- [x] Implement manual and timer time entry, week report, task/dossier links, lock/reopen periods, filtering and export; prevent two active timers for one user and double stop/replay. Wire realized time and planned-versus-realized reporting into the existing Task3 task detail/report through its canonical task identity (PUB-016-S2); Task3 links alone do not complete that reporting criterion.
+- [x] RED then GREEN: forfait change mid-month, activity starts late, two collaborators on one role and extra task do not double-count; allocation weights and prorating basis are explicit versioned choices, never guessed fiscal rules.
+- [x] Implement workload grid by user/team/site/period, capacity and overload, reassignment preview/commit, actual-versus-planned, dated forfait/rate editors; test unauthorized employee data and browser workflow, check/test/build, commit and report.
 
 ### Task 6: CRM, onboarding et LAB
 

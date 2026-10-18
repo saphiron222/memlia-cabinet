@@ -5865,17 +5865,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5912,17 +5916,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -5958,17 +5966,22 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts",
+          "apps/server/test/time-export-batch.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -6005,17 +6018,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -6053,17 +6070,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8172,19 +8193,23 @@
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
           "docs/time.md",
-          "apps/web/src/features/workflows/TaskDetail.tsx"
+          "apps/web/src/features/workflows/TaskDetail.tsx",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/workflows.test.ts",
           "apps/server/test/backup.test.ts",
           "tests/e2e/workflows.spec.ts",
           "apps/server/test/time.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Mentions Task3 conservées ; prévu/réalisé Task5 raccordé à la fiche canonique. Réception indépendante, CI exacte et qualification globale Task12 encore distinctes ; validation cabinet en dernière phase."
+        "remaining": "Mentions Task3 et prévu/réalisé Task5 raccordés à la fiche canonique, revus et vérifiés en CI au commit cfc96c1. Qualification consolidée Task11/12 et validation cabinet en dernière phase restent distinctes."
       }
     },
     {
@@ -8271,17 +8296,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -8316,17 +8345,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -9114,17 +9147,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
@@ -9160,17 +9197,21 @@
           "apps/web/src/features/time/TimeReport.tsx",
           "apps/web/src/features/time/Configuration.tsx",
           "apps/web/src/features/time/Workload.tsx",
-          "docs/time.md"
+          "docs/time.md",
+          "apps/server/src/time/scope-references.ts",
+          "apps/server/src/time/authorize-batch.ts"
         ],
         "tests": [
           "apps/server/test/time.test.ts",
           "apps/server/test/backup.test.ts",
-          "tests/e2e/time.spec.ts"
+          "tests/e2e/time.spec.ts",
+          "apps/server/test/time-review.test.ts",
+          "apps/server/test/time-scope.test.ts"
         ],
-        "ci": "not-run-for-task5",
+        "ci": "verified-ci:cfc96c1; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096978179; https://github.com/saphiron222/memlia-cabinet/actions/runs/39096981166",
         "fieldValidation": "last-phase",
         "criterionDetails": "docs/time.md#critères-et-réception",
-        "remaining": "Réception indépendante du contrôleur et CI exacte ; qualification globale Task12 ; essais réels en cabinet en dernière phase."
+        "remaining": "Lot revu et vérifié en CI au commit cfc96c1 ; qualification consolidée Task11/12 (design, accessibilité, volume et exploitation), puis essais réels en cabinet en dernière phase."
       }
     },
     {
