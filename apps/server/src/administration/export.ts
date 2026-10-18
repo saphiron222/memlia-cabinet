@@ -1,4 +1,4 @@
-import { timeExportPage, assertTimeExport } from "../time/export.js";
+import { timeExportPage, assertTimeExports } from "../time/export.js";
 import { TimeExportSchema } from "@memlia/contracts";
 import {
   ProductionGridExport,
@@ -585,8 +585,11 @@ export class Exports {
         [id, afterTime],
       );
       if (!page.length) break;
-      for (const row of page)
-        await assertTimeExport(tx, actor, TimeExportSchema.parse(row.content));
+      await assertTimeExports(
+        tx,
+        actor,
+        page.map((row) => TimeExportSchema.parse(row.content)),
+      );
       afterTime = String(page.at(-1)!.id);
     }
     let afterDocument: string | null = null;

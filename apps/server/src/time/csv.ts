@@ -8,7 +8,8 @@ import {
 } from "@memlia/contracts";
 import type { Connection } from "../storage/database.js";
 import { JobRunner } from "../jobs/runner.js";
-import { report, authorize, load } from "./service.js";
+import { report, authorizeTimeQuery } from "./service.js";
+import { authorizeTimeBatch } from "./authorize-batch.js";
 import { requireGlobal } from "../records/permissions.js";
 import { idempotent } from "../storage/operations.js";
 import { fail } from "../errors.js";
@@ -37,7 +38,7 @@ export class TimeCsv {
       }),
       authorize: async (tx, actor, i) => {
         requireGlobal(actor, "export");
-        await report(tx, actor, { ...i.query, limit: 1 }, "export");
+        await authorizeTimeQuery(tx, actor, i.query, "export");
         await assertTimeCsvRows(tx, actor, i.exportId);
       },
       execute: async (i, ctx) => {
@@ -118,7 +119,7 @@ export class TimeCsv {
       fail(404, "NOT_FOUND", "Sortie inaccessible.");
     requireGlobal(actor, "export");
     const i = input.parse(j.input);
-    await report(tx, actor, { ...i.query, limit: 1 }, "export");
+    await authorizeTimeQuery(tx, actor, i.query, "export");
     await assertTimeCsvRows(tx, actor, i.exportId);
     return {
       id,
@@ -190,11 +191,10 @@ export async function assertTimeCsvRows(
       [exportId, after],
     );
     if (!rows.length) break;
-    for (const r of rows) {
-      const e = TimeEntitySchema.parse(r.content);
-      await authorize(tx, actor, e, "export");
-      const current = await load(tx, actor, e.id);
-      if (current.version !== e.version)
+    const entries = rows.map((r) => TimeEntitySchema.parse(r.content));
+    const current = await authorizeTimeBatch(tx, actor, entries);
+    for (const entry of entries) {
+      if (current.get(entry.id)!.version !== entry.version)
         fail(
           409,
           "EXPORT_CHANGED",

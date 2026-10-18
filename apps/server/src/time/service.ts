@@ -545,7 +545,10 @@ export function period(q: TimeQuery) {
   if (q.from > q.to || Date.parse(q.to) - Date.parse(q.from) > 366 * 86400000)
     fail(400, "INVALID_PERIOD", "Choisissez une période de 367 jours maximum.");
 }
-export async function report(
+// A stored query must remain authorized even when it has no prepared rows.
+// Callers that only revalidate an exit need these checks, not a new report of
+// unrelated current totals. Retain the record plan's read checks and bounds.
+export async function authorizeTimeQuery(
   tx: Connection,
   actor: SessionUser,
   q: TimeQuery,
@@ -555,6 +558,19 @@ export async function report(
   if (q.userId && q.userId !== actor.id && !readsOthers(actor))
     fail(404, "NOT_FOUND", "Utilisateur inaccessible.");
   if (action === "export") requireGlobal(actor, "export");
+  if (q.recordId)
+    await requireAccess(tx, actor, action, await loadRecord(tx, q.recordId));
+  if (q.dossierId)
+    await requireAccess(tx, actor, action, await loadRecord(tx, q.dossierId));
+  return q.recordId ? effectivePlan(tx, actor, q.recordId) : null;
+}
+export async function report(
+  tx: Connection,
+  actor: SessionUser,
+  q: TimeQuery,
+  action: "read" | "export" = "read",
+) {
+  const planned = await authorizeTimeQuery(tx, actor, q, action);
   const params: unknown[] = [q.from, q.to],
     p = (v: unknown) => {
       params.push(v);
@@ -569,13 +585,11 @@ export async function report(
   if (q.natureId)
     filters.push(`t.content->'data'->>'natureId'=${p(q.natureId)}`);
   if (q.recordId) {
-    await requireAccess(tx, actor, action, await loadRecord(tx, q.recordId));
     filters.push(
       `t.content->'data'->'link'->>'kind'='record' AND t.content->'data'->'link'->>'id'=${p(q.recordId)}`,
     );
   }
   if (q.dossierId) {
-    await requireAccess(tx, actor, action, await loadRecord(tx, q.dossierId));
     const dossier = p(q.dossierId);
     filters.push(
       `(CASE t.content->'data'->'link'->>'kind' WHEN 'record' THEN EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=(t.content->'data'->'link'->>'id')::uuid AND (r.id=${dossier}::uuid OR r.content->>'dossierId'=${dossier}::text)) WHEN 'production' THEN EXISTS(SELECT 1 FROM cabinet_production_rows pr LEFT JOIN cabinet_records related ON related.id=pr.record_id WHERE pr.id=(t.content->'data'->'link'->>'id')::uuid AND ((pr.content->'target'->>'kind'='dossier' AND pr.content->'target'->>'id'=${dossier}::text) OR related.content->>'dossierId'=${dossier}::text OR pr.content->'scope'->>'id'=${dossier}::text)) ELSE FALSE END)`,
@@ -614,7 +628,7 @@ export async function report(
     realizedSeconds: Number(totals.seconds),
     unratedSeconds: Number(totals.unrated),
     amount: Number(totals.unrated) > 0 ? null : (totals.amount ?? "0.00"),
-    planned: q.recordId ? await effectivePlan(tx, actor, q.recordId) : null,
+    planned,
     entries: rows.map((r) => TimeEntitySchema.parse(r.content)),
     relations: rows.flatMap((r) => {
       const e = TimeEntitySchema.parse(r.content);

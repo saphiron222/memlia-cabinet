@@ -101,6 +101,7 @@ const sourcePaths = [
   "apps/server/test/time-review.test.ts",
   "apps/server/test/time.test.ts",
   "apps/server/test/time-scope.test.ts",
+  "apps/server/test/time-export-batch.test.ts",
   "apps/server/test/production-round1.test.ts",
   "apps/server/test/helpers.ts",
   "apps/server/src/time/service.ts",
@@ -108,6 +109,7 @@ const sourcePaths = [
   "apps/server/src/time/catalog.ts",
   "apps/server/src/time/workload.ts",
   "apps/server/src/time/scope-references.ts",
+  "apps/server/src/time/authorize-batch.ts",
   "apps/server/src/time/csv.ts",
   "apps/server/src/time/routes.ts",
   "apps/server/src/administration/export.ts",
@@ -453,7 +455,7 @@ try {
     plansComplete: complete,
     serverDefaultAfter: after,
     qualification:
-      "Exact populated C1 original test result and 30s timeout are retained, including failure. The independent C1 SQL probe is diagnostic only. All 23 Time cases, 18 affected Production cases, whole native CI and downstream gates remain pending on the final candidate.",
+      "Exact populated C1 original test result and 30s timeout are retained, including failure. The independent C1 SQL probe is diagnostic only. All 27 Time cases, 18 affected Production cases, whole native CI and downstream gates remain pending on the final candidate.",
     testName,
   });
   console.log(
