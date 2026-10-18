@@ -1,18 +1,18 @@
 // Manual diagnostic on a disposable/fictitious loopback database. No normal CI
 // command, production setting, test fixture, assertion or timeout is changed.
 import assert from "node:assert/strict";
-import { spawn, execFileSync } from "node:child_process";
-import {
-  readFileSync,
-  writeFileSync,
-  appendFileSync,
-  mkdirSync,
-  readdirSync,
-} from "node:fs";
+import { execFileSync } from "node:child_process";
+import { readFileSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve, join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { platform, arch, cpus, totalmem } from "node:os";
 import { Pool } from "pg";
+import { EvidenceStore } from "./relationship-diagnostic-evidence.mjs";
+import {
+  runStage,
+  readEvents as stageEvents,
+  scrub,
+} from "./relationship-diagnostic-stage.mjs";
 
 const local = process.argv.includes("--local-harness-check");
 assert(
@@ -37,13 +37,8 @@ assert.equal(
   "Use a new evidence directory; prior failures are never overwritten",
 );
 const hash = (value) => createHash("sha256").update(value).digest("hex");
-const scrub = (value) =>
-  value.replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, "[database URL redacted]");
-const save = (name, value) =>
-  writeFileSync(join(directory, name), JSON.stringify(value, null, 2) + "\n", {
-    mode: 0o600,
-    flag: "wx",
-  });
+const evidence = EvidenceStore.create(directory);
+const save = (name, value) => evidence.save(name, value);
 const head = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
 }).trim();
@@ -99,6 +94,11 @@ const sourcePaths = [
   "vitest.config.ts",
   "package-lock.json",
   "scripts/relationship-linux-diagnostic.mjs",
+  "scripts/relationship-diagnostic-evidence.mjs",
+  "scripts/relationship-diagnostic-evidence.d.mts",
+  "scripts/relationship-diagnostic-stage.mjs",
+  "tests/diagnostics/relationship-linux-reporter.mjs",
+  "tests/diagnostics/relationship-linux-bounds.test.mjs",
   "tests/diagnostics/relationship-linux.config.ts",
   "tests/diagnostics/relationship-linux.setup.ts",
   "tests/diagnostics/relationship-linux-observer.ts",
@@ -122,131 +122,17 @@ const sources = sourcePaths.map((path) => {
   const bytes = readFileSync(path);
   return { path, bytes: bytes.length, sha256: hash(bytes) };
 });
-const readEvents = (stage) => {
-  try {
-    return readFileSync(join(directory, `${stage}-events.jsonl`), "utf8")
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .map(JSON.parse);
-  } catch (error) {
-    if (error.code === "ENOENT") return [];
-    throw error;
-  }
-};
-async function cleanOwned(stage) {
-  // Only connections carrying this invocation's random application name and
-  // schemas whose CREATE was observed in this invocation can be removed.
-  const terminated = await control.query(
-    "SELECT pg_terminate_backend(pid) AS terminated FROM pg_stat_activity WHERE application_name=$1 AND pid<>pg_backend_pid()",
-    [applicationName],
-  );
-  const schemas = [
-    ...new Set(
-      readEvents(stage).flatMap((e) => (e.ownedSchema ? [e.ownedSchema] : [])),
-    ),
-  ];
-  for (const schema of schemas) {
-    assert.match(schema, /^(test_|diag_relationship_)[a-z0-9]+$/);
-    await control.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-  }
-  return { terminated: terminated.rows, schemas };
-}
-async function run(stage, args, boundMs) {
-  const startedAt = new Date().toISOString(),
-    started = performance.now();
-  const child = spawn(process.execPath, args, {
-    env: { ...childEnv, RELATIONSHIP_DIAGNOSTIC_STAGE: stage },
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-  });
-  let timedOut = false,
-    killTimer,
-    monitoring = false;
-  const chunks = { stdout: "", stderr: "" };
-  // Redact complete lines, including connection strings spanning stream chunks.
-  for (const name of ["stdout", "stderr"])
-    child[name].on("data", (data) => {
-      chunks[name] += data.toString();
-      const end = chunks[name].lastIndexOf("\n");
-      if (end >= 0) {
-        appendFileSync(
-          join(directory, `${stage}.log`),
-          scrub(chunks[name].slice(0, end + 1)),
-          { mode: 0o600 },
-        );
-        chunks[name] = chunks[name].slice(end + 1);
-      }
-    });
-  const signal = (name) => {
-    try {
-      process.kill(-child.pid, name);
-    } catch (error) {
-      if (error.code !== "ESRCH") throw error;
-    }
-  };
-  const watchdog = setTimeout(() => {
-    timedOut = true;
-    signal("SIGTERM");
-    killTimer = setTimeout(() => signal("SIGKILL"), 10000);
-  }, boundMs);
-  const monitor = setInterval(async () => {
-    if (monitoring) return;
-    monitoring = true;
-    try {
-      const result = await control.query(
-        "SELECT pid,state,wait_event_type,wait_event,pg_blocking_pids(pid) AS blockers,extract(epoch FROM clock_timestamp()-query_start)*1000 AS query_ms,query FROM pg_stat_activity WHERE application_name=$1",
-        [applicationName],
-      );
-      const rows = result.rows.map(({ query, ...row }) => ({
-        ...row,
-        sqlSha256: hash(query),
-      }));
-      appendFileSync(
-        join(directory, `${stage}-activity.jsonl`),
-        JSON.stringify({ at: new Date().toISOString(), rows }) + "\n",
-        { mode: 0o600 },
-      );
-    } catch (error) {
-      appendFileSync(
-        join(directory, `${stage}-activity.jsonl`),
-        JSON.stringify({
-          at: new Date().toISOString(),
-          error: scrub(error.message),
-        }) + "\n",
-      );
-    } finally {
-      monitoring = false;
-    }
-  }, 1000);
-  let status;
-  try {
-    status = await new Promise((done, reject) => {
-      child.on("error", reject);
-      child.on("close", (code, signal) => done({ code, signal }));
-    });
-  } finally {
-    clearInterval(monitor);
-    clearTimeout(watchdog);
-    clearTimeout(killTimer);
-    for (const name of ["stdout", "stderr"])
-      if (chunks[name])
-        appendFileSync(join(directory, `${stage}.log`), scrub(chunks[name]), {
-          mode: 0o600,
-        });
-  }
-  const cleanup = await cleanOwned(stage);
-  const receipt = {
-    startedAt,
-    elapsedMs: performance.now() - started,
+const readEvents = (stage) => stageEvents(directory, stage);
+const run = (stage, args, boundMs) =>
+  runStage({
+    directory,
+    stage,
+    args,
     boundMs,
-    timedOut,
-    ...status,
-    cleanup,
-  };
-  save(`${stage}-result.json`, receipt);
-  return receipt;
-}
+    env: childEnv,
+    control,
+    applicationName,
+  });
 
 const cases = [
   [
@@ -343,8 +229,7 @@ try {
       originalTestMs: "N4 20000; N6 15000; others 30000 unchanged",
       selectedPlansPerCase: 1,
       queryEvents: 16384,
-      eventBytes: 33554432,
-      artifactBytes: 8388608,
+      evidence: evidence.limits,
     },
     settings:
       "No JIT or statement/test/lock timeout changes; EXPLAIN ANALYZE keeps server policy. Only control connection has 5s monitoring timeout.",
@@ -360,8 +245,7 @@ try {
       "-t",
       "^" + name + "$",
       "--reporter=verbose",
-      "--reporter=json",
-      `--outputFile.json=${join(directory, stage + "-vitest.json")}`,
+      "--reporter=./tests/diagnostics/relationship-linux-reporter.mjs",
     ];
     delete childEnv.RELATIONSHIP_DIAGNOSTIC_TARGET;
     const baseline = await run(
@@ -439,10 +323,7 @@ try {
   );
   process.exitCode = receipts.every((r) => r.planComplete) ? 0 : 1;
 } catch (error) {
-  save("diagnostic-error.json", {
-    message: scrub(error.message),
-    stack: scrub(error.stack ?? ""),
-  });
+  evidence.failureReceipt(scrub(error.message));
   console.error(scrub(error.message));
   process.exitCode = 1;
 } finally {

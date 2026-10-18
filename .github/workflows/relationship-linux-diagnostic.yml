@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/relationship-linux-diagnostic.yml"
       - "scripts/relationship-linux-diagnostic.mjs"
+      - "scripts/relationship-diagnostic-*"
       - "tests/diagnostics/relationship-linux*"
 permissions:
   contents: read

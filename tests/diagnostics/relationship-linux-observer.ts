@@ -1,6 +1,6 @@
 // Explicit diagnostic only: original requests, assertions and deadlines are unchanged.
-import { appendFileSync, writeFileSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import { EvidenceStore } from "../../scripts/relationship-diagnostic-evidence.mjs";
 import { createHash } from "node:crypto";
 import { Client, type QueryResult } from "pg";
 const directory = process.env.RELATIONSHIP_DIAGNOSTIC_DIRECTORY!;
@@ -8,25 +8,15 @@ const stage = process.env.RELATIONSHIP_DIAGNOSTIC_STAGE!;
 export const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 export const scrub = (s: string) =>
   s.replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, "[database URL redacted]");
-let bytes = 0;
+const evidence = new EvidenceStore(directory, stage, "observer");
 export function event(type: string, detail: Record<string, unknown>) {
-  const line =
-    JSON.stringify({ at: new Date().toISOString(), type, ...detail }) + "\n";
-  bytes += Buffer.byteLength(line);
-  if (bytes > 32 * 1024 * 1024)
-    throw new Error("Diagnostic event bound exceeded");
-  appendFileSync(join(directory, stage + "-events.jsonl"), line, {
-    mode: 0o600,
-  });
+  evidence.append(
+    stage + "-events.jsonl",
+    evidence.json({ at: new Date().toISOString(), type, ...detail }),
+  );
 }
 function artifact(name: string, value: unknown) {
-  const text = JSON.stringify(value, null, 2) + "\n";
-  if (Buffer.byteLength(text) > 8 * 1024 * 1024)
-    throw new Error("Diagnostic artifact bound exceeded");
-  writeFileSync(join(directory, stage + "-" + name + ".json"), text, {
-    mode: 0o600,
-    flag: "wx",
-  });
+  evidence.save(stage + "-" + name + ".json", value);
 }
 export function installObserver() {
   if (!directory || !stage || !process.env.DATABASE_URL)
@@ -61,7 +51,7 @@ export function installObserver() {
       at = performance.now(),
       fingerprint = hash(sql);
     if (serial > 16384 || Buffer.byteLength(sql) > 1024 * 1024)
-      throw new Error("Diagnostic SQL bound exceeded");
+      evidence.fail("sql-count-or-size");
     const occurrence = (occurrences.get(fingerprint) ?? 0) + 1;
     occurrences.set(fingerprint, occurrence);
     const eligible =
