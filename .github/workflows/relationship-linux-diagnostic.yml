@@ -12,6 +12,8 @@ on:
       - "tests/diagnostics/relationship-linux*"
       - "apps/server/src/records/query.ts"
       - "apps/server/src/relationship/document-scope.ts"
+      - "apps/server/src/time/**"
+      - "apps/server/test/time-review.test.ts"
 permissions:
   contents: read
 env:
@@ -40,7 +42,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with: { node-version: "22.22.3", cache: npm }
       - run: npm ci
-      - name: Seven original native witnesses and measured GED policy plans
+      - name: Eight original native witnesses including Time C1 and measured GED policy plans
         env:
           DATABASE_URL: postgresql://memlia_test:ci-fictitious-disposable-only@127.0.0.1:5432/memlia_test
           EXPECTED_HEAD: ${{ github.sha }}

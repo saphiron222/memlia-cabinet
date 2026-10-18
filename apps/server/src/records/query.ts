@@ -1,4 +1,4 @@
-import { directPermissionSql } from "./grants.js";
+import { directPermissionSql, type SqlPermissionActor } from "./grants.js";
 import { relationshipDocumentPredicate } from "../relationship/document-scope.js";
 import { productionDocumentIdsSql } from "../production/document-scope.js";
 import {
@@ -15,17 +15,28 @@ import { assignmentScope } from "../administration/access.js";
 import { fail } from "../errors.js";
 // Exact counterpart of direct resource checks; applied before projection/count/pagination.
 export function authorizedPredicate(
-  actor: SessionUser,
+  actor: SessionUser | SqlPermissionActor,
   action: "read" | "export" | "update",
   parameter: (v: unknown) => string,
   followContact = true,
   followRelationship = true,
 ): string {
   const grant = (verb: Action, kind: RecordKind, scope: string) => {
-    const direct = directPermissionSql(actor, verb, kind, scope, parameter);
+    const direct = directPermissionSql(
+      "sql" in actor ? actor.sql.permissions : actor,
+      verb,
+      kind,
+      scope,
+      parameter,
+    );
+    const actorId = "sql" in actor ? actor.sql.id : actor.id;
+    const p =
+      "sql" in actor
+        ? (v: unknown) => (v === actorId ? actorId : parameter(v))
+        : parameter;
     return direct === "TRUE"
       ? "TRUE"
-      : `(${direct} OR ${assignmentScope(actor.id, verb, kind, scope, parameter)})`;
+      : `(${direct} OR ${assignmentScope(actorId, verb, kind, scope, p)})`;
   };
   const scope =
     "CASE WHEN r.kind='dossier' THEN r.id ELSE (r.content->>'dossierId')::uuid END";
@@ -212,15 +223,22 @@ export async function queryRecords(
   };
 }
 
+const workDocumentOwnersSql = (id: string) =>
+  `SELECT id,kind,content FROM cabinet_records WHERE ((kind='obligation' AND (content->'data'->'fiscal'->'documentIds') ? (${id})::text) OR (kind='tache' AND (content->'data'->'documentIds') ? (${id})::text))`;
+
 export function fiscalDocumentPredicate(
   actor: SessionUser,
   parameter: (v: unknown) => string,
   documentId: string,
 ) {
-  // Isolate the actual owners before applying the full record graph policy.
-  // Only structural rows are projected; grants are evaluated for this actor now.
-  return `${relationshipDocumentPredicate(actor, parameter, documentId)} AND NOT EXISTS(WITH fiscal_owners AS MATERIALIZED(SELECT id,kind,content FROM cabinet_records WHERE ((kind='obligation' AND (content->'data'->'fiscal'->'documentIds') ? (${documentId})::text) OR (kind='tache' AND (content->'data'->'documentIds') ? (${documentId})::text))) SELECT 1 FROM fiscal_owners fiscal_owner WHERE (${authorizedPredicate(actor, "read", parameter).replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE)`;
+  // Existence and policy share one statement. With no Work owner, avoid
+  // compiling its transitive graph; any owner invokes the canonical policy.
+  return `${relationshipDocumentPredicate(actor, parameter, documentId)} AND CASE WHEN EXISTS(${workDocumentOwnersSql(documentId)}) THEN cabinet_work_document_allowed_v14(${parameter(actor.id)}::uuid,${parameter(JSON.stringify(actor.permissions))}::jsonb,(${documentId})::uuid) ELSE TRUE END`;
 }
+
+// Reuse the same graph and grant providers as record queries. Only the actor
+// binding changes: every invocation receives current effective permissions.
+export const workDocumentFunctionV14 = `CREATE OR REPLACE FUNCTION cabinet_work_document_allowed_v14(uuid,jsonb,uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY INVOKER SET search_path FROM CURRENT AS $work$ SELECT NOT EXISTS(WITH fiscal_owners AS MATERIALIZED(${workDocumentOwnersSql("$3")}) SELECT 1 FROM fiscal_owners fiscal_owner WHERE (${authorizedPredicate({ sql: { id: "$1", permissions: "$2" } }, "read", (v) => "'" + String(v).replaceAll("'", "''") + "'").replaceAll(/\br\./g, "fiscal_owner.")}) IS NOT TRUE) $work$;`;
 
 // Grid and original archives use the same current notice and coupled year/property semantics.
 export function currentNoticePredicate(

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { workDocumentFunctionV14 } from "../records/query.js";
 import {
   relationshipDocumentFunctionV12,
   relationshipDocumentFunctionV13,
@@ -24,7 +25,7 @@ export async function migrate(connection: Connection): Promise<void> {
     "SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations",
   );
   const version = Number(rows[0]?.version);
-  if (version > 13)
+  if (version > 14)
     throw new Error(
       "Schéma plus récent que cette application ; mise à jour requise.",
     );
@@ -149,6 +150,25 @@ export async function migrate(connection: Connection): Promise<void> {
       ),
     );
     await connection.query("INSERT INTO schema_migrations(version) VALUES(13)");
+  }
+  if (version < 14) {
+    if (
+      createHash("sha256").update(workDocumentFunctionV14).digest("hex") !==
+      "f6b00d1b96968c500f515ba0b11376f3fb6d98a23173582590cf143be7098264"
+    )
+      throw new Error(
+        "La politique des propriétaires Work v14 a changé ; une migration versionnée est requise.",
+      );
+    const schemas = await connection.query("SELECT current_schema() AS name");
+    const schema = String(schemas[0]?.name ?? "");
+    if (!schema) throw new Error("Schéma d’installation absent.");
+    await connection.query(
+      workDocumentFunctionV14.replace(
+        "SET search_path FROM CURRENT",
+        `SET search_path TO "${schema.replaceAll('"', '""')}", pg_catalog`,
+      ),
+    );
+    await connection.query("INSERT INTO schema_migrations(version) VALUES(14)");
   }
 }
 

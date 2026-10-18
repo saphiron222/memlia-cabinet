@@ -1,4 +1,7 @@
 import type { Action, RecordKind, SessionUser } from "@memlia/contracts";
+// Trusted SQL expressions used only while installing a versioned policy. This
+// context is constructed in source, never parsed from HTTP or stored models.
+export type SqlPermissionActor = { sql: { id: string; permissions: string } };
 // Canonical direct-grant matching. Null dossier means global; kind * matches
 // every resource kind. Assignment grants remain in administration/access.
 export function hasPermission(

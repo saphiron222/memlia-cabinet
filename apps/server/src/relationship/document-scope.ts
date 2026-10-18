@@ -1,18 +1,21 @@
-import { directPermissionSql } from "../records/grants.js";
+import {
+  directPermissionSql,
+  type SqlPermissionActor,
+} from "../records/grants.js";
 import type { SessionUser, Action } from "@memlia/contracts";
 import { assignmentScope } from "../administration/access.js";
 // A SQL function keeps this finite policy out of the expanded Work/Production
 // predicates. It is STABLE and SECURITY INVOKER; every call receives the current
 // actor/grants and reads canonical assignments and every owner snapshot.
 export function relationshipDocumentPredicate(
-  a: SessionUser,
+  a: SessionUser | SqlPermissionActor,
   p: (v: unknown) => string,
   id: string,
 ) {
   // Skip the owner policy only when this proof chain has no historical owner.
   // This is a structural existence check in the same statement, not a verdict
   // cache; attached proofs still use the unique versioned authorization policy.
-  return `CASE WHEN EXISTS(${relatedLabOwnersSql(id)}) THEN cabinet_relationship_document_allowed_v13(${p(a.id)}::uuid,${p(JSON.stringify(a.permissions))}::jsonb,(${id})::uuid) ELSE TRUE END`;
+  return `CASE WHEN EXISTS(${relatedLabOwnersSql(id)}) THEN cabinet_relationship_document_allowed_v13(${"sql" in a ? a.sql.id : p(a.id)}::uuid,${"sql" in a ? a.sql.permissions : p(JSON.stringify(a.permissions))}::jsonb,(${id})::uuid) ELSE TRUE END`;
 }
 const relatedLabOwnersSql = (id: string) =>
   `SELECT DISTINCT linked.id FROM cabinet_documents lab_target JOIN cabinet_documents lab_proof ON lab_proof.logical_id=lab_target.logical_id JOIN cabinet_relationship_history linked ON EXISTS(SELECT 1 FROM jsonb_array_elements(COALESCE(linked.content->'data'->'evidence','[]'::jsonb)) proof WHERE (proof->>'documentId')::uuid=lab_proof.id) WHERE lab_target.id=(${id})::uuid`;

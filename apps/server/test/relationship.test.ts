@@ -1644,7 +1644,7 @@ test("LAB v13 migration preserves the v12 verdict for historical owners, contact
     expect(
       (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
         .version,
-    ).toBe(13);
+    ).toBe(14);
   });
   const create = async (record: Record<string, unknown>) => {
     const result = await f.request("POST", "/records", {
@@ -1767,13 +1767,16 @@ test("LAB v13 migration preserves the v12 verdict for historical owners, contact
     await db.query(
       "DROP FUNCTION cabinet_relationship_document_allowed_v13(uuid,jsonb,uuid)",
     );
-    await db.query("DELETE FROM schema_migrations WHERE version=13");
+    await db.query(
+      "DROP FUNCTION cabinet_work_document_allowed_v14(uuid,jsonb,uuid)",
+    );
+    await db.query("DELETE FROM schema_migrations WHERE version>=13");
   });
   await f.maintainDatabase(async (db) => {
     expect(
       (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
         .version,
-    ).toBe(13);
+    ).toBe(14);
     expect(
       await db.query(
         "SELECT id,version,content FROM cabinet_relationship_history ORDER BY id,version",
@@ -1876,5 +1879,342 @@ test("GED proof discovery keeps uppercase historical links and the full document
     ).toEqual(
       status === 200 ? [old.documentId, replacement.documentId].sort() : [],
     );
+  }
+});
+
+test("Work document v14 shares concrete grants, all current owners and historical LAB checks through populated migration and team withdrawal", async () => {
+  const admin = await start();
+  const { authorizedPredicate } = await import("../src/records/query.js");
+  const create = async (record: Record<string, unknown>) => {
+    const response = await f.request("POST", "/records", {
+      operationId: operationId(),
+      record,
+    });
+    expect(response.statusCode, response.body).toBe(201);
+    return response.json();
+  };
+  const a = await create({ kind: "dossier", title: "Work A", data: {} });
+  const b = await create({ kind: "dossier", title: "Lien B", data: {} });
+  const person = await create({
+    kind: "contact",
+    title: "Contact sans dossier principal",
+    confidential: true,
+    data: { contactType: "personne", relatedDossierIds: [a.id, b.id] },
+  });
+  const evidence = await proof(a.id),
+    independent = await proof(a.id),
+    otherEvidence = await proof(b.id);
+  const first = await create({
+    kind: "tache",
+    title: "Premier propriétaire",
+    dossierId: a.id,
+    data: { documentIds: [evidence.documentId] },
+  });
+  const second = await create({
+    kind: "tache",
+    title: "Second propriétaire confidentiel",
+    dossierId: a.id,
+    confidential: true,
+    data: { documentIds: [evidence.documentId], prospectId: person.id },
+  });
+  const grant = (
+    action: string,
+    kind = "*",
+    dossierId: string | null = null,
+  ) => ({ action, kind, dossierId });
+  const scoped = [
+    grant("read", "*", a.id),
+    grant("confidential", "*", a.id),
+    grant("read", "dossier", b.id),
+    grant("read", "contact"),
+    grant("confidential", "contact"),
+  ];
+  const compare = async (
+    permissions: typeof admin.permissions,
+    expected: boolean,
+    actorId = admin.id,
+  ) => {
+    await f.maintainDatabase(async (db) => {
+      const params: unknown[] = [[first.id, second.id]];
+      const predicate = authorizedPredicate(
+        { ...admin, id: actorId, permissions },
+        "read",
+        (value) => {
+          params.push(value);
+          return "$" + params.length;
+        },
+      );
+      const concrete = (
+        await db.query(
+          `SELECT NOT EXISTS(SELECT 1 FROM cabinet_records r WHERE r.id=ANY($1::uuid[]) AND (${predicate}) IS NOT TRUE) allowed`,
+          params,
+        )
+      )[0]!.allowed;
+      const symbolic = (
+        await db.query(
+          "SELECT cabinet_work_document_allowed_v14($1::uuid,$2::jsonb,$3::uuid) allowed",
+          [actorId, JSON.stringify(permissions), evidence.documentId],
+        )
+      )[0]!.allowed;
+      expect([concrete, symbolic]).toEqual([expected, expected]);
+      expect(
+        (
+          await db.query(
+            "SELECT cabinet_work_document_allowed_v14($1::uuid,$2::jsonb,$3::uuid) allowed",
+            [actorId, JSON.stringify(permissions), independent.documentId],
+          )
+        )[0]!.allowed,
+      ).toBe(true);
+    });
+  };
+  for (const [permissions, allowed] of [
+    [admin.permissions, true],
+    [[grant("read"), grant("confidential")], true],
+    [[grant("read", "*", a.id), grant("confidential", "*", a.id)], false],
+    [scoped, true],
+    [
+      scoped.filter(
+        (p) => !(p.action === "confidential" && p.kind === "contact"),
+      ),
+      false,
+    ],
+    [
+      [
+        grant("read", "dossier", a.id),
+        grant("read", "dossier", b.id),
+        grant("read", "tache", a.id),
+        grant("read", "contact"),
+        grant("confidential", "tache", a.id),
+        grant("confidential", "contact"),
+      ],
+      true,
+    ],
+    [[grant("read", "dossier"), grant("confidential")], false],
+    [[], false],
+  ] as const)
+    await compare([...permissions], allowed);
+
+  const policy = await save({
+    kind: "lab_policy",
+    name: "Historique Work",
+    periodDays: 90,
+    reason: "Examen fictif",
+  });
+  let review = await save({
+    kind: "lab",
+    dossierId: a.id,
+    personId: person.id,
+    level: "standard",
+    reason: "Preuve historique",
+    role: "Responsable",
+    observedOn: "2026-10-18",
+    decisionOn: "2026-10-18",
+    nextReviewOn: "2027-01-01",
+    policyId: policy.id,
+    policyVersion: policy.version,
+    evidence: [{ ...evidence, documentId: evidence.documentId.toUpperCase() }],
+  });
+  review = await save(
+    {
+      ...review.data,
+      dossierId: b.id,
+      personId: null,
+      evidence: [otherEvidence],
+    },
+    review,
+  );
+  const changed = await f.request("PUT", `/records/${person.id}`, {
+    operationId: operationId(),
+    expectedVersion: person.version,
+    record: {
+      kind: person.kind,
+      title: person.title,
+      dossierId: person.dossierId,
+      data: person.data,
+      confidential: false,
+    },
+  });
+  expect(changed.statusCode, changed.body).toBe(200);
+  await compare(scoped, false);
+  await compare([...scoped, grant("lab_read", "dossier", a.id)], false);
+  const complete = [
+    ...scoped,
+    grant("lab_read", "dossier", a.id),
+    grant("lab_read", "dossier", b.id),
+  ];
+  await compare(complete, true);
+  await compare(
+    complete.filter(
+      (p) => !(p.action === "confidential" && p.kind === "contact"),
+    ),
+    false,
+  );
+
+  let before: unknown[] = [];
+  await f.maintainDatabase(async (db) => {
+    before = await db.query(
+      "SELECT id,version,content FROM cabinet_relationship_history ORDER BY id,version",
+    );
+    await db.query(
+      "DROP FUNCTION cabinet_work_document_allowed_v14(uuid,jsonb,uuid)",
+    );
+    await db.query("DELETE FROM schema_migrations WHERE version=14");
+    expect(
+      (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
+        .version,
+    ).toBe(13);
+  });
+  await compare(complete, true);
+  await compare(
+    complete.filter((p) => p.action !== "lab_read"),
+    false,
+  );
+  await f.maintainDatabase(async (db) => {
+    expect(
+      await db.query(
+        "SELECT id,version,content FROM cabinet_relationship_history ORDER BY id,version",
+      ),
+    ).toEqual(before);
+    expect(
+      (await db.query("SELECT max(version) version FROM schema_migrations"))[0]!
+        .version,
+    ).toBe(14);
+    const schema = String(
+      (await db.query("SELECT current_schema() name"))[0]!.name,
+    );
+    const properties = await db.query(
+      "SELECT prosecdef,provolatile,proconfig FROM pg_proc WHERE proname='cabinet_work_document_allowed_v14' AND pronamespace=current_schema()::regnamespace",
+    );
+    expect(properties).toEqual([
+      {
+        prosecdef: false,
+        provolatile: "s",
+        proconfig: [`search_path=${schema}, pg_catalog`],
+      },
+    ]);
+    const otherSchema =
+      "diag_relationship_" + operationId().replaceAll("-", "");
+    const { migrate } = await import("../src/storage/migrations.js");
+    await db.transaction(async (tx) => {
+      await tx.query(`CREATE SCHEMA ${otherSchema}`);
+      try {
+        await tx.query(`SET LOCAL search_path TO ${otherSchema}, pg_catalog`);
+        await migrate(tx);
+        const result = (
+          await tx.query(
+            `SELECT "${schema}".cabinet_work_document_allowed_v14($1::uuid,'[]'::jsonb,$2::uuid) installation,${otherSchema}.cabinet_work_document_allowed_v14($1::uuid,'[]'::jsonb,$2::uuid) empty_installation`,
+            [admin.id, evidence.documentId],
+          )
+        )[0];
+        expect(result).toEqual({
+          installation: false,
+          empty_installation: true,
+        });
+      } finally {
+        await tx.query(`DROP SCHEMA ${otherSchema} CASCADE`);
+      }
+    });
+  });
+
+  const withoutWork = [
+    grant("read", "dossier"),
+    grant("read", "contact"),
+    grant("confidential", "contact"),
+    grant("lab_read"),
+  ];
+  const user = (
+    await f.request("POST", "/users", {
+      operationId: operationId(),
+      email: "work-owner-reader@example.test",
+      name: "Lecteur Work",
+      password: "FictitiousReader123!",
+      permissions: withoutWork,
+    })
+  ).json();
+  const role = (
+    await f.request("POST", "/administration/roles", {
+      operationId: operationId(),
+      name: "Lecture des propriétaires",
+      order: 0,
+      permissions: [grant("read", "tache"), grant("confidential", "tache")],
+    })
+  ).json();
+  let group = (
+    await f.request("POST", "/administration/groups", {
+      operationId: operationId(),
+      kind: "team",
+      name: "Équipe des propriétaires",
+      memberIds: [],
+    })
+  ).json();
+  const assigned = await f.request("POST", "/administration/assignments", {
+    operationId: operationId(),
+    rows: [
+      {
+        dossierId: a.id,
+        expectedVersion: a.version,
+        subject: { kind: "team", id: group.id },
+        roleId: role.id,
+        remove: false,
+      },
+    ],
+  });
+  expect(assigned.statusCode, assigned.body).toBe(200);
+  const login = await f.request(
+    "POST",
+    "/login",
+    {
+      email: "work-owner-reader@example.test",
+      password: "FictitiousReader123!",
+    },
+    "",
+  );
+  expect(login.statusCode, login.body).toBe(200);
+  const cookie = String(login.headers["set-cookie"]).split(";")[0]!;
+  for (const allowed of [false, true, false, true]) {
+    const changed = await f.request(
+      "PUT",
+      `/administration/groups/${group.id}`,
+      {
+        operationId: operationId(),
+        expectedVersion: group.version,
+        kind: "team",
+        name: group.name,
+        memberIds: allowed ? [user.id] : [],
+      },
+    );
+    expect(changed.statusCode, changed.body).toBe(200);
+    group = changed.json();
+    await compare(withoutWork, allowed, user.id);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/documents/${evidence.documentId}`,
+          undefined,
+          cookie,
+        )
+      ).statusCode,
+    ).toBe(allowed ? 200 : 404);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/documents?dossierId=${a.id}`,
+          undefined,
+          cookie,
+        )
+      ).json().total,
+    ).toBe(allowed ? 2 : 1);
+    expect(
+      (
+        await f.request(
+          "GET",
+          `/documents/${independent.documentId}`,
+          undefined,
+          cookie,
+        )
+      ).statusCode,
+    ).toBe(200);
   }
 });

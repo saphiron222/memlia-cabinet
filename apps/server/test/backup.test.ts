@@ -902,6 +902,7 @@ it.skipIf(!process.env.DATABASE_URL).each(["public", "cabinet_fixture"])(
         for (const functionName of [
           "cabinet_relationship_document_allowed_v12",
           "cabinet_relationship_document_allowed_v13",
+          "cabinet_work_document_allowed_v14",
         ])
           expect(
             (

@@ -99,6 +99,7 @@ const sourcePaths = [
   "scripts/relationship-diagnostic-stage.mjs",
   "tests/diagnostics/relationship-linux-reporter.mjs",
   "tests/diagnostics/relationship-linux-bounds.test.mjs",
+  "tests/diagnostics/relationship-linux-cleanup.test.mjs",
   "tests/diagnostics/relationship-linux.config.ts",
   "tests/diagnostics/relationship-linux.setup.ts",
   "tests/diagnostics/relationship-linux-observer.ts",
@@ -106,17 +107,27 @@ const sourcePaths = [
   "apps/server/test/documents.test.ts",
   "apps/server/test/fiscal.test.ts",
   "apps/server/test/relationship.test.ts",
+  "apps/server/test/time-review.test.ts",
   "apps/server/src/documents/store.ts",
   "apps/server/src/records/query.ts",
   "apps/server/src/records/grants.ts",
   "apps/server/src/records/permissions.ts",
   "apps/server/src/production/document-scope.ts",
+  "apps/server/src/production/query.ts",
+  "apps/server/src/production/service.ts",
   "apps/server/src/relationship/document-scope.ts",
   "apps/server/src/relationship/service.ts",
   "apps/server/src/storage/database.ts",
   "apps/server/src/storage/migrations.ts",
   "apps/server/src/administration/export.ts",
+  "apps/server/src/time/service.ts",
+  "apps/server/src/time/scope-references.ts",
+  "apps/server/src/time/authorize-batch.ts",
+  "apps/server/src/time/export.ts",
+  "apps/server/src/time/csv.ts",
+  "apps/server/src/time/timers.ts",
   "apps/server/src/jobs/runner.ts",
+  "deploy/operations.mjs",
 ];
 const sources = sourcePaths.map((path) => {
   const bytes = readFileSync(path);
@@ -169,6 +180,11 @@ const cases = [
     "N7",
     "apps/server/test/relationship.test.ts",
     "interoperable exit retains relationship models, versions, conversions and LAB evidence; prepared exit reauthorizes LAB rights",
+  ],
+  [
+    "N8",
+    "apps/server/test/time-review.test.ts",
+    "review C1 populated interoperable HTTP exit includes exact current history active timer configurations links and prepared CSV",
   ],
 ];
 try {
@@ -311,7 +327,7 @@ try {
     receipts,
     after,
     qualification:
-      "Original seven baseline results retained with original limits. Probe adds one EXPLAIN ANALYZE to the same unchanged test and can exceed its original deadline; its result is diagnostic only, never normal gate acceptance. No JIT comparison/off setting; no fixture/cardinality changes. Exact ordinary Linux CI and scoped review remain required.",
+      "Original eight baseline results retained with original limits, including Time C1 as N8. Probe adds one EXPLAIN ANALYZE to the same unchanged test and can exceed its original deadline; its result is diagnostic only, never normal gate acceptance. No JIT comparison/off setting; no fixture/cardinality changes. Exact ordinary Linux CI and scoped review remain required.",
   });
   console.log(
     JSON.stringify({

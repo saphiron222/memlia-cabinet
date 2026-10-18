@@ -26,7 +26,7 @@ export class EvidenceLimit extends Error {
     this.name = "EvidenceLimit";
   }
 }
-const stages = /^(runner|N[1-7]-(baseline|probe)|synthetic[1-9])$/;
+const stages = /^(runner|N[1-8]-(baseline|probe)|synthetic[1-9])$/;
 export class EvidenceStore {
   constructor(directory, stage = "runner", writer = "runner") {
     if (
@@ -77,7 +77,7 @@ export class EvidenceStore {
     });
     // One fixed <=4KiB emergency receipt per known writer/stage. This and all
     // stage receipts/ledger copies fit the separately reserved 1MiB envelope.
-    // At most 24 stage identities × (3 × 4KiB + 16KiB), plus 2 × 64KiB
+    // At most 26 stage identities × (3 × 4KiB + 16KiB), plus 2 × 64KiB
     // ledgers, one 4KiB error and the small fixed budget config: < 1MiB.
     this.#reserved(`limit-${this.stage}-${this.writer}.json`, receipt, 4096);
     throw new EvidenceLimit(reason);

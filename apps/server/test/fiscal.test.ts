@@ -1550,7 +1550,7 @@ test("additive fiscal migration upgrades version six without granting module or 
       (
         await db.query("SELECT max(version) AS version FROM schema_migrations")
       )[0]!.version,
-    ).toBe(13);
+    ).toBe(14);
     expect(await db.query("SELECT * FROM cabinet_fiscal_events")).toEqual([]);
   });
 });

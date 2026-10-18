@@ -66,7 +66,9 @@ async function exercise(
   const observedControl = monitorRows
     ? {
         query: (sql, params) =>
-          sql.startsWith("SELECT pid,state")
+          (typeof sql === "string" ? sql : sql.text).startsWith(
+            "SELECT pid,state",
+          )
             ? Promise.resolve({ rows: monitorRows })
             : control.query(sql, params),
       }
