@@ -10,7 +10,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: [
-    4173, 4175, 4177, 4179, 4181, 4183, 4185, 4187, 4189, 4191, 4193,
+    4173, 4175, 4177, 4179, 4181, 4183, 4185, 4187, 4189, 4191, 4193, 4195,
   ].map((port) => ({
     command: "npx tsx tests/e2e/serve.ts",
     url: `http://127.0.0.1:${port}`,

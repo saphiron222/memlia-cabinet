@@ -121,7 +121,7 @@ export function Notifications() {
               <div className="actions">
                 <a
                   href={
-                    (n.targetKind === "obligation"
+                    n.source === "lab" ? "#relationship?view=lab&id=" + n.relationshipId : (n.targetKind === "obligation"
                       ? "#fiscal?id="
                       : "#tache?id=") + n.targetId
                   }

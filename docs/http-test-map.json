@@ -566,5 +566,61 @@
   "GET /api/v1/time/catalog/:kind": {
     "file": "apps/server/test/time-review.test.ts",
     "test": "review I5 bounded searchable catalogs resolve and select users and inactive natures beyond 200"
+  },
+  "GET /api/v1/relationship/catalog/:kind": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+  },
+  "POST /api/v1/relationship/lab/reminders": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+  },
+  "GET /api/v1/relationship/onboarding/:id/status": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "onboarding distinct manual/source fiscal steps never manufacture habilitation; missing identity and mandate block activation and expiry reopens identity"
+  },
+  "POST /api/v1/relationship/onboarding/:id/activate": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "person-owned identity with exact GED evidence unlocks activation only with examined mandate, then expiry and changed identity reopen blockers"
+  },
+  "POST /api/v1/relationship/prospects/bulk-move": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "partial bulk move preserves successes and reports stale versions without duplicating conversion"
+  },
+  "GET /api/v1/relationship/entities/:id/capabilities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "POST /api/v1/relationship/entities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/entities": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/entities/:id": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "POST /api/v1/relationship/prospects/:id/move": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "GET /api/v1/relationship/:id/history": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "LAB retains justified revisions and cabinet policy; common notifications and GED withdraw after LAB permission revocation"
+  },
+  "GET /api/v1/relationship/:id/events": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "CRM configured stages convert canonical contact once and preserve task relation, manual temperature and distinct pending triggers"
+  },
+  "POST /api/v1/relationship/imports/preview": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "assisted pipeline exchange previews unmapped values, requires explicit validation and persists editable ordered model"
+  },
+  "POST /api/v1/relationship/imports/:id/commit": {
+    "file": "apps/server/test/relationship.test.ts",
+    "test": "assisted pipeline exchange previews unmapped values, requires explicit validation and persists editable ordered model"
   }
 }

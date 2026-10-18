@@ -44,6 +44,9 @@ const actionLabels: Record<Permission["action"], string> = {
   manage_users: "Administrer les utilisateurs",
   time_read: "Consulter les temps des collaborateurs",
   time_manage: "Configurer les temps et la charge",
+  lab_read: "Lire la vigilance LAB",
+  lab_manage: "Gérer la vigilance LAB",
+  lab_export: "Exporter la vigilance LAB",
   time_lock: "Verrouiller ou rouvrir les temps",
 };
 function Permissions({

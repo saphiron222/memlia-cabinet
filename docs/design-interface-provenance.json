@@ -348,6 +348,36 @@
       "local": "apps/web/src/features/time/Catalog.tsx",
       "sha256": "5a2bab44559877cdce3eff91408ba383e381b7adc4ade44462fb051249a32e75",
       "role": "Memlia paged searchable time catalogs and historical identity resolution composed from retained Cal fields, Plane controls and Propel buttons; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/shared.tsx",
+      "sha256": "3a868e06d6e46acd1cf86cbbaedf889ca7732bdcbb9256cd13c7f254727bef55",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Models.tsx",
+      "sha256": "7846c98fced3999d7f264e89654b97758778a3a9e32ab6edab3677dc519461c6",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/ProspectForm.tsx",
+      "sha256": "2c277c5f668619dc57a33d94589ba3bb0c7f35e0f6c19a8444237e0ed918e506",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Relationship.tsx",
+      "sha256": "0daf8e08e45b8f28821f199eb47a8f225c996d715e352cd9fb2f812f0fd95e8e",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/Reviews.tsx",
+      "sha256": "2ae17a1f2feb6351d00feea402d07a4914ed2e1c4a0b969ddd4cbb821df7a942",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
+    },
+    {
+      "local": "apps/web/src/features/relationship/relationship.css",
+      "sha256": "dd011671b28e2df245db4061eb7f74bff7d34785aa15dd639d853894914481ae",
+      "role": "Task6 canonical CRM/onboarding/LAB composition of retained Plane/Propel, Twenty Table and cal.diy forms; no new upstream copy"
     }
   ],
   "packages": [

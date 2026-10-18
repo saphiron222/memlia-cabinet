@@ -39,6 +39,7 @@ const groups = [
       ["contact", "Contacts", IconUsers],
     ],
   },
+  {name:"Relation client",links:[["relationship","CRM",IconUsers],["relationship?view=onboarding","Onboarding",IconCheckbox],["relationship?view=lab","Vigilance LAB",IconListDetails]]},
   {
     name: "Échéances",
     links: [

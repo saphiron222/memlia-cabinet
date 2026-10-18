@@ -63,3 +63,14 @@ La branche source d’aperçu temporisé de ResizableSidebar est conservée, mai
 Correction I3 (round1) : les anciennes sections indépendantes annuelles et hebdomadaires ont été remplacées. `AnnualCalendar.tsx` est une composition Memlia explicite des ports Cal Calendar/PanelCard et Plane KanbanCard, pas un composant annuel cal.diy prétendument inchangé. Les mois/jours et le clavier viennent du vrai Calendar ; seule la densité annuelle, les compteurs de la page et le filtrage civil des événements sont propres au cabinet. La semaine des tâches compose PanelCard (en-tête/repli/région) et KanbanCard ; seul le regroupement civil lundi→dimanche et les liens proviennent du métier. Les limites de pagination restent visibles et les exports conservent le périmètre fournisseur.
 
 Correction CI round2 : le clic primaire sur un événement annuel identifié par `productionIds` suit directement son lien canonique `#production?id=…`, afin de charger son année et sa configuration gelée réelles. Seules tâches et obligations ordinaires ouvrent l’inspecteur annuel contextualisé ; les clics avec modificateurs restent des liens natifs.
+
+## Relation client — extension Task6
+
+| Surface | Ports consommés | Adaptation métier |
+|---|---|---|
+| Prospects, pipeline, revue de conversion | Plane TabButton/Propel et KanbanCard, Peek Plane, cal PanelCard/Input/Alert | Canonical contact, ordered pipeline, explicit conversion review, exact amounts, separate manual temperature/risk and pending document triggers |
+| Matrice d’accueil, listes LAB/identités, historiques | Twenty Table/TableRow/TableHeader/TableCell, Plane Peek/Propel controls | Typed cells, source/manual provenance, filtered authorized counts, horizontal focusable region, selection/follow/column order, read-only capabilities |
+| Configuration pipeline/missions/étapes/politique | cal PanelCard/Input, Propel select/checkbox/buttons | Structured fields and canonical reusable status-type versions; immutable system steps; explicit human LAB policy |
+| GED, reprise et recherche publique | Common retained forms/Twenty tables through EvidenceEditor, PipelineImport and canonical Companies | Exact GED identities/hash/version, preview and explicit validation, canonical proposal/reconciliation rather than an independent company store |
+
+`features/relationship/relationship.css` composes the existing locally served tokens and source ports. No upstream copy, new font or palette replaces them. Hash navigation retains view/query/selected ID/configuration/detail/form tabs and matrix display. Private filled1440/900 light/dark captures include errors, read-only and a real last-column keyboard activation after inner scroll. These source/Vite/PGlite receipts are distinct from compiled/native runtime and final Task12 reception.

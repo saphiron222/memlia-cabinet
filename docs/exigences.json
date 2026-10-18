@@ -5549,10 +5549,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -5576,10 +5590,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -5742,10 +5770,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -5770,10 +5812,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -6634,10 +6690,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -7009,10 +7079,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -7035,10 +7119,24 @@
         "report/matrice-parcours.csv"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -7512,10 +7610,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -7537,10 +7649,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -8232,10 +8358,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -8258,10 +8398,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -8383,10 +8537,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {
@@ -8408,10 +8576,24 @@
         "research/inventaire-site-public.json"
       ],
       "implementation": {
-        "status": "planned",
-        "files": [],
-        "tests": [],
-        "fieldValidation": "last-phase"
+        "status": "implemented-local-partial",
+        "files": [
+          "packages/contracts/src/relationship.ts",
+          "apps/server/src/relationship/service.ts",
+          "apps/server/src/relationship/onboarding.ts",
+          "apps/server/src/relationship/notifications.ts",
+          "apps/server/src/relationship/export.ts",
+          "apps/web/src/features/relationship/Relationship.tsx"
+        ],
+        "tests": [
+          "apps/server/test/relationship.test.ts",
+          "apps/server/test/backup.test.ts",
+          "tests/e2e/relationship.spec.ts"
+        ],
+        "ci": "not-run-for-task6",
+        "fieldValidation": "last-phase",
+        "traceability": "docs/relationship.md",
+        "remaining": "Task7 documents/signature, Task9 partage/session/dépôt portail, Task10 observations source vérifiées ; qualification consolidée Task11/12 et cabinet dernière phase."
       }
     },
     {

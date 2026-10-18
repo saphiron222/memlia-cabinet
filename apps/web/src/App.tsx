@@ -1,3 +1,4 @@
+import { Relationship } from "./features/relationship/Relationship";
 import { Time } from "./features/time/Time";
 import AuthContainer from "./upstream/cal/AuthContainer";
 import { AppHeader as PlaneAppHeader } from "./upstream/plane/app-header";
@@ -237,6 +238,7 @@ function Auth({
   );
 }
 type Page =
+  | "relationship"
   | "temps"
   | "temps-cabinet"
   | "charge"
@@ -252,6 +254,7 @@ type Page =
   | "collectes"
   | RecordKind;
 const icons = {
+  relationship: IconUsers,
   temps: IconCalendar,
   "temps-cabinet": IconCalendar,
   charge: IconCalendar,
@@ -273,6 +276,7 @@ const icons = {
 function route(): Page {
   const hash = location.hash.slice(1).split("?")[0];
   return [
+    "relationship",
     "temps",
     "temps-cabinet",
     "charge",
@@ -447,7 +451,7 @@ function Cabinet({
                 {pageContext(page)} <span aria-hidden> / </span>
               </span>
               <h1 ref={heading} tabIndex={-1}>
-                {page === "temps"
+                {page === "relationship" ? "Relation client" : page === "temps"
                   ? "Mes temps"
                   : page === "temps-cabinet"
                     ? "Temps du cabinet"
@@ -482,7 +486,7 @@ function Cabinet({
           }
         />
         <ErrorSummary message={fault || accountError || undefined} />
-        {page === "temps" || page === "temps-cabinet" || page === "charge" ? (
+        {page === "relationship" ? <Relationship user={user}/> : page === "temps" || page === "temps-cabinet" || page === "charge" ? (
           <Time key={page} user={user} mode={page} />
         ) : page === "production" ? (
           <Production user={user} />
